@@ -2,7 +2,7 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
-** $Id: ls_odbc.c,v 1.10 2003/05/08 21:43:39 tomas Exp $
+** $Id: ls_odbc.c,v 1.11 2003/05/26 10:58:15 tomas Exp $
 */
 
 #include <assert.h>
@@ -22,7 +22,6 @@
 #include <lauxlib.h>
 
 #include "luasql.h"
-#include "ls_odbc.h"
 
 #define LUASQL_ENVIRONMENT_ODBC "ODBC environment"
 #define LUASQL_CONNECTION_ODBC "ODBC connection"
@@ -56,6 +55,9 @@ typedef struct {
 #define hSTMT SQL_HANDLE_STMT
 #define hDBC SQL_HANDLE_DBC
 #define error(a) ((a) != SQL_SUCCESS && (a) != SQL_SUCCESS_WITH_INFO) 
+
+
+LUASQL_API int luasql_libopen_odbc(lua_State *L);
 
 
 /*

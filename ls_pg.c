@@ -2,7 +2,7 @@
 ** LuaSQL, PostgreSQL driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
-** $Id: ls_pg.c,v 1.12 2003/05/08 21:43:39 tomas Exp $
+** $Id: ls_pg.c,v 1.13 2003/05/26 10:58:15 tomas Exp $
 */
 
 #include <assert.h>
@@ -17,7 +17,6 @@
 #include <lauxlib.h>
 
 #include "luasql.h"
-#include "ls_pg.h"
 
 #define LUASQL_ENVIRONMENT_PG "PostgreSQL environment"
 #define LUASQL_CONNECTION_PG "PostgreSQL connection"
@@ -47,6 +46,9 @@ typedef struct {
 
 
 typedef void (*creator) (lua_State *L, cur_data *cur);
+
+
+LUASQL_API int luasql_libopen_postgres(lua_State *L);
 
 
 /*
