@@ -16,7 +16,7 @@ LIB_OPTION= -shared
 LUA_LIBS= -llua-5.0 -llualib-5.0 -lm
 DLLIB= -ldl
 
-VERSION= 2.0b3
+VERSION= 2.0.0
 
 OBJS= compat-5.1.o luasql.o ls_$T.o
 LIBNAME= lib$T.$(VERSION)$(LIB_EXT)
@@ -80,11 +80,13 @@ dist_dir:
 	mkdir $(DIST_DIR)
 	mkdir -p $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
 	mkdir -p $(DIST_DIR)/jdbc/src/lua
+	mkdir -p $(DIST_DIR)/ado
 	cp $(SRCS) $(DIST_DIR)
 	cp jdbc/Makefile $(DIST_DIR)/jdbc
 	cp jdbc/build.xml $(DIST_DIR)/jdbc
 	cp jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
 	cp jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
+	cp ado/ado.lua $(DIST_DIR)/ado
 
 install:
 	mkdir -p $(LUA_LIBDIR)/luasql
