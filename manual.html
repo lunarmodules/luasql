@@ -41,8 +41,8 @@ programming language
 <p>
 LuaSQL is a simple interface from Lua to a DBMS.
 It has a collection of drivers to some popular databases
-(actually PostgreSQL, ODBC, MySQL and Oracle; ADO will be
-ready soon).
+(actually PostgreSQL, ODBC, MySQL, SQLite and Oracle;
+ADO, Interbase and Sybase are on our plans).
 LuaSQL defines a simple object-oriented API.
 All drivers should implement this common API,
 but each one is free to offer extensions.
@@ -61,6 +61,7 @@ create a
 <a href="#cursor_object">cursor object</a>
 which is used to retrieve data.
 </p>
+<!--
 <p>
 Each LuaSQL driver is composed by two files:
 a C source file that implements the driver functions;
@@ -69,10 +70,33 @@ The host application can be statically linked with one or more drivers
 or they can be loaded dynamically by the corresponding Lua script (this
 requires the built-in <tt>loadlib</tt> function Lua 5 offers).
 </p>
+-->
 <p>
 LuaSQL is free software and uses the same
 <a href="license.html">license</a>
 as Lua 5.0.
+</p>
+
+
+<a name="errors">
+<h2>Errors</h2>
+<p>
+LuaSQL is just an abstraction layer that communicates between Lua
+and a database system.
+Therefore errors can occur on both levels, that is,
+inside the database client or inside LuaSQL driver.
+<p>
+Errors like mal-formed SQL statement, unknown table name etc.
+are called <em>database errors</em> and
+will be reported by the function/method returning <tt>nil</tt> followed
+by the error message provided by the database system.
+Errors like wrong parameters, absent connection, invalid objects etc.,
+called <em>API errors</em>,
+are usually program errors hence will raise a Lua error.
+</p>
+<p>
+This behavior will be followed by all functions/methods
+described in this document unless otherwise stated.
 </p>
 
 
@@ -92,8 +116,8 @@ object using the ODBC driver.
 <a name="env_close"></a>
 <li> <b><tt>env:close()</tt></b> <br>
 Closes the environment <tt>env</tt>.
-Only successful if all connections pertaining to it were closed first.
-Returns <code>true</code> in case of success and <code>nil</code> when
+Only successful if all connections pertaining to it were closed first.<br>
+Returns: <code>true</code> in case of success; <code>false</code> when
 the object is already closed.
 
 <a name="env_connect"></a>
@@ -121,13 +145,17 @@ method.
 <a name="conn_close"></a>
 <li> <b><tt>conn:close()</tt></b> <br>
 Closes the connection <tt>conn</tt>.
-Only successful if all cursors pertaining to it were closed first.
-Returns <code>true</code> in case of success and <code>nil</code> when
+Only successful if all cursors pertaining to it were closed first.<br>
+Returns: <code>true</code> in case of success and <code>false</code> when
 the object is already closed.
 
 <a name="conn_commit"></a>
 <li> <b><tt>conn:commit()</tt></b> <br>
 Commits the current transaction.
+This feature might not work on database systems that do not implement
+transactions.<br>
+Returns: <code>true</code> in case of success and <code>false</code> when
+the operation could not be performed or when it is not implemented.
 
 <a name="conn_execute"></a>
 <li> <b><tt>conn:execute(statement)</tt></b> <br>
@@ -138,23 +166,21 @@ if there are results, or the number of rows affected by the command otherwise.
 <a name="conn_rollback"></a>
 <li> <b><tt>conn:rollback()</tt></b> <br>
 Rolls back the current transaction.
+This feature might not work on database systems that do not implement
+transactions.<br>
+Returns: <code>true</code> in case of success and <code>false</code> when
+the operation could not be performed or when it is not implemented.
 
 <a name="conn_setautocommit"></a>
 <li> <b><tt>conn:setautocommit(boolean)</tt></b> <br>
 Turns on or off the "auto commit" mode.
-This feature might not work on database systems that don't implement
+This feature might not work on database systems that do not implement
 transactions.
-<!--
-Turning off the "auto commit" mode should begin a new transaction;
-turning the mode on will roll back the current transaction.
--->
-
-<!--
-<li> <tt>TableList()</tt> <br>==&gt; So' no ODBC &lt;==
-Retrieves a list of all the tables in the data source. <br>
-Returns: a list of the table names.
-</p>
--->
+On database systems that do not have the concept of "auto commit mode",
+but do implement transactions, this mechanism is implemented by the driver.
+<br>
+Returns: <code>true</code> in case of success and <code>false</code> when
+the operation could not be performed or when it is not implemented.
 
 </ul>
 
@@ -175,8 +201,8 @@ and <a href="#oracle_extensions">Oracle</a> extensions.
 <ul>
 <a name="cur_close"></a>
 <li> <b><tt>cur:close()</tt></b> <br>
-Closes this cursor. 
-Returns <code>true</code> in case of success and <code>nil</code> when
+Closes this cursor.<br>
+Returns: <code>true</code> in case of success and <code>false</code> when
 the object is already closed.
 
 <a name="cur_fetch"></a>
@@ -206,14 +232,15 @@ There is no guarantee about the types of the results
 the PostgreSQL and MySQL drivers returns all values as strings
 while the ODBC and Oracle drivers converts them to Lua types</i>.<br>
 Returns: data, as above, or <tt>nil</tt> if there are no more rows.
+<em>Note that this method could return <code>nil</code> as a valid result.</em>
 
 <a name="cur_colnames"></a>
 <li> <b><tt>cur:getcolnames()</tt></b> <br>
-Returns: a list of column names.
+Returns: a list (table) of column names.
 
 <a name="cur_coltypes"></a>
 <li> <b><tt>cur:getcoltypes()</tt></b> <br>
-Returns: a list of column types.
+Returns: a list (table) of column types.
 
 </ul>
 
@@ -235,10 +262,12 @@ these extra features:
     as stated in the documentation for <tt>PQconnectdb</tt> function
     in the PostgreSQL manual
     (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>) <br>
-    See also: <a href="#environment_object">environment objects</a>
+    See also: <a href="#environment_object">environment objects</a><br>
+    Returns: a <a href="#connection_object">connection object</a>
+
   <li> <b><tt>cur:numrows()</tt></b> <br>
-    This additional method returns the number of rows in the query result.<br>
-    See also: <a href="#cursor_object">cursor objects</a>
+    See also: <a href="#cursor_object">cursor objects</a><br>
+    Returns: the number of rows in the query result.
 </ul>
 
 
@@ -253,7 +282,9 @@ the MySQL driver also offers these extra features:
   <li> <b><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt></b> <br>
     In the MySQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
-    See also: <a href="#environment_object">environment objects</a>
+    See also: <a href="#environment_object">environment objects</a><br>
+    Returns: a <a href="#connection_object">connection object</a>
+
 <!--
   <li> <b><tt>cur:numrows()</tt></b> <br>
     This additional method returns the number of rows in the query result.<br>
@@ -261,11 +292,12 @@ the MySQL driver also offers these extra features:
 -->
 </ul>
 
-Note: This driver is compatible to version 4.1 of MySQL API,
-with support to BDB and INNODB tables.
-MySQL has types of tables that don't support transactions,
-so with these types, the methods <tt>setautocommit</tt>, <tt>commit</tt>
-and <tt>rollback</tt> don't work.
+Note: This driver is compatible to version 4.0 and 4.1 (alpha) of MySQL API.
+Only version 4.1 provides support for transactions by using BDB or INNODB
+tables.
+Therefore, with version 4.0 or without one of these types of tables the
+methods <code>commit</code>, <code>rollback</code> and
+<code>setautocommit</code> would not work.
 
 
 <a name="oracle_extensions"></a>
@@ -277,8 +309,8 @@ this extra feature:
 
 <ul>
   <li> <b><tt>cur:numrows()</tt></b> <br>
-    This additional method returns the number of rows in the query result.<br>
-    See also: <a href="#cursor_object">cursor objects</a>
+    See also: <a href="#cursor_object">cursor objects</a><br>
+    Returns: the number of rows in the query result.
 </ul>
 
 
@@ -387,7 +419,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-$Id: manual.html,v 1.18 2004/01/12 10:43:26 tomas Exp $
+$Id: manual.html,v 1.19 2004/08/30 15:28:51 tomas Exp $
 </small>
 
 </body>
