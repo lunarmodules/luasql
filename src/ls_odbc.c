@@ -48,8 +48,8 @@ typedef struct {
 	short closed;
     int conn;                 /* reference to connection */
     int numcols;              /* number of columns */
+	int coltypes, colnames;   /* reference to column information tables */
     SQLHSTMT hstmt;           /* statement handle */
-	int colinfo;              /* reference to column information table */
 } cur_data;
 
 
@@ -165,19 +165,19 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
 ** Returns:
 **   0 if successfull, non-zero otherwise;
 */
-static int push_column(lua_State *L, int colinfo, const SQLHSTMT hstmt, 
+static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
         SQLUSMALLINT i) {
     const char *tname;
     char type;
     /* get column type from types table */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, colinfo);	/* ColInfo table */
-	lua_rawgeti (L, -1, i);	/* name of the column */
-	lua_rawget (L, -2);	/* typename of the column */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, coltypes);
+	lua_rawgeti (L, -1, i);	/* typename of the column */
     tname = lua_tostring(L, -1);
     if (!tname)
 		return luasql_faildirect(L, LUASQL_PREFIX"Invalid type in table.");
     type = tname[1];
-    lua_pop(L, 2); /* type and ColInfo table */
+    lua_pop(L, 2);	/* pops type name and coltypes table */
+
     /* deal with data according to type */
     switch (type) {
         /* nUmber */
@@ -252,7 +252,6 @@ static int push_column(lua_State *L, int colinfo, const SQLHSTMT hstmt,
 static int cur_fetch (lua_State *L) {
     cur_data *cur = (cur_data *) getcursor (L);
     SQLHSTMT hstmt = cur->hstmt;
-    int row, types, names;
     int ret; 
     SQLRETURN rc = SQLFetch(cur->hstmt); 
     if (rc == SQL_NO_DATA) {
@@ -260,46 +259,21 @@ static int cur_fetch (lua_State *L) {
         return 1;
     } else if (error(rc)) fail(L, hSTMT, hstmt);
 
-    /* push column type and name table */
-/*
-    lua_getref(L, curdata->coltypes); types = lua_gettop(L);
-    lua_getref(L, curdata->colnames); names = lua_gettop(L);
-*/
 	if (lua_istable (L, 2)) {
 		SQLUSMALLINT i;
 		const char *opts = luaL_optstring (L, 3, "n");
-/*
-		if (strchr (opts, 'n') != NULL)
-			*//* Copy values to numerical indices *//*
-			for (i = 1; i <= cur->numcols; i++) {
-				ret = push_column (L, cur->colinfo, hstmt, i);
-				if (ret)
-					return ret;
-				lua_rawseti (L, 2, i);
-			}
-		if (strchr (opts, 'a') != NULL)
-			*//* Copy values to alphanumerical indices *//*
-			for (i = 1; i <= cur->numcols; i++) {
-				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colinfo);
-				lua_rawgeti (L, -1, i);
-				ret = push_column (L, cur->colinfo, hstmt, i);
-				if (ret)
-					return ret;
-				lua_rawset (L, 2);
-			}
-*/
 		int num = strchr (opts, 'n') != NULL;
 		int alpha = strchr (opts, 'a') != NULL;
 		for (i = 1; i <= cur->numcols; i++) {
-			ret = push_column (L, cur->colinfo, hstmt, i);
+			ret = push_column (L, cur->coltypes, hstmt, i);
 			if (ret)
 				return ret;
 			if (alpha) {
-				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colinfo);
+				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
 				lua_rawgeti (L, -1, i);
 				lua_pushvalue (L, -3);
 				lua_rawset (L, 2);
-				lua_pop (L, 1);	/* pops colinfo table */
+				lua_pop (L, 1);	/* pops colnames table */
 			}
 			if (num)
 				lua_rawseti (L, 2, i);
@@ -310,7 +284,7 @@ static int cur_fetch (lua_State *L) {
 	else {
 		SQLUSMALLINT i;
 		for (i = 1; i <= cur->numcols; i++) {
-			ret = push_column (L, cur->colinfo, hstmt, i);
+			ret = push_column (L, cur->coltypes, hstmt, i);
 			if (ret)
 				return ret;
 		}
@@ -342,7 +316,8 @@ static int cur_close (lua_State *L) {
 	if (error(ret))
 		return fail(L, hSTMT, hstmt);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->colinfo);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 	cur->conn = LUA_NOREF;
     return pass(L);
 }
@@ -375,34 +350,42 @@ static int sqlCurGetColInfo (lua_State *L) {
 	return 1;
 }
 */
-static int cur_colinfo (lua_State *L) {
+static int cur_coltypes (lua_State *L) {
 	cur_data *cur = (cur_data *) getcursor (L);
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colinfo);
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
 	return 1;
 }
 
+static int cur_colnames (lua_State *L) {
+	cur_data *cur = (cur_data *) getcursor (L);
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
+	return 1;
+}
 
 /*
-** Creates a table with column information.
+** Creates two tables with the names and the types of the columns.
 */
-static void create_colinfo (lua_State *L, const SQLHSTMT hstmt, int numcols) {
+static void create_colinfo (lua_State *L, cur_data *cur) {
 	SQLCHAR buffer[256];
-	SQLSMALLINT namelen;
-	SQLSMALLINT datatype;
+	SQLSMALLINT namelen, datatype, i;
 	SQLRETURN ret;
-	int i;
+	int types, names;
 
-    lua_newtable(L);
-    for (i = 1; i <= numcols; i++) {
-        ret = SQLDescribeCol(hstmt, i, buffer, sizeof(buffer), 
+	lua_newtable(L);
+	types = lua_gettop (L);
+	lua_newtable(L);
+	names = lua_gettop (L);
+	for (i = 1; i <= cur->numcols; i++) {
+		ret = SQLDescribeCol(cur->hstmt, i, buffer, sizeof(buffer), 
                 &namelen, &datatype, NULL, NULL, NULL);
-        /*if (ret == SQL_ERROR) return fail(L, hSTMT, hstmt);*/
-        lua_pushstring (L, buffer);
-		lua_pushvalue (L, -1);
-		lua_rawseti (L, -3, i);
-        lua_pushstring(L, sqltypetolua(datatype));
-		lua_rawset (L, -3);
-    }
+		/*if (ret == SQL_ERROR) return fail(L, hSTMT, cur->hstmt);*/
+		lua_pushstring (L, buffer);
+		lua_rawseti (L, names, i);
+		lua_pushstring(L, sqltypetolua(datatype));
+		lua_rawseti (L, types, i);
+	}
+	cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
 }
 
 
@@ -411,12 +394,6 @@ static void create_colinfo (lua_State *L, const SQLHSTMT hstmt, int numcols) {
 */
 static int create_cursor (lua_State *L, conn_data *conn, 
         const SQLHSTMT hstmt, const SQLSMALLINT numcols) {
-    SQLCHAR buffer[256];
-    SQLSMALLINT namelen;
-    SQLSMALLINT datatype;
-    SQLRETURN ret;
-    int names, types;
-    short i;
     /* allocate cursor userdatum */
     cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
@@ -429,8 +406,7 @@ static int create_cursor (lua_State *L, conn_data *conn,
     cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	/* make and store column information table */
-	create_colinfo (L, hstmt, numcols);
-	cur->colinfo = luaL_ref (L, LUA_REGISTRYINDEX);
+	create_colinfo (L, cur);
 
     return 1;
 }
@@ -479,11 +455,6 @@ static int conn_execute (lua_State *L) {
 	SQLHDBC hdbc = conn->hdbc;
 	SQLHSTMT hstmt;
 	SQLSMALLINT numcols;
-	SQLUINTEGER colsize;
-	SQLINTEGER strlen;
-	SQLUSMALLINT i;
-	const char *param;
-	size_t len;
 	SQLRETURN ret;
 	ret = SQLAllocHandle(hSTMT, hdbc, &hstmt);
 	if (error(ret))
@@ -713,7 +684,9 @@ static void create_metatables (lua_State *L) {
 	struct luaL_reg cursor_methods[] = {
 		{"close", cur_close},
 		{"fetch", cur_fetch},
-		{"colinfo", cur_colinfo},
+		/*{"colinfo", cur_colinfo},*/
+		{"getcoltypes", cur_coltypes},
+		{"getcolnames", cur_colnames},
 		/*{"numrows", sqlCurNumRows},*/
 		{NULL, NULL},
 	};
