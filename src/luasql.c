@@ -1,5 +1,5 @@
-#include <lua5/lua.h>
-#include <lua5/lauxlib.h>
+#include <lua.h>
+#include <lauxlib.h>
 
 #include "luasql.h"
 
@@ -43,10 +43,14 @@ LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 ** Check the type (metatable) of #1 arg
 ** Do NOT pop the argument
 */
+/*
 LUASQL_API void *luasql_getuserdata (lua_State *L, const char *type) {
 	return luaL_checkudata (L, 1, type);
 }
+*/
 
+
+/*
 
 static int sqlOpen(lua_State *L) {
     const char *driver = luaL_checkstring(L, 2);
@@ -65,3 +69,4 @@ LUASQL_API int lua_sqllibopen(lua_State *L) {
     lua_setglobal(L, "sql");
 	return 1;
 }
+*/

@@ -13,7 +13,6 @@
 
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
-LUASQL_API void *luasql_getuserdata (lua_State *L, const char *type);
 LUASQL_API int lua_sqllibopen (lua_State *L);
 
 #endif

@@ -1,11 +1,13 @@
-/*------------------------------------------------------------------*\
-* LuaSQL, ODBC driver
-* Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab
-\*------------------------------------------------------------------*/
+/*
+** LuaSQL, ODBC driver
+** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
+** Tomas Guisasola
+*/
+
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <time.h>
 
 #if defined(WIN32)
@@ -21,12 +23,9 @@
 #include "luasql.h"
 #include "ls_odbc.h"
 
-/* environment userdatum */
 typedef struct {
     SQLHENV henv;             /* environment handle */
-    int conn_tag;             /* connection userdata tag */
-    int cur_tag;              /* statement userdata tag */
-    int invalid_tag;          /* tag used for invalid userdata */
+	unsigned conn_counter;    /* active connections counter */
 } env_data;
 
 /* connection userdatum */

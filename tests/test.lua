@@ -1,3 +1,5 @@
+#!/usr/local/bin/lua.5.0b
+
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40
 
@@ -79,16 +81,18 @@ end
 
 -- Main --
 
+if not sql and loadlib then
+	loadlib ("libluasqlpostgres.5.0.dylib","luasql_libopen_postgres") ()
+end
 assert (sql, "no sql table")
-assert (type(sql.Open)=="function", "no Open method")
+--assert (type(sql.Open)=="function", "no Open method")
 
 -- Check environment object.
-local env, err = sql:Open("postgres")
+--local env, err = sql:Open("postgres")
+local env, err = sql.postgres ()
 assert (env, err)
 local env_type = gettype(env)
 assert (env:Close() == 1, "couldn't close environment")
-assert (gettype(env) ~= env_type, "closed environment with a valid type")
-local inv_type = gettype(env)
 
 env, err = sql.postgres () 
 assert (env, err)
@@ -97,9 +101,7 @@ assert (env, err)
 local conn, err = env:Connect ("luasql-test") 
 assert (conn, err)
 local conn_type = gettype(conn)
-assert (type(conn:TableList()) == "table", "error on TableList")
 assert (conn:Close() == 1, "couldn't close connection")
-assert (gettype(conn) ~= conn_type, "closed connection with a valid type")
 
 conn, err = env:Connect ("unknown-data-base")
 assert (conn == nil)
@@ -134,7 +136,6 @@ local cur_type = gettype(cur)
 assert (cur:Fetch() == 'a', "wrong value")
 assert (cur:Fetch() == nil, "wrong number of rows")
 assert (cur:Close () == 1, "couldn't close cursor")
-assert (gettype(cur) ~= cur_type, "closed cursor with a valid_type")
 cur, err = conn:Execute ("select field1 from test_table where field1 != 'a'")
 assert (cur, err)
 assert (cur:Fetch() == nil)
@@ -205,7 +206,6 @@ cur, err = conn:Execute ("select count(*) as c from test_table where field1 like
 assert (gettype(cur) == cur_type, err)
 local num_rows = tonumber (cur:Fetch())
 assert (cur:Close() == 1, "couldn't close cursor object")
-assert (gettype(cur) == inv_type, "closed cursor with a valid type")
 cur, err = conn:Execute ("select field1, field2, field3 from test_table where field1 like '%b%'")
 assert (gettype(cur) == cur_type, err)
 assert ((cur:NumRows() == num_rows), "wrong number of total rows"..num_rows..cur:NumRows())
