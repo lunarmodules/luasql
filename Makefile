@@ -3,34 +3,34 @@ VERSION= 2.0b
 COMPAT_DIR= .
 
 ODBC_OBJ= ls_odbc.o
-ODBC_LIB= libluasqlodbc.$(VERSION).a
-ODBC_DLL= luasqlodbc.$(VERSION).dll
+ODBC_LIB= libodbc.$(VERSION).a
+ODBC_DLL= odbc.$(VERSION).dll
 
 SQLITE_OBJ= ls_sqlite.o
-SQLITE_LIB= libluasqlsqlite.$(VERSION).a
-SQLITE_SO= libluasqlsqlite.$(VERSION).so
-SQLITE_DYLIB= libluasqlsqlite.$(VERSION).dylib
+SQLITE_LIB= libsqlite.$(VERSION).a
+SQLITE_SO= libsqlite.$(VERSION).so
+SQLITE_DYLIB= libsqlite.$(VERSION).dylib
 SQLITE_LIBS= -lsqlite
 SQLITE_INCS=
 
 PG_OBJ= ls_pg.o
-PG_LIB= libluasqlpostgres.$(VERSION).a
-PG_SO= libluasqlpostgres.$(VERSION).so
-PG_DYLIB= libluasqlpostgres.$(VERSION).dylib
+PG_LIB= libpostgres.$(VERSION).a
+PG_SO= libpostgres.$(VERSION).so
+PG_DYLIB= libpostgres.$(VERSION).dylib
 PG_LIBS= -L/usr/local/pgsql/lib -lpq
 PG_INCS= -I/usr/local/pgsql/include
 
 OCI_OBJ= ls_oci8.o
-OCI_LIB= libluasqloci8.$(VERSION).a
-OCI_SO= libluasqloci8.$(VERSION).so
-OCI_DLL= luasqloracle.$(VERSION).dll
+OCI_LIB= liboci8.$(VERSION).a
+OCI_SO= liboci8.$(VERSION).so
+OCI_DLL= oci8.$(VERSION).dll
 OCI_LIBS= -L/home/oracle/OraHome1/lib -lz -lclntsh
 OCI_INCS= -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
 
 MYSQL_OBJ= ls_mysql.o
-MYSQL_LIB= libluasqlmysql.$(VERSION).a
-MYSQL_SO= libluasqlmysql.$(VERSION).so
-MYSQL_DLL= luasqlmysql.$(VERSION).dll
+MYSQL_LIB= libmysql.$(VERSION).a
+MYSQL_SO= libmysql.$(VERSION).so
+MYSQL_DLL= mysql.$(VERSION).dll
 MYSQL_LIBS= -L/usr/local/mysql/lib -lmysqlclient
 MYSQL_INCS= -I/usr/local/mysql/include
 
