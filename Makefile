@@ -1,6 +1,6 @@
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
-INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
-LIBS_DIR= -L/usr/local/pgsql/lib -L../lua-5.0/lib -L/home/oracle/OraHome1/lib
+INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public -I/usr/local/mysql/include
+LIBS_DIR= -L/usr/local/pgsql/lib -L../lua-5.0/lib -L/home/oracle/OraHome1/lib -L/usr/local/mysql/lib
 LIBS= -llua.5.0 -llualib.5.0 -lm -lz -ldl
 CFLAGS= -g $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
 
@@ -91,7 +91,7 @@ $(MYSQL_LIB): $(LS_OBJ) $(MYSQL_OBJ)
 	$(RANLIB) $@
 
 $(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(LIBS)
+	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) -lmysqlclient $(LIBS)
 
 clean:
 	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(MY_OBJ) $(ODBC_LIB) $(ODBC_DLL) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) postgres.lua odbc.lua oracle.lua mysql.lua postgres.def odbc.def oracle.def mysql.def
