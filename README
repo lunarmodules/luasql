@@ -3,22 +3,20 @@ functionality available in any database manager.
 
 Here goes a small description of the files in the distribution
 
+    def.tmpl         -- .DEF template
     index.html       -- Home page
-    ls_odbc.c        -- ODBC driver (source)
-    ls_odbc.def      -- ODBC driver (.def)
-    ls_odbc.h        -- ODBC driver (header)
-    ls_pg.c          -- PostgreSQL driver (source)
-    ls_pg.def        -- PostgreSQL driver (.def)
-    ls_pg.h          -- PostgreSQL driver (header)
+    loader.tmpl      -- Lua loader template
+    ls_mysql.c       -- MySQL driver
+    ls_oci8.c        -- Oracle OCI 8 driver
+    ls_odbc.c        -- ODBC driver
+    ls_pg.c          -- PostgreSQL driver
     lua.png          -- Lua Logo
     luasql.c         -- Common functions
     luasql.h         -- Common definitions
     Makefile         -- Makefile for Unix systems
     manual.html      -- Reference manual
-    odbc.tmpl        -- ODBC loader template (.lua)
     performance.lua  -- Performance test script
-    postgres.tmpl    -- PostgreSQL loader template (.lua)
     README           -- This file
     test.lua         -- Overall API test script
 
-$Id: README,v 1.3 2003/05/05 10:06:34 tomas Exp $
+$Id: README,v 1.4 2003/10/24 11:03:51 tomas Exp $

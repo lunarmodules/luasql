@@ -1,6 +1,6 @@
 #!/usr/local/bin/lua
 
-TOTAL_FIELDS = 40
+TOTAL_FIELDS = 400
 TOTAL_ROWS = 40
 
 ---------------------------------------------------------------------
