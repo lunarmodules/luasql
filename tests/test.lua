@@ -3,83 +3,35 @@
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40
 
--- Create a string based on a number.
-function toword (n)
-	local s = ""
-	repeat
-		local c = math.mod (n, 26)
-		s = string.char (string.byte('a')+c)..s
-		n = math.floor (n / 26)
-	until n == 0
-	return s
-end
-
--- Build SQL command to insert a record at the table.
-function insert_table (n, offset)
-	local s = "insert into t ("
-	for i = 1, n do
-		s = s.."f"..i..", "
-	end
-	s = string.sub(s,1,-3)..") values ("
-	for i = 1, n do
-		s = s.."'"..toword(offset + i).."', "
-	end
-	return string.sub(s,1,-3)..")"
-end
-
-function T (...)
-	if arg[1] then
-		return arg
-	else
-		return arg[1], arg[2]
-	end
-end
-
--- Execute a select-statement and read all resulting rows.
-function fetch_test (conn, tab, mode)
-	local cur, err = conn:execute ("select * from t")
-	assert (cur, err)
-	if mode then
-		linha, err = cur:fetch (tab, mode)
-	else
-		linha, err = T (cur:fetch ())
-	end
-	assert (linha, err)
-	while linha do
-		assert (type(linha) == "table", "not a table")
-		if mode then
-			linha, err = cur:fetch (tab, mode)
-		else
-			linha, err = T (cur:fetch ())
-		end
-	end
-	assert (cur:close ())
-end
-
 ---------------------------------------------------------------------
+-- checks for a value and throw an error if it's not the expected.
 ---------------------------------------------------------------------
+function assert2 (expected, value, msg)
+	if not msg then
+		msg = ''
+	else
+		msg = msg..'\n'
+	end
+	return assert (value == expected,
+		msg.."wrong value (["..tostring(value).."] instead of "..
+		tostring(expected)..")")
+end
 
 ---------------------------------------------------------------------
 -- basic checking test.
 ---------------------------------------------------------------------
 function basic_test ()
-	local err
-
 	-- Check environment object.
-	ENV, err = luasql[driver] ()
-	assert (ENV, err)
-	assert (ENV:close() == 1, "couldn't close environment")
-
-	ENV, err = luasql[driver] () 
-	assert (ENV, err)
-
+	ENV = assert (luasql[driver] ())
+	assert2 (1, ENV:close(), "couldn't close environment")
+	-- Reopen the environment.
+	ENV = assert (luasql[driver] ())
 	-- Check connection object.
 	local conn, err = ENV:connect (datasource, username, password)
 	assert (conn, (err or '').." ("..datasource..")")
-	assert (conn:close() == 1, "couldn't close connection")
-
-	conn, err = ENV:connect ("unknown-data-base")
-	assert (conn == nil)
+	assert2 (1, conn:close(), "couldn't close connection")
+	-- Check error situation.
+	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
 end
 
 ---------------------------------------------------------------------
@@ -97,86 +49,49 @@ end
 -- Create a table with TOTAL_FIELDS character fields.
 ---------------------------------------------------------------------
 function create_table ()
-	local err
-
 	-- Check SQL statements.
-	CONN, err = ENV:connect (datasource, username, password)
-	assert (CONN, err)
-
+	CONN = assert (ENV:connect (datasource, username, password))
+	-- Drop table (if it already exists).
+	--CONN:execute("drop table t")
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
-	local cur, err = CONN:execute (cmd)
-	assert (cur == 0, err)
-end
-
----------------------------------------------------------------------
----------------------------------------------------------------------
-function drop_table ()
-	local cur, err = CONN:execute ("drop table t")
-	assert (cur == 0, err)
-end
-
----------------------------------------------------------------------
----------------------------------------------------------------------
-function rollback ()
-	-- erase table
-	local n, err = CONN:execute ("delete from t")
-	assert (n == 0, err)
-	CONN:setautocommit (false) -- begin transaction
-	local n, err = CONN:execute ("insert into t (f1) values ('a')")
-	assert (n == 1, err)
-	CONN:rollback ()
-	cur, err = CONN:execute ("select count(*) from t")
-	assert (cur, err)
-	n = tonumber (cur:fetch ())
-	assert (n == 0, "Rollback fails")
-	CONN:setautocommit (true)
-end
-
----------------------------------------------------------------------
-function assert2 (value, expected, msg)
-	if not msg then
-		msg = ''
-	else
-		msg = msg..'\n'
-	end
-	assert (value == expected,
-		msg.."wrong value (["..tostring(value).."] instead of "..
-		tostring(expected)..")")
+	-- Postgres retorna 0, enquanto ODBC retorna -1.
+	--assert (cur == 0, err)
+	assert (CONN:execute (cmd))
 end
 
 ---------------------------------------------------------------------
 -- Fetch 2 values.
 ---------------------------------------------------------------------
 function fetch2 ()
-	local cur, err = CONN:execute ("insert into t (f1, f2) values ('b', 'c')")
-	assert2 (cur, 1, err)
-	cur, err = CONN:execute ("select f1, f2, f3 from t")
-	assert (cur, err)
+	-- insert a record.
+	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
+	-- retrieve data.
+	local cur = assert (CONN:execute ("select f1, f2, f3 from t"))
+	assert2 ("userdata", type(cur), "not a cursor")
+	-- get cursor metatable.
 	CUR_TYPE = getmetatable (cur)
-
+	-- check data.
 	local f1, f2, f3 = cur:fetch()
-	assert2 (f1, 'b')
-	assert2 (f2, 'c')
-	assert2 (f3, nil)
-	assert2 (cur:fetch(), nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 ('b', f1)
+	assert2 ('c', f2)
+	assert2 (nil, f3)
+	assert2 (nil, cur:fetch())
+	assert2 (1, cur:close(), "couldn't close cursor")
 	cur, err = CONN:execute ("insert into t (f1, f2) values ('d', 'e')")
-	assert2 (cur, 1, err)
-	cur, err = CONN:execute ("select f1, f2, f3 from t order by f1")
-	assert (cur, err)
+	assert2 (1, cur, err)
+	cur = assert (CONN:execute ("select f1, f2, f3 from t order by f1"))
 	local f1, f2, f3 = cur:fetch()
-	assert2 (f1, 'b')
-	assert2 (f2, 'c')
-	assert2 (f3, nil)
+	assert2 ('b', f1, f2)	-- f2 can be an error message
+	assert2 ('c', f2)
+	assert2 (nil, f3)
 	f1, f2, f3 = cur:fetch()
-	assert2 (f1, 'd')
-	assert2 (f2, 'e')
-	assert2 (f3, nil)
-	assert2 (cur:fetch(), nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
-	cur, err = CONN:execute ("delete from t where f1 in ('b', 'd')")
-	assert2 (cur, 2, err)
+	assert2 ('d', f1, f2)	-- f2 can be an error message
+	assert2 ('e', f2)
+	assert2 (nil, f3)
+	assert2 (nil, cur:fetch())
+	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
 end
 
 ---------------------------------------------------------------------
@@ -185,123 +100,131 @@ end
 ---------------------------------------------------------------------
 function fetch_new_table ()
 	-- insert elements.
-	local cur, err = CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')")
-	assert2 (cur, 1, err)
-	cur, err = CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')")
-	assert2 (cur, 1, err)
+	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
+	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
 	-- retrieve data using a new table.
-	cur, err = CONN:execute ("select f1, f2, f3, f4 from t")
-	assert (cur, err)
-	assert (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	local cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
+	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
 	local row, err = cur:fetch{}
-	assert (type(row), "table", err)
-	assert2 (row[1], 'a')
-	assert2 (row[2], 'b')
-	assert2 (row[3], 'c')
-	assert2 (row[4], 'd')
-	assert2 (row.f1, nil)
-	assert2 (row.f2, nil)
-	assert2 (row.f3, nil)
-	assert2 (row.f4, nil)
+	assert2 (type(row), "table", err)
+	assert2 ('a', row[1])
+	assert2 ('b', row[2])
+	assert2 ('c', row[3])
+	assert2 ('d', row[4])
+	assert2 (nil, row.f1)
+	assert2 (nil, row.f2)
+	assert2 (nil, row.f3)
+	assert2 (nil, row.f4)
 	row, err = cur:fetch{}
 	assert (type(row), "table", err)
-	assert2 (row[1], 'f')
-	assert2 (row[2], 'g')
-	assert2 (row[3], 'h')
-	assert2 (row[4], 'i')
-	assert2 (row.f1, nil)
-	assert2 (row.f2, nil)
-	assert2 (row.f3, nil)
-	assert2 (row.f4, nil)
-	assert2 (cur:fetch(), nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 ('f', row[1])
+	assert2 ('g', row[2])
+	assert2 ('h', row[3])
+	assert2 ('i', row[4])
+	assert2 (nil, row.f1)
+	assert2 (nil, row.f2)
+	assert2 (nil, row.f3)
+	assert2 (nil, row.f4)
+	assert2 (nil, cur:fetch())
+	assert2 (1, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
-	cur, err = CONN:execute ("select f1, f2, f3, f4 from t")
-	assert (cur, err)
-	assert (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
+	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
 	local row, err = cur:fetch{}
 	assert (type(row), "table", err)
-	assert2 (row[1], 'a')
-	assert2 (row[2], 'b')
-	assert2 (row[3], 'c')
-	assert2 (row[4], 'd')
-	assert2 (row.f1, nil)
-	assert2 (row.f2, nil)
-	assert2 (row.f3, nil)
-	assert2 (row.f4, nil)
+	assert2 ('a', row[1])
+	assert2 ('b', row[2])
+	assert2 ('c', row[3])
+	assert2 ('d', row[4])
+	assert2 (nil, row.f1)
+	assert2 (nil, row.f2)
+	assert2 (nil, row.f3)
+	assert2 (nil, row.f4)
 	row, err = cur:fetch (row)
 	assert (type(row), "table", err)
-	assert2 (row[1], 'f')
-	assert2 (row[2], 'g')
-	assert2 (row[3], 'h')
-	assert2 (row[4], 'i')
-	assert2 (row.f1, nil)
-	assert2 (row.f2, nil)
-	assert2 (row.f3, nil)
-	assert2 (row.f4, nil)
-	assert2 (cur:fetch{}, nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 ('f', row[1])
+	assert2 ('g', row[2])
+	assert2 ('h', row[3])
+	assert2 ('i', row[4])
+	assert2 (nil, row.f1)
+	assert2 (nil, row.f2)
+	assert2 (nil, row.f3)
+	assert2 (nil, row.f4)
+	assert2 (nil, cur:fetch{})
+	assert2 (1, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
-	cur, err = CONN:execute ("select f1, f2, f3, f4 from t")
-	assert (cur, err)
-	assert (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
+	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
 	local row, err = cur:fetch ({}, "a")
 	assert (type(row), "table", err)
-	assert2 (row[1], nil)
-	assert2 (row[2], nil)
-	assert2 (row[3], nil)
-	assert2 (row[4], nil)
-	assert2 (row.f1, 'a')
-	assert2 (row.f2, 'b')
-	assert2 (row.f3, 'c')
-	assert2 (row.f4, 'd')
+	assert2 (nil, row[1])
+	assert2 (nil, row[2])
+	assert2 (nil, row[3])
+	assert2 (nil, row[4])
+	assert2 ('a', row.f1)
+	assert2 ('b', row.f2)
+	assert2 ('c', row.f3)
+	assert2 ('d', row.f4)
 	row, err = cur:fetch (row, "a")
-	assert (type(row), "table", err)
-	assert2 (row[1], nil)
-	assert2 (row[2], nil)
-	assert2 (row[3], nil)
-	assert2 (row[4], nil)
-	assert2 (row.f1, 'f')
-	assert2 (row.f2, 'g')
-	assert2 (row.f3, 'h')
-	assert2 (row.f4, 'i')
-	assert2 (cur:fetch(row, "a"), nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 (type(row), "table", err)
+	assert2 (nil, row[1])
+	assert2 (nil, row[2])
+	assert2 (nil, row[3])
+	assert2 (nil, row[4])
+	assert2 ('f', row.f1)
+	assert2 ('g', row.f2)
+	assert2 ('h', row.f3)
+	assert2 ('i', row.f4)
+	assert2 (nil, cur:fetch(row, "a"))
+	assert2 (1, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
-	cur, err = CONN:execute ("select f1, f2, f3, f4 from t")
-	assert (cur, err)
+	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
 	assert (getmetatable (cur), CUR_TYPE, "incorrect metatable")
 	local row, err = cur:fetch ({}, "an")
 	assert (type(row), "table", err)
-	assert2 (row[1], 'a')
-	assert2 (row[2], 'b')
-	assert2 (row[3], 'c')
-	assert2 (row[4], 'd')
-	assert2 (row.f1, 'a')
-	assert2 (row.f2, 'b')
-	assert2 (row.f3, 'c')
-	assert2 (row.f4, 'd')
+	assert2 ('a', row[1])
+	assert2 ('b', row[2])
+	assert2 ('c', row[3])
+	assert2 ('d', row[4])
+	assert2 ('a', row.f1)
+	assert2 ('b', row.f2)
+	assert2 ('c', row.f3)
+	assert2 ('d', row.f4)
 	row, err = cur:fetch (row, "an")
 	assert (type(row), "table", err)
-	assert2 (row[1], 'f')
-	assert2 (row[2], 'g')
-	assert2 (row[3], 'h')
-	assert2 (row[4], 'i')
-	assert2 (row.f1, 'f')
-	assert2 (row.f2, 'g')
-	assert2 (row.f3, 'h')
-	assert2 (row.f4, 'i')
-	assert2 (cur:fetch(row, "an"), nil)
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 ('f', row[1])
+	assert2 ('g', row[2])
+	assert2 ('h', row[3])
+	assert2 ('i', row[4])
+	assert2 ('f', row.f1)
+	assert2 ('g', row.f2)
+	assert2 ('h', row.f3)
+	assert2 ('i', row.f4)
+	assert2 (nil, cur:fetch(row, "an"))
+	assert2 (1, cur:close(), "couldn't close cursor")
 	-- clean the table.
-	cur, err = CONN:execute ("delete from t where f1 in ('a', 'f')")
-	assert2 (cur, 2, err)
+	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function rollback ()
+	CONN:setautocommit (false) -- begin transaction
+	assert2 (1, CONN:execute ("insert into t (f1) values ('a')"))
+	local cur = assert (CONN:execute ("select count(*) from t"))
+	assert2 (1, tonumber (cur:fetch ()), "Insert failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
+	CONN:rollback ()
+	cur = assert (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
+	CONN:setautocommit (true)
 end
 
 ---------------------------------------------------------------------
@@ -309,32 +232,39 @@ end
 ---------------------------------------------------------------------
 function column_info ()
 	-- insert elements.
-	local cur, err = CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')")
-	assert2 (cur, 1, err)
-	cur, err = CONN:execute ("select * from t")
-	assert (cur, err)
-	assert2 (getmetatable(cur), CUR_TYPE, "incorrect metatable")
+	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
+	local cur = assert (CONN:execute ("select f1,f2,f3,f4 from t"))
+	assert2 (CUR_TYPE, getmetatable(cur), "incorrect metatable")
 	local names, types = cur:getcolnames(), cur:getcoltypes()
-
-	assert2 (cur:close(), 1, "couldn't close cursor")
+	assert2 ("table", type(names), "getcolnames failed")
+	assert2 ("table", type(types), "getcoltypes failed")
+	assert2 (4, table.getn(names), "incorrect column names table")
+	assert2 (4, table.getn(types), "incorrect column types table")
+	for i = 1, table.getn(names) do
+		assert2 ("f"..i, names[i], "incorrect column names table")
+		--assert2 ("string", types[i], "incorrect column types table")
+		local type_i = types[i]
+		assert (type_i == "varchar (30)" or type_i == "string", "incorrect column types table")
+	end
+	assert2 (1, cur:close(), "couldn't close cursor")
 	-- clean the table.
-	cur, err = CONN:execute ("delete from t where f1 = 'a'")
-	assert2 (cur, 2, err)
+	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
 end
 
---[[
--- Column Information.
-cur, err = CONN:execute ("select count(*) as c from t where f1 like '%b%'")
-assert (getmetatable(cur) == CUR_TYPE, err)
-local num_rows = tonumber (cur:fetch())
-assert (cur:close() == 1, "couldn't close cursor object")
-cur, err = CONN:execute ("select f1, f2, f3 from t where f1 like '%b%'")
-assert (getmetatable(cur) == CUR_TYPE, err)
-local info, err = cur:colinfo ()
-assert (type(info) == "table", err)
-for i,v in info do print (i,v) end
-cur:close ()
---]]
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function drop_table ()
+	-- Postgres retorna 0, enquanto ODBC retorna -1.
+	assert (CONN:execute ("drop table t"))
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function close_conn ()
+	assert (1, CONN:close())
+	assert (1, ENV:close())
+end
+
 
 ---------------------------------------------------------------------
 tests = {
@@ -345,6 +275,7 @@ tests = {
 	{ "rollback", rollback },
 	{ "get column information", column_info },
 	{ "drop table", drop_table },
+	{ "close connection", close_conn },
 }
 
 ---------------------------------------------------------------------
