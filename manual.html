@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.3 2003/04/28 09:45:14 tomas Exp $>
+<!$Id: manual.html,v 1.4 2003/04/28 16:02:58 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -15,7 +15,7 @@ ul { list-style-type: disc };
 <table border=0 cellspacing=2 cellpadding=2>
 <tr><td align=center><a href="http://www.lua.org">
 <img border=0 alt="The Lua language" src="lua.png"></a>
-<tr><td align=center><big><b>LuaSQL</b></big>
+<tr><td align=center><big><b>LuaSQL Reference Manual</b></big>
 <tr><td align=center valign=top>Database connectivity for the Lua language
 </table>
 </center>
@@ -32,18 +32,6 @@ ul { list-style-type: disc };
 
 <hr>
 
-<h2>Contents</h2>
-<p>
-<ul>
-<li> <a href="#overview">Overview</a>
-<li> <a href="#environment">Environment class</a>
-<li> <a href="#connection">Connection class</a>
-<li> <a href="#cursor">Cursor class</a>
-<li> <a href="#examples">Examples</a>
-</ul>
-</p>
-
-
 <a name="overview"></a>
 <h2>Overview</h2>
 <p>
@@ -57,7 +45,7 @@ requires the built-in <tt>loadlib</tt> function Lua 5 offers).
 Both ways when the driver is loaded it creates a method in a table
 called <tt>luasql</tt>; this method has the same name of the driver
 (postgres, odbc etc.).
-This method is used to create an <a href="#environment">Environment
+This method is used to create an <a href="#environment_class">Environment
 object</a> which is the basis to do whatever is needed.
 </p><p>
 LuaSQL has a common API that all drivers must implement,
@@ -67,84 +55,91 @@ of each driver.
 </p>
 
 
-<a name="environment">
+<a name="environment_class">
 <h2>Environment class</h2>
 <p>
 An Environment object is created by calling the method with the
-same name of the driver it's used (odbc, postgres etc.).
-
-by calling <tt>sql[drivername] ()</tt>,
-where <tt>drivername</tt> is a string with the name of the driver.
-
-<h3>Fields</h3>
-
-==&gt; So' para o ODBC &lt;==
-<ul>
-<li> <tt>Version</tt><br>
-(ODBC only) The number of the version one
-requires the ODBC source to be compatible with. Should be set to either
-2 or 3. 
-</ul>
+same name of the driver (odbc, postgres etc.).
+For example, <tt>luasql.odbc()</tt>, will try to create an environment
+object using the ODBC driver.
+</p>
 
 <h4>Methods</h4>
 
 <ul>
+<a name="env_connect"></a>
 <li> <tt>connect (sourcename [, username [, password]])</tt> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
-<tt>username</tt> and <tt>password</tt> if they are supplied. <br>
+<tt>username</tt> and <tt>password</tt> if they are supplied.<br>
+Returns: a <a href="connection_class">Connection object</a>.
 <ul> PostgreSQL extension:
 <li> Two more optionsl parameters (hostname and port)
-<li> First string containing all connection info, as described in
-     the PostgreSQL manual ("host=&lt;sourcename&gt; port=&lt;port&gt;" etc.)
+<li> Just one string containing all connection info, as described in
+     the PostgreSQL manual ("host=&lt;<i>source name</i>&gt; port=&lt;<i>port number</i>&gt;" etc.)
 </ul>
-Returns: a Connection object.
+
+<a name="env_close"></a>
 <li> <tt>close ()</tt> <br>
 Closes this environment. Only successful if all connections pertaining to
 it were closed first.
 </ul>
 
-<h3><a name=con>Connection class</h3>
+<a name="connection_class">
+<h2>Connection class</h2>
 
 A Connection object contains specific attributes and parameters of a single
 data source connection.
-A Connection object is created by calling the <tt>Environment:connect</tt>
+A Connection object is created by calling the
+<tt><a href="#env_connect">environment:connect</a></tt>
 method.
 
 <h4>Methods</h4>
 
 <ul>
+<a name="conn_execute"></a>
 <li> <tt>execute (statement)</tt> <br>
-Executes the given SQL <tt>statement</tt>.
-Returns: a  Cursor object if  there are results,  or the number  of rows
-affected by the command otherwise.
+Executes the given SQL <tt>statement</tt>.<br>
+Returns: a <a href="cursor_class">Cursor object</a>
+if there are results, or the number of rows affected by the command otherwise.
 
+<a name="conn_setautocommit"></a>
 <li> <tt>setautocommit (boolean)</tt> <br>
 Turns on or off the "auto commit" mode.
 
+<!--
 <li> <tt>TableList()</tt> <br>==&gt; So' no ODBC &lt;==
 Retrieves a list of all the tables in the data source. <br>
 Returns: a list of the table names.
-
+</p>
+-->
+<a name="conn_commit"></a>
 <li> <tt>commit()</tt> <br>
 Commits the current transaction.
 
+<a name="conn_rollback"></a>
 <li> <tt>rollback()</tt> <br>
 Rolls back the current transaction.
 
+<a name="conn_close"></a>
 <li> <tt>close()</tt> <br>
-Closes this connection. 
+Closes this connection.
+Only successful if all cursors pertaining to it were closed first.
 </ul>
 
-<h3><a name=cur>Cursor class</h3>
+
+<a name="cursor_class"></a>
+<h3>Cursor class</h3>
 
 A Cursor object contains methods permitting the retrieval of 
 data resulting from an executed statement.
-A Cursor object is created by using the <tt>Connection:execute</tt>
+A Cursor object is created by using the
+<tt><a href="#conn_execute">Connection:execute</a></tt>
 function.
 
 <h4>Methods</h4>
 
 <ul>
+<a name="cur_fetch"></a>
 <li> <tt>fetch ([table[,modestring]])</tt> <br>
 Retrieves the next row of results.<br>
 If <tt>fetch</tt> is called without parameters,
@@ -164,7 +159,11 @@ This should improve the performance when retrieving many rows with many fields.<
 Returns: data, as above, or <tt>nil</tt> if there aren't any rows left
 followed by an error message if any.
 
-<li> <tt>Close()</tt> <br>
+<a name="cur_colinfo"></a>
+<li> <tt>colinfo()</tt> <br>
+
+<a name="cur_close"></a>
+<li> <tt>close()</tt> <br>
 Closes this cursor. 
 </ul>
 
@@ -248,16 +247,34 @@ because some drivers are case-insensitive whereas others are
 case-sensitive.
 </ul>
 
-<h2><a name=hist>History</h2>
+<h2>Contents</h2>
+<p>
+<ul>
+<li> <a href="#overview">Overview</a>
+<li> <a href="#environment_class">Environment class</a>
+  <ul>
+    <li> <a href="#env_close">close</a>
+    <li> <a href="#env_connect">connect</a>
+  </ul>
+<li> <a href="#connection_class">Connection class</a>
+  <ul>
+    <li> <a href="#conn_close">close</a>
+    <li> <a href="#conn_execute">execute</a>
+    <li> <a href="#conn_commit">commit</a>
+    <li> <a href="#conn_rollback">rollback</a>
+    <li> <a href="#conn_setautocommit">setautocommit</a>
+  </ul>
+<li> <a href="#cursor">Cursor class</a>
+  <ul>
+    <li> <a href="#cur_close">close</a>
+    <li> <a href="#cur_fetch">fetch</a>
+    <li> <a href="#cur_colinfo">colinfo</a>
+    <li> <a href="#cur_numrows">numrows</a>
+  </ul>
+<li> <a href="#examples">Examples</a>
+</ul>
+</p>
 
-LuaSQL   was  designed   by   Pedro  Miller   Rabinovitch  and   Roberto
-Ierusalimschy, sponsored by <a href="http://www.fabricadigital.com.br">
-Fábrica Digital</a>. The  first  implementation was  compatible with  Lua
-4.0a. The current ODBC driver has been adapted from the original version
-by Diego Nehab, and the PostgreSQL driver has been adapted by Roberto
-Ierusalimschy and Carlos Cassino.
-Version 1.1 was made by Diego Nehab, Eduardo Quint&atilde;o and
-Tom&aacute;s Guisasola.
 
 <p>
 <center>
