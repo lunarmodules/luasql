@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 #include <libpq-fe.h>
 
 #include <lua.h>
@@ -44,6 +45,9 @@ typedef struct {
 	int        curr_tuple;         /* next tuple to be read */
 	PGresult  *pg_res;
 } cur_data;
+
+
+typedef void (*creator) (lua_State *L, cur_data *cur);
 
 
 /*
@@ -94,7 +98,7 @@ static void pushvalue (lua_State *L, PGresult *res, int tuple, int i) {
 ** Get another row of the given cursor.
 */
 static int cur_fetch (lua_State *L) {
-	cur_data *cur = (cur_data *)getcursor (L);
+	cur_data *cur = getcursor (L);
 	PGresult *res = cur->pg_res;
 	int tuple = cur->curr_tuple;
 
@@ -151,9 +155,12 @@ static int cur_close (lua_State *L) {
 	PQclear(cur->pg_res);
 	cur->pg_res = NULL;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 	cur->conn = LUA_NOREF;
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	cur->colnames = LUA_NOREF;
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+	cur->coltypes = LUA_NOREF;
+
 	lua_pushnumber(L, 1);
 	return 1;
 }
@@ -188,48 +195,70 @@ static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
 
 
 /*
+** Creates the list of fields names and pushes it on top of the stack.
+*/
+static void create_colnames (lua_State *L, cur_data *cur) {
+	PGresult *result = cur->pg_res;
+	int i;
+	lua_newtable (L);
+	for (i = 1; i <= cur->numcols; i++) {
+		lua_pushstring (L, PQfname (result, i-1));
+		lua_rawseti (L, -2, i);
+	}
+}
+
+
+/*
+** Creates the list of fields types and pushes it on top of the stack.
+*/
+static void create_coltypes (lua_State *L, cur_data *cur) {
+	PGresult *result = cur->pg_res;
+	conn_data *conn;
+	char typename[100];
+	int i;
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+	if (!lua_isuserdata (L, -1))
+		luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
+	conn = (conn_data *)lua_touserdata (L, -1);
+	lua_newtable (L);
+	for (i = 1; i <= cur->numcols; i++) {
+		lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
+		lua_rawseti (L, -2, i);
+	}
+}
+
+
+/*
+** Pushes a column information table on top of the stack.
+** If the table isn't built yet, call the creator function and stores
+** a reference to it on the cursor structure.
+*/
+static void pushtable (lua_State *L, cur_data *cur, size_t off, creator func) {
+	int *ref = (int *)((char *)cur + off);
+	if (*ref != LUA_NOREF)
+		lua_rawgeti (L, LUA_REGISTRYINDEX, *ref);
+	else {
+		func (L, cur);
+		lua_pushvalue (L, -1);
+		*ref = luaL_ref (L, LUA_REGISTRYINDEX);
+	}
+}
+
+
+/*
 ** Return the list of field names.
-** The list is built when needed.
 */
 static int cur_getcolnames (lua_State *L) {
-	cur_data *cur = (cur_data *)getcursor (L);
-	if (cur->colnames != LUA_NOREF)
-		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
-	else {
-		PGresult *result = cur->pg_res;
-		int i;
-		lua_newtable (L);
-		for (i = 1; i <= cur->numcols; i++) {
-			lua_pushstring (L, PQfname (result, i-1));
-			lua_rawseti (L, -2, i);
-		}
-		lua_pushvalue (L, -1);
-		cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
-	}
+	pushtable (L, getcursor(L), offsetof(cur_data, colnames), create_colnames);
 	return 1;
 }
 
+
+/*
+** Return the list of field types.
+*/
 static int cur_getcoltypes (lua_State *L) {
-	cur_data *cur = (cur_data *)getcursor (L);
-	if (cur->coltypes != LUA_NOREF)
-		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
-	else {
-		PGresult *result = cur->pg_res;
-		conn_data *conn;
-		char typename[100];
-		int i;
-		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-		if (!lua_isuserdata (L, -1))
-			luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
-		conn = (conn_data *)lua_touserdata (L, -1);
-		lua_newtable (L);
-		for (i = 1; i <= cur->numcols; i++) {
-			lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
-			lua_rawseti (L, -2, i);
-		}
-		lua_pushvalue (L, -1);
-		cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
-	}
+	pushtable (L, getcursor(L), offsetof(cur_data, coltypes), create_coltypes);
 	return 1;
 }
 
@@ -238,8 +267,7 @@ static int cur_getcoltypes (lua_State *L) {
 ** Push the number of rows.
 */
 static int cur_numrows (lua_State *L) {
-	cur_data *cur = (cur_data *)getcursor (L);
-	lua_pushnumber (L, PQntuples (cur->pg_res));
+	lua_pushnumber (L, PQntuples (getcursor(L)->pg_res));
 	return 1;
 }
 
@@ -247,7 +275,7 @@ static int cur_numrows (lua_State *L) {
 /*
 ** Create a new Cursor object and push it on top of the stack.
 */
-static int create_cursor  (lua_State *L, int conn, PGresult *result) {
+static int create_cursor (lua_State *L, int conn, PGresult *result) {
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_PG);
 
@@ -312,7 +340,7 @@ static int conn_close (lua_State *L) {
 ** return the number of tuples affected by the statement.
 */
 static int conn_execute (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
+	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
 	PGresult *res;
 	res = PQexec(conn->pg_conn, statement);
@@ -333,31 +361,10 @@ static int conn_execute (lua_State *L) {
 
 
 /*
-** Creates a table with the names of all database tables.
-*/
-/*
-static int sqlConnTableList (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
-	PGresult *pg_res = PQexec(conn->pg_conn,
-		"SELECT relname FROM pg_class WHERE relkind = 'r' AND "
-		"relowner != (SELECT relowner FROM pg_class WHERE relname = 'pg_class');");
-	int numtables = PQntuples(pg_res);
-	int i;
-	lua_newtable(L);
-	for (i=0; i < numtables; i++) {
-		lua_pushstring(L, PQgetvalue(pg_res, i, 0));
-		lua_rawseti(L, -2, i+1);
-	}
-	return 1;
-}
-*/
-
-
-/*
 ** Commit the current transaction.
 */
 static int conn_commit (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
+	conn_data *conn = getconnection (L);
 	sql_commit(conn);
 	if (conn->auto_commit == 0) 
 		sql_begin(conn); 
@@ -369,7 +376,7 @@ static int conn_commit (lua_State *L) {
 ** Rollback the current transaction.
 */
 static int conn_rollback (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
+	conn_data *conn = getconnection (L);
 	sql_rollback(conn);
 	if (conn->auto_commit == 0) 
 		sql_begin(conn); 
@@ -383,7 +390,7 @@ static int conn_rollback (lua_State *L) {
 ** If 'false', then start a new transaction.
 */
 static int conn_setautocommit (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
+	conn_data *conn = getconnection (L);
 	if (lua_toboolean (L, 2)) {
 		conn->auto_commit = 1;
 		sql_rollback(conn); /* Undo active transaction. */
@@ -429,7 +436,7 @@ static void notice_processor (void *arg, const char *message) {
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
-	env_data *env = (env_data *) getenvironment (L);
+	env_data *env = getenvironment (L);
 	const char *sourcename = luaL_checkstring(L, 2);
 	PGconn *conn;
 
@@ -481,7 +488,6 @@ static void create_metatables (lua_State *L) {
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
-        /*{"TableList", sqlConnTableList},*/
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
