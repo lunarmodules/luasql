@@ -52,6 +52,7 @@ typedef struct {
 	int colinfo;              /* reference to column information table */
 } cur_data;
 
+
 /* we are lazy */
 #define hENV SQL_HANDLE_ENV
 #define hSTMT SQL_HANDLE_STMT
@@ -267,8 +268,9 @@ static int cur_fetch (lua_State *L) {
 	if (lua_istable (L, 2)) {
 		SQLUSMALLINT i;
 		const char *opts = luaL_optstring (L, 3, "n");
+/*
 		if (strchr (opts, 'n') != NULL)
-			/* Copy values to numerical indices */
+			*//* Copy values to numerical indices *//*
 			for (i = 1; i <= cur->numcols; i++) {
 				ret = push_column (L, cur->colinfo, hstmt, i);
 				if (ret)
@@ -276,15 +278,32 @@ static int cur_fetch (lua_State *L) {
 				lua_rawseti (L, 2, i);
 			}
 		if (strchr (opts, 'a') != NULL)
-			/* Copy values to alphanumerical indices */
+			*//* Copy values to alphanumerical indices *//*
 			for (i = 1; i <= cur->numcols; i++) {
 				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colinfo);
 				lua_rawgeti (L, -1, i);
 				ret = push_column (L, cur->colinfo, hstmt, i);
 				if (ret)
 					return ret;
-				lua_rawseti (L, 2, i);
+				lua_rawset (L, 2);
 			}
+*/
+		int num = strchr (opts, 'n') != NULL;
+		int alpha = strchr (opts, 'a') != NULL;
+		for (i = 1; i <= cur->numcols; i++) {
+			ret = push_column (L, cur->colinfo, hstmt, i);
+			if (ret)
+				return ret;
+			if (alpha) {
+				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colinfo);
+				lua_rawgeti (L, -1, i);
+				lua_pushvalue (L, -3);
+				lua_rawset (L, 2);
+				lua_pop (L, 1);	/* pops colinfo table */
+			}
+			if (num)
+				lua_rawseti (L, 2, i);
+		}
 		lua_pushvalue (L, 2);
 		return 1;	/* return table */
 	}
@@ -418,6 +437,37 @@ static int create_cursor (lua_State *L, conn_data *conn,
 
 
 /*
+** Closes a connection.
+*/
+static int conn_close (lua_State *L) {            
+	SQLRETURN ret;
+	env_data *env;
+    conn_data *conn = (conn_data *) luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
+	if (conn->closed)
+		return 0;
+	if (conn->cur_counter > 0)
+		return luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
+
+	/* Decrement parent's connection counter. */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+	env = (env_data *)lua_touserdata (L, -1);
+	env->conn_counter--;
+	/* Nullify structure fields. */
+	conn->closed = 1;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	conn->env = LUA_NOREF;
+	ret = SQLDisconnect(conn->hdbc);
+	if (error(ret))
+		return fail(L, hDBC, conn->hdbc);
+	ret = SQLFreeHandle(hDBC, conn->hdbc);
+	if (error(ret))
+		return fail(L, hDBC, conn->hdbc);
+	conn->hdbc = NULL;
+    return pass(L);
+}
+
+
+/*
 ** Executes a SQL statement.
 ** Returns
 **   cursor object: if there are results or
@@ -452,9 +502,11 @@ static int conn_execute (lua_State *L) {
 		SQLFreeHandle(hSTMT, hstmt);
 		return ret;
 	}
-	if (numcols > 0)
+	if (numcols > 0) {
     	/* if there is a results table (e.g., SELECT) */
+		conn->cur_counter++;
 		return create_cursor (L, conn, hstmt, numcols);
+	}
 	else {
 		/* if action has no results (e.g., UPDATE) */
 		SQLINTEGER numrows;
@@ -467,36 +519,6 @@ static int conn_execute (lua_State *L) {
 		lua_pushnumber(L, numrows);
 		return 1;
 	}
-}
-
-/*
-** Closes a connection.
-*/
-static int conn_close (lua_State *L) {            
-	SQLRETURN ret;
-	env_data *env;
-    conn_data *conn = (conn_data *) luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
-	if (conn->closed)
-		return 0;
-	if (conn->cur_counter > 0)
-		return luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
-
-	/* Decrement parent's connection counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = (env_data *)lua_touserdata (L, -1);
-	env->conn_counter--;
-	/* Nullify structure fields. */
-	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	conn->env = LUA_NOREF;
-	ret = SQLDisconnect(conn->hdbc);
-	if (error(ret))
-		return fail(L, hDBC, conn->hdbc);
-	ret = SQLFreeHandle(hDBC, conn->hdbc);
-	if (error(ret))
-		return fail(L, hDBC, conn->hdbc);
-	conn->hdbc = NULL;
-    return pass(L);
 }
 
 /*------------------------------------------------------------------*\
@@ -660,8 +682,8 @@ static int env_close (lua_State *L) {
 	if (env->conn_counter > 0)
 		luaL_error (L, LUASQL_PREFIX"unexpected error (EnvClose)");
 
-	ret = SQLFreeHandle (hENV, env->henv);
 	env->closed = 1;
+	ret = SQLFreeHandle (hENV, env->henv);
 	if (error(ret)) {
 		int ret = fail(L, hENV, env->henv);
 		env->henv = NULL;
@@ -673,7 +695,7 @@ static int env_close (lua_State *L) {
 /*
 ** Create metatables for each class of object.
 */
-static void createmetatables (lua_State *L) {
+static void create_metatables (lua_State *L) {
 	struct luaL_reg environment_methods[] = {
 		{"close", env_close},
 		{"connect", env_connect},
@@ -682,9 +704,9 @@ static void createmetatables (lua_State *L) {
 	struct luaL_reg connection_methods[] = {
 		{"close", conn_close},
 		/*{"TableList", sqlConnTableList},*/
+		{"execute", conn_execute},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
-		{"execute", conn_execute},
 		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
 	};
@@ -734,7 +756,7 @@ LUASQL_API int luasql_libopen_odbc(lua_State *L) {
 	lua_pushcfunction(L, create_environment); 
 	lua_settable(L, -3); 
 
-	createmetatables (L);
+	create_metatables (L);
 
 	return 0;
 } 
