@@ -22,7 +22,7 @@ JARSDIR= .
 PACKAGENAME= luasql
 
 
-jdbc:
+jdbc_driver:
 	rm -rf $(JDBC_BUILD)
 	mkdir $(JDBC_BUILD)
 	for i in $(SUBDIRS);  \
