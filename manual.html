@@ -226,20 +226,19 @@ The mode string can contain:
   <li> <b>"n"</b> the resulting table will have numerical indices (default)
   <li> <b>"a"</b> the resulting table will have alphanumerical indices
 </ul>
-The <i>numerical indices</i> are the positions of the fields in the select
+The <em>numerical indices</em> are the positions of the fields in the select
 statement;
-the <i>alphanumerical indices</i> are the names of the fields.<br>
+the <em>alphanumerical indices</em> are the names of the fields.<br>
 The optional <code>table</code> parameter is a table that should be
 used to store the next row.
 This allows the use of a unique table for many fetches which
 can improve the overall performance.<br>
-There is no guarantee about the types of the results
--- they can be converted to adequate Lua types by the driver or not.
-<i>In the current implementation,
+There is no guarantee about the types of the results, they can be converted to adequate Lua types by the driver or not.
+In the current implementation,
 the PostgreSQL and MySQL drivers returns all values as strings
-while the ODBC and Oracle drivers converts them to Lua types</i>.<br>
+while the ODBC and Oracle drivers converts them to Lua types.<br>
 Returns: data, as above, or <code>nil</code> if there are no more rows.
-<em>Note that this method could return <code>nil</code> as a valid result.</em></li>
+Note that this method could return <code>nil</code> as a valid result.</li>
 
 <a name="cur_colnames"></a>
 <li> <b><code>cur:getcolnames()</code></b> <br>
@@ -248,7 +247,6 @@ Returns: a list (table) of column names.</li>
 <a name="cur_coltypes"></a>
 <li> <b><code>cur:getcoltypes()</code></b> <br>
 Returns: a list (table) of column types.</li>
-
 </ul>
 
 
@@ -267,7 +265,7 @@ the Postgres driver also offers these extra features:</p>
     Also, the first parameter can contain all connection information,
     as stated in the documentation for <code>PQconnectdb</code> function
     in the PostgreSQL manual
-    (e.g. <small><code>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</code></small>) <br>
+    (e.g. <small><code>environment:connect("dbname=&lt;<em>name</em>&gt; user=&lt;<em>username</em>&gt;")</code></small>) <br>
     See also: <a href="#environment_object">environment objects</a><br>
     Returns: a <a href="#connection_object">connection object</a></li>
 
@@ -441,7 +439,7 @@ end
 
 <hr>
 <small>
-$Id: manual.html,v 1.34 2005/03/07 03:26:13 carregal Exp $
+$Id: manual.html,v 1.35 2005/03/07 03:34:28 carregal Exp $
 </small>
 
 </body>
