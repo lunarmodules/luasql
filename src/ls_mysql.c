@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
-** $Id: ls_mysql.c,v 1.4 2003/07/28 20:10:12 eduquintao Exp $
+** $Id: ls_mysql.c,v 1.5 2003/08/14 14:32:06 eduquintao Exp $
 */
 
 #include <assert.h>
@@ -28,7 +28,6 @@ typedef struct {
 typedef struct {
 	short      closed;
 	int        env;                /* reference to environment */
-	int        auto_commit;        /* 0 for manual commit */
 	MYSQL     *my_conn;
 } conn_data;
 
@@ -99,6 +98,62 @@ static void pushvalue (lua_State *L, void *row, long int len) {
 		lua_pushnil (L);
 	else
 		lua_pushlstring (L, row, len);
+}
+
+
+/*
+** Get the internal database type of the given column.
+*/
+static char *getcolumntype (enum enum_field_types type) {
+
+	switch (type) {
+		case MYSQL_TYPE_VAR_STRING: case MYSQL_TYPE_STRING:
+			return "string";
+		case MYSQL_TYPE_DECIMAL: case MYSQL_TYPE_SHORT: case MYSQL_TYPE_LONG:
+		case MYSQL_TYPE_FLOAT: case MYSQL_TYPE_DOUBLE: case MYSQL_TYPE_LONGLONG:
+		case MYSQL_TYPE_INT24: case MYSQL_TYPE_YEAR: case MYSQL_TYPE_TINY: 
+			return "number";
+		case MYSQL_TYPE_TINY_BLOB: case MYSQL_TYPE_MEDIUM_BLOB:
+		case MYSQL_TYPE_LONG_BLOB: case MYSQL_TYPE_BLOB:
+			return "binary";
+		case MYSQL_TYPE_DATE: case MYSQL_TYPE_NEWDATE:
+			return "date";
+		case MYSQL_TYPE_DATETIME:
+			return "datetime";
+		case MYSQL_TYPE_TIME:
+			return "time";
+		case MYSQL_TYPE_TIMESTAMP:
+			return "timestamp";
+		case MYSQL_TYPE_ENUM: case MYSQL_TYPE_SET:
+			return "set";
+		case MYSQL_TYPE_NULL:
+			return "null";
+		default:
+			return "undefined";
+	}
+}
+
+
+/*
+** Creates the lists of fields names and fields types.
+*/
+static void create_colinfo (lua_State *L, cur_data *cur) {
+	MYSQL_FIELD *fields;
+	char typename[50];
+	int i;
+	fields = mysql_fetch_fields(cur->my_res);
+	lua_newtable (L); /* names */
+	lua_newtable (L); /* types */
+	for (i = 1; i <= cur->numcols; i++) {
+		lua_pushstring (L, fields[i-1].name);
+		lua_rawseti (L, -3, i);
+		sprintf (typename, "%.20s(%ld)", getcolumntype (fields[i-1].type), fields[i-1].length);
+		lua_pushstring(L, typename);
+		lua_rawseti (L, -2, i);
+	}
+	/* Stores the references in the cursor structure */
+	cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
 }
 
 
@@ -177,62 +232,6 @@ static int cur_close (lua_State *L) {
 
 	lua_pushnumber(L, 1);
 	return 1;
-}
-
-
-/*
-** Get the internal database type of the given column.
-*/
-static char *getcolumntype (enum enum_field_types type) {
-
-	switch (type) {
-		case MYSQL_TYPE_VAR_STRING: case MYSQL_TYPE_STRING:
-			return "string";
-		case MYSQL_TYPE_DECIMAL: case MYSQL_TYPE_SHORT: case MYSQL_TYPE_LONG:
-		case MYSQL_TYPE_FLOAT: case MYSQL_TYPE_DOUBLE: case MYSQL_TYPE_LONGLONG:
-		case MYSQL_TYPE_INT24: case MYSQL_TYPE_YEAR: case MYSQL_TYPE_TINY: 
-			return "number";
-		case MYSQL_TYPE_TINY_BLOB: case MYSQL_TYPE_MEDIUM_BLOB:
-		case MYSQL_TYPE_LONG_BLOB: case MYSQL_TYPE_BLOB:
-			return "binary";
-		case MYSQL_TYPE_DATE: case MYSQL_TYPE_NEWDATE:
-			return "date";
-		case MYSQL_TYPE_DATETIME:
-			return "datetime";
-		case MYSQL_TYPE_TIME:
-			return "time";
-		case MYSQL_TYPE_TIMESTAMP:
-			return "timestamp";
-		case MYSQL_TYPE_ENUM: case MYSQL_TYPE_SET:
-			return "set";
-		case MYSQL_TYPE_NULL:
-			return "null";
-		default:
-			return "undefined";
-	}
-}
-
-
-/*
-** Creates the lists of fields names and fields types.
-*/
-static void create_colinfo (lua_State *L, cur_data *cur) {
-	MYSQL_FIELD *fields;
-	char typename[50];
-	int i;
-	fields = mysql_fetch_fields(cur->my_res);
-	lua_newtable (L); /* names */
-	lua_newtable (L); /* types */
-	for (i = 1; i <= cur->numcols; i++) {
-		lua_pushstring (L, fields[i-1].name);
-		lua_rawseti (L, -3, i);
-		sprintf (typename, "%.20s(%ld)", getcolumntype (fields[i-1].type), fields[i-1].length);
-		lua_pushstring(L, typename);
-		lua_rawseti (L, -2, i);
-	}
-	/* Stores the references in the cursor structure */
-	cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
-	cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
 }
 
 
@@ -323,7 +322,8 @@ static int conn_execute (lua_State *L) {
 	if (!mysql_real_query(conn->my_conn, statement, st_len)) {
 		unsigned int num_cols;
 		MYSQL_RES *res;
-		res = mysql_use_result(conn->my_conn);
+		/*-- res = mysql_use_result(conn->my_conn);*/
+		res = mysql_store_result(conn->my_conn);
 		num_cols = mysql_field_count(conn->my_conn);
 
 		if (res) { /* tuples returned */
@@ -370,11 +370,9 @@ static int conn_rollback (lua_State *L) {
 static int conn_setautocommit (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	if (lua_toboolean (L, 2)) {
-		conn->auto_commit = 1;
 		mysql_autocommit(conn->my_conn, 1); /* Set it ON */
 	}
 	else {
-		conn->auto_commit = 0;
 		mysql_autocommit(conn->my_conn, 0);
 	}
 	return 0;
@@ -391,7 +389,6 @@ static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 	/* fill in structure */
 	conn->closed = 0;
 	conn->env = LUA_NOREF;
-	conn->auto_commit = 1;
 	conn->my_conn = my_conn;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
