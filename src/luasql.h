@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.h,v 1.8 2003/12/01 16:08:38 tomas Exp $
+** $Id: luasql.h,v 1.9 2004/10/15 12:19:35 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -23,6 +23,5 @@ typedef struct {
 LUASQL_API int luasql_faildirect (lua_State *L, const char *err);
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
-LUASQL_API void luasql_getlibtable (lua_State *L);
 
 #endif

@@ -504,7 +504,7 @@ datasource = arg[2] or "luasql-test"
 username = arg[3] or nil
 password = arg[4] or nil
 
-require (driver)
+require ("luasql."..driver)
 assert (luasql, "no luasql table")
 
 for i = 1, table.getn (tests) do

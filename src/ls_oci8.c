@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.21 2004/09/20 13:05:08 tuler Exp $
+** $Id: ls_oci8.c,v 1.22 2004/10/15 12:19:35 tomas Exp $
 */
 
 #include <assert.h>
@@ -18,6 +18,7 @@
 
 #include <lua.h>
 #include <lauxlib.h>
+#include <compat-5.1.h>
 
 #include "luasql.h"
 
@@ -840,33 +841,12 @@ static void create_metatables (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasqloracle (lua_State *L) {
-	const char *name;
-	int luasql;
-	luasql_getlibtable (L);
-	lua_pushstring(L, "oracle");
-	lua_pushcfunction(L, create_environment);
-	lua_settable(L, -3);
-	luasql = lua_gettop (L);
-
+LUASQL_API int luaopen_luasqloci8 (lua_State *L) {
+	struct luaL_reg driver[] = {
+		{"oci8", create_environment},
+		{NULL, NULL},
+	};
 	create_metatables (L);
-
-	/* if Lua 5.0 then Set package.loaded[name] = luasql */
-	if (lua_isstring(L, 1))
-		name = lua_tostring (L, 1);
-	else {
-		lua_getglobal (L, "arg");
-		lua_rawgeti (L, -1, 1);
-		name = lua_tostring (L, -1);
-		lua_pop (L, 2);
-	}
-	lua_getglobal (L, "package");
-	lua_pushliteral (L, "loaded");
-	lua_gettable (L, -2);
-	lua_pushstring (L, name);
-	lua_pushvalue (L, luasql);
-	lua_settable (L, -3); /* package.loaded[name] = luasql */
-	lua_pop (L, 2);
-
+	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
 	return 1;
 }

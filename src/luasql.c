@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.11 2003/12/01 16:08:38 tomas Exp $
+** $Id: luasql.c,v 1.12 2004/10/15 12:19:35 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -7,6 +7,7 @@
 
 #include <lua.h>
 #include <lauxlib.h>
+#include <compat-5.1.h>
 
 #include "luasql.h"
 
@@ -74,18 +75,4 @@ LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 	luaL_getmetatable (L, name);
 	lua_setmetatable (L, -2);
-}
-
-
-/*
-** Push the library table onto the stack.
-** If it does not exist, create one.
-*/
-LUASQL_API void luasql_getlibtable (lua_State *L) {
-	lua_getglobal(L, LUASQL_TABLENAME);
-	if (lua_isnil (L, -1)) {
-		lua_newtable (L);
-		lua_pushvalue (L, -1);
-		lua_setglobal (L, LUASQL_TABLENAME);
-	}
 }
