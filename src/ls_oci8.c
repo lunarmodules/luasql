@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.20 2004/09/17 15:37:30 tomas Exp $
+** $Id: ls_oci8.c,v 1.21 2004/09/20 13:05:08 tuler Exp $
 */
 
 #include <assert.h>
@@ -78,9 +78,6 @@ typedef struct {
 
 int checkerr (lua_State *L, sword status, OCIError *errhp);
 #define ASSERT(L,exp,err) {sword s = exp; if (s) return checkerr (L, s, err);}
-
-
-LUASQL_API int luasql_libopen_oracle (lua_State *L);
 
 
 /*
@@ -162,7 +159,7 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 ** Copy the column name to the column structure and convert it to lower case.
 */
 static void copy_column_name (column_data *col, text *name) {
-	int i;
+	unsigned int i;
 	col->name = (text *)malloc (col->namelen);
 	memcpy (col->name, name, col->namelen);
 	for (i = 0; i < col->namelen; i++)
