@@ -72,22 +72,22 @@ function luasql.ado()
         if not self then error("You must provide a self parameter") end
     
         if isClosed then
-            return false, "Environment closed."
+            error("Environment closed")
         end
         
-        if sourcestr == nil then
-            return false, "Invalid sourcename."
+        if type(sourcestr) ~= "string" then
+            error("Sourcename must be a string")
         end
 
         local conn = luacom.CreateObject("ADODB.Connection")
         local ok, errmsg = pcall(conn.Open, conn, sourcestr, user, pass, opts)
                 
         if not ok then
-            return false, errmsg
+            nil, errmsg
         end
         
         if conn.State == 0 then
-            return nil
+            return nil, "Invalid sourcename"
         end
           
         openConns[conn] = true
@@ -145,7 +145,7 @@ function Private.createConnection(conObj, closeFunc)
         if not self then error("You must provide a self parameter") end
 
         if isClosed then
-          return false, "Connection closed."
+          error("Connection closed")
         end          
           
         local cond, err = pcall(conObj.CommitTrans, conObj)
@@ -165,12 +165,12 @@ function Private.createConnection(conObj, closeFunc)
         if not self then error("You must provide a self parameter") end
 
         if isClosed then
-          return false, "Connection closed."
+          error("Connection closed")
         end          
         
         local cond, res, upcount = pcall(conObj.Execute, conObj, sql)
         if not cond then
-            return false, res
+            return nil, res
         end
         
         if not upcount then upcount = 0 end
@@ -178,7 +178,7 @@ function Private.createConnection(conObj, closeFunc)
         if autocommit then
           local cond, err = con:commit()
           if not cond then
-            return false, err
+            return nil, err
           end
         end
 
@@ -197,7 +197,7 @@ function Private.createConnection(conObj, closeFunc)
         if not self then error("You must provide a self parameter") end
 
         if isClosed then
-          return false, "Connection closed."
+          error("Connection closed")
         end          
           
         local cond, err = pcall(conObj.RollbackTrans, conObj)
@@ -215,6 +215,10 @@ function Private.createConnection(conObj, closeFunc)
     
     function con:setautocommit(bool)
         if not self then error("You must provide a self parameter") end
+
+        if isClosed then
+          error("Connection closed")
+        end          
 
         local cond, err = pcall(conObj.CommitTrans, conObj)
         if not cond then
@@ -265,10 +269,14 @@ function Private.createCursor(rs, con, closeFunc)
     function res:fetch(tb, modestring)
         if not self then error("You must provide a self parameter") end
 
+        if isClosed then
+          error("Cursor closed")
+        end          
+
         local arg_tb = tb
     
         if cursor.EOF then
-          return nil
+          return nil, "End of cursor reached"
         end
         
         if tb == nil or type(tb) ~= "table" then
@@ -282,7 +290,7 @@ function Private.createCursor(rs, con, closeFunc)
         for i = 0, cursor.Fields.Count-1 do
           local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
           if not cond then
-            return field
+            return nil, field
           end
           if modestring == "n" or modestring == "an" or modestring == "na" then
             tb[i+1] = field.Value
@@ -293,7 +301,7 @@ function Private.createCursor(rs, con, closeFunc)
         end
         local cond, err = pcall(cursor.MoveNext, cursor)
         if not cond then
-            return false, err
+            return nil, err
         end
         
         if modestring == "n" and not arg_tb then
@@ -306,6 +314,10 @@ function Private.createCursor(rs, con, closeFunc)
     function res:getcolnames()
         if not self then error("You must provide a self parameter") end
 
+        if isClosed then
+          error("Cursor closed")
+        end          
+
         if col_names then return col_names end
         
         col_names = {}
@@ -314,7 +326,7 @@ function Private.createCursor(rs, con, closeFunc)
         for i = 0, cursor.Fields.Count-1 do
           local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
           if not cond then
-            return field
+            return nil, field
           end
           tb[i+1] = field.Name
         end
@@ -325,6 +337,10 @@ function Private.createCursor(rs, con, closeFunc)
     function res:getcoltypes()
         if not self then error("You must provide a self parameter") end
 
+        if isClosed then
+          error("Cursor closed")
+        end          
+
         if col_types then return col_types end
         
         col_types = {}
@@ -333,7 +349,7 @@ function Private.createCursor(rs, con, closeFunc)
         for i = 0, cursor.Fields.Count-1 do
           local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
           if not cond then
-            return field
+            return nil, field
           end
           tb[i+1] = ADOTypes[field.Type]
         end
