@@ -31,7 +31,7 @@ DRIVER_INCS= -I/usr/local/pgsql/include
 #DRIVER_INCS= -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
 
 # MySQL
-#DRIVER_LIBS= -L/usr/local/mysql/lib -lmysqlclient
+#DRIVER_LIBS= -L/usr/local/mysql/lib -lmysqlclient -lz
 #DRIVER_INCS= -I/usr/local/mysql/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
