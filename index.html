@@ -79,7 +79,7 @@
 <p>
 LuaSQL is a simple interface from Lua to a DBMS. It enables a Lua program to:
 <ul>
-	<li> Connect to ODBC, Oracle, MySQL, SQLite, JDBC and PostgreSQL databases;</li>
+	<li> Connect to ODBC, ADO, Oracle, MySQL, SQLite, JDBC, and PostgreSQL databases;</li>
 	<li> Execute arbitrary SQL statements;</li>
 	<li> Retrieve results in a row-by-row cursor fashion.</li>
 </ul>
@@ -100,7 +100,8 @@ The MySQL driver has been tested on Linux and is compatible with versions 4.0
 and 4.1.
 The Oracle driver has been tested on Windows and is compatible with OCI 8 API.
 The SQLite driver had been tested on Linux and are compatible with versions 2.x.
-The JDBC driver has been tested with LuaJava Beta 3 and JDK 1.4 (MySQL driver).
+The JDBC driver has been tested with LuaJava Beta 3 and JDK 1.4 (MySQL driver). 
+The ADO driver has been tested on Windows, with LuaCOM 1.3 (Microsoft Access driver).
 </p>
 
 <a name=download></a>
@@ -170,6 +171,9 @@ In order to use LuaSQL over JDBC, make sure that:
   <li> JDBC driver of the desired database is also in the virtual machine classpath
 </ul>
 
+<p>In order to use LuaSQL over ADO, make sure that Lua is running with
+ <a href="http://www.tecgraf.puc-rio.br/~rcerq/luacom">LuaCOM 1.3</a></p>
+
 
 <a name="credits"></a> 
 
@@ -183,7 +187,7 @@ and Tom&aacute;s Guisasola as part of the
 The implementation is compatible with Lua 5.0 and was coded by
 Tom&aacute;s Guisasola, Eduardo Quint&atilde;o and Thiago Ponte,
 with many invaluable contributions by Michael Roth, Tiago Dionisio,
-Leonardo Godinho and Danilo Tuler.
+Leonardo Godinho, Danilo Tuler, and Fabio Mascarenhas.
 
 <h4>LuaSQL 1.0</h4>
 <p>
@@ -223,7 +227,7 @@ Comments are welcome!
 
 <hr>
 <small>
-$Id: index.html,v 1.36 2004/12/22 15:27:56 tomas Exp $
+$Id: index.html,v 1.37 2005/02/28 19:48:10 mascarenhas Exp $
 </small>
 
 </body>

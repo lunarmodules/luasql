@@ -1,7 +1,7 @@
 #!/usr/local/bin/lua
 -- See Copyright Notice in license.html
 
-TOTAL_FIELDS = 800
+TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
 
 ---------------------------------------------------------------------
@@ -23,7 +23,7 @@ end
 ---------------------------------------------------------------------
 function test_object (obj, objmethods)
 	-- checking object type.
-	assert2 ("userdata", type(obj), "incorrect object type")
+	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type")
 	-- trying to get metatable.
 	assert2 ("LuaSQL: you're not allowed to get this metatable",
 		getmetatable(obj), "error permitting access to object's metatable")
@@ -427,7 +427,7 @@ function column_info ()
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
 		local type_i = string.gsub(types[i], "%s+", "")
-		assert (type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
+		assert (type_i == "adWVarChar" or type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
@@ -459,6 +459,8 @@ function check_close()
 	collectgarbage ()
 	CONN_OK (a.CONN)
 	a.cur = cur
+        a.cur:close()
+        a.CONN:close()
 	cur = nil
 	collectgarbage ()
 	assert2(nil, a.cur, "cursor not collected")
@@ -470,6 +472,7 @@ end
 ---------------------------------------------------------------------
 function drop_table ()
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
+        CONN:setautocommit(true)
 	assert (CONN:execute ("drop table t"))
 end
 
