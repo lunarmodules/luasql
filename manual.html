@@ -1,3 +1,4 @@
+<!doctype html public "-//W3C//DTD HTML 3.2//EN">
 <html>
 <head>
     <title>LuaSQL: Database connectivity for the Lua programming language</title>
@@ -44,18 +45,16 @@
 
 <a name="introduction"></a>
 <h2>Introduction</h2>
-<p>
-LuaSQL is a simple interface from Lua to a DBMS.
+<p>LuaSQL is a simple interface from Lua to a DBMS.
 It has a collection of drivers to some popular databases
 (actually PostgreSQL, ODBC, JDBC, MySQL, SQLite, Oracle, and ADO;
  Interbase and Sybase are on our plans).
 LuaSQL defines a simple object-oriented API.
 All drivers should implement this common API,
-but each one is free to offer extensions.
-</p>
-<p>
-LuaSQL defines one single global variable,
-a table called <tt>luasql</tt>.
+but each one is free to offer extensions.</p>
+
+<p>LuaSQL defines one single global variable,
+a table called <code>luasql</code>.
 This table is used to store the initialization methods of the
 loaded drivers.
 These methods are used to create an
@@ -84,7 +83,7 @@ inside the database client or inside LuaSQL driver.
 <p>
 Errors like mal-formed SQL statement, unknown table name etc.
 are called <em>database errors</em> and
-will be reported by the function/method returning <tt>nil</tt> followed
+will be reported by the function/method returning <code>nil</code> followed
 by the error message provided by the database system.
 Errors like wrong parameters, absent connection, invalid objects etc.,
 called <em>API errors</em>,
@@ -98,21 +97,19 @@ described in this document unless otherwise stated.
 
 <a name="environment_object"></a>
 <h2>Environment Objects</h2>
-<p>
-An environment object is created by calling the driver's initialization
-function that is stored into the table <tt>luasql</tt> with the same
-name of the driver (odbc, postgres etc.).
-For example,
-<pre>
+<p>An environment object is created by calling the driver's initialization
+function that is stored into the table <code>luasql</code> with the same
+name of the driver (odbc, postgres etc). For example,
+<pre class="example">
 env = luasql.odbc()
 </pre>
-will try to create an environment object using the ODBC driver.
+<p>will try to create an environment object using the ODBC driver.
 The only exception is the JDBC driver which should know which 
 internal driver to use. Therefore when creating an environment, 
 the driver class name must be passed as the first parameter to the function 
-<code>luasql.jdbc</code>.
-For example:
-<pre>
+<code>luasql.jdbc</code>. For example:</p>
+
+<pre class="example">
 env = luasql.jdbc ("com.mysql.jdbc.Driver")
 </pre>
 </p>
@@ -121,21 +118,21 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
 
 <ul>
 <a name="env_close"></a>
-<li> <b><tt>env:close()</tt></b> <br>
-Closes the environment <tt>env</tt>.
+<li> <b><code>env:close()</code></b> <br>
+Closes the environment <code>env</code>.
 Only successful if all connections pertaining to it were closed first.<br>
 Returns: <code>true</code> in case of success; <code>false</code> when
 the object is already closed.</li>
 
 <a name="env_connect"></a>
-<li> <b><tt>env:connect(sourcename[,username[,password]])</tt></b> <br>
-Connects to a data source specified in <tt>sourcename</tt> using 
-<tt>username</tt> and <tt>password</tt> if they are supplied.<br>
-The <tt>sourcename</tt> may vary according to each driver.
+<li> <b><code>env:connect(sourcename[,username[,password]])</code></b> <br>
+Connects to a data source specified in <code>sourcename</code> using 
+<code>username</code> and <code>password</code> if they are supplied.<br>
+The <code>sourcename</code> may vary according to each driver.
 Some use a simple database name, like PostgreSQL, MySQL and SQLite;
 the ODBC driver expects the name of the DSN;
 the Oracle driver expects the service name;
-the JDBC driver expects a string like <tt>"jdbc:&lt;database system&gt;://&lt;database name&gt;"</tt>, which is specific for each driver.<br>
+the JDBC driver expects a string like <code>"jdbc:&lt;database system&gt;://&lt;database name&gt;"</code>, which is specific for each driver.<br>
 See also: <a href="#postgres_extensions">PostgreSQL</a>,
 	and <a href="#mysql_extensions">MySQL</a> extensions.<br>
 Returns: a <a href="#connection_object">connection object</a>.</li>
@@ -145,24 +142,24 @@ Returns: a <a href="#connection_object">connection object</a>.</li>
 <a name="connection_object"></a>
 <h2>Connection Objects</h2>
 
-A connection object contains specific attributes and parameters of a single
-data source connection.
+<p>A connection object contains specific attributes and parameters of a
+single data source connection.
 A connection object is created by calling the
-<tt><a href="#env_connect">environment:connect</a></tt>
-method.
+<code><a href="#env_connect">environment:connect</a></code>
+method.</p>
 
 <h4>Methods</h4>
 
 <ul>
 <a name="conn_close"></a>
-<li> <b><tt>conn:close()</tt></b> <br>
-Closes the connection <tt>conn</tt>.
+<li> <b><code>conn:close()</code></b> <br>
+Closes the connection <code>conn</code>.
 Only successful if all cursors pertaining to it were closed first.<br>
 Returns: <code>true</code> in case of success and <code>false</code> when
 the object is already closed.</li>
 
 <a name="conn_commit"></a>
-<li> <b><tt>conn:commit()</tt></b> <br>
+<li> <b><code>conn:commit()</code></b> <br>
 Commits the current transaction.
 This feature might not work on database systems that do not implement
 transactions.<br>
@@ -170,13 +167,13 @@ Returns: <code>true</code> in case of success and <code>false</code> when
 the operation could not be performed or when it is not implemented.</li>
 
 <a name="conn_execute"></a>
-<li> <b><tt>conn:execute(statement)</tt></b> <br>
-Executes the given SQL <tt>statement</tt>.<br>
+<li> <b><code>conn:execute(statement)</code></b> <br>
+Executes the given SQL <code>statement</code>.<br>
 Returns: a <a href="#cursor_object">cursor object</a>
 if there are results, or the number of rows affected by the command otherwise.</li>
 
 <a name="conn_rollback"></a>
-<li> <b><tt>conn:rollback()</tt></b> <br>
+<li> <b><code>conn:rollback()</code></b> <br>
 Rolls back the current transaction.
 This feature might not work on database systems that do not implement
 transactions.<br>
@@ -184,7 +181,7 @@ Returns: <code>true</code> in case of success and <code>false</code> when
 the operation could not be performed or when it is not implemented.</li>
 
 <a name="conn_setautocommit"></a>
-<li> <b><tt>conn:setautocommit(boolean)</tt></b> <br>
+<li> <b><code>conn:setautocommit(boolean)</code></b> <br>
 Turns on or off the "auto commit" mode.
 This feature might not work on database systems that do not implement
 transactions.
@@ -196,35 +193,33 @@ the operation could not be performed or when it is not implemented.</li>
 
 </ul>
 
-
 <a name="cursor_object"></a>
 <h2>Cursor Objects</h2>
 
-A cursor object contains methods to retrieve
-data resulting from an executed statement.
-A cursor object is created by using the
-<tt><a href="#conn_execute">connection:execute</a></tt>
+<p>A cursor object contains methods to retrieve data resulting from an
+executed statement. A cursor object is created by using the
+<code><a href="#conn_execute">connection:execute</a></code>
 function.
 See also <a href="#postgres_extensions">PostgreSQL</a>
-and <a href="#oracle_extensions">Oracle</a> extensions.
+and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 
 <h4>Methods</h4>
 
 <ul>
 <a name="cur_close"></a>
-<li> <b><tt>cur:close()</tt></b> <br>
+<li> <b><code>cur:close()</code></b> <br>
 Closes this cursor.<br>
 Returns: <code>true</code> in case of success and <code>false</code> when
 the object is already closed.</li>
 
 <a name="cur_fetch"></a>
-<li> <b><tt>cur:fetch([table[,modestring]])</tt></b> <br>
+<li> <b><code>cur:fetch([table[,modestring]])</code></b> <br>
 Retrieves the next row of results.<br>
-If <tt>fetch</tt> is called without parameters,
+If <code>fetch</code> is called without parameters,
 the results will be returned to the caller directly.
-If <tt>fetch</tt> is called with a table, the results will be copied
+If <code>fetch</code> is called with a table, the results will be copied
 into the table and this table will be returned (for convenience).
-In this case, an optional <tt>mode</tt> parameter can be used.
+In this case, an optional <code>mode</code> parameter can be used.
 It is just a string indicating how the result table should be made.
 The mode string can contain:
 <ul>
@@ -234,24 +229,24 @@ The mode string can contain:
 The <i>numerical indices</i> are the positions of the fields in the select
 statement;
 the <i>alphanumerical indices</i> are the names of the fields.<br>
-The optional <tt>table</tt> parameter is a table that should be
+The optional <code>table</code> parameter is a table that should be
 used to store the next row.
 This allows the use of a unique table for many fetches which
 can improve the overall performance.<br>
 There is no guarantee about the types of the results
 -- they can be converted to adequate Lua types by the driver or not.
-<i>In the current implementation (2.0b),
+<i>In the current implementation,
 the PostgreSQL and MySQL drivers returns all values as strings
 while the ODBC and Oracle drivers converts them to Lua types</i>.<br>
-Returns: data, as above, or <tt>nil</tt> if there are no more rows.
+Returns: data, as above, or <code>nil</code> if there are no more rows.
 <em>Note that this method could return <code>nil</code> as a valid result.</em></li>
 
 <a name="cur_colnames"></a>
-<li> <b><tt>cur:getcolnames()</tt></b> <br>
+<li> <b><code>cur:getcolnames()</code></b> <br>
 Returns: a list (table) of column names.</li>
 
 <a name="cur_coltypes"></a>
-<li> <b><tt>cur:getcoltypes()</tt></b> <br>
+<li> <b><code>cur:getcoltypes()</code></b> <br>
 Returns: a list (table) of column types.</li>
 
 </ul>
@@ -262,22 +257,21 @@ Returns: a list (table) of column types.</li>
 <a name="postgres_extensions"></a>
 <h2>PostgreSQL Extensions</h2>
 
-Besides the basic functionality
-provided by all drivers (see manual), the Postgres driver also offers
-these extra features:
+<p>Besides the basic functionality provided by all drivers (see manual),
+the Postgres driver also offers these extra features:</p>
 
 <ul>
-  <li> <b><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt></b> <br>
+  <li> <b><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></b> <br>
     In the PostgreSQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     Also, the first parameter can contain all connection information,
-    as stated in the documentation for <tt>PQconnectdb</tt> function
+    as stated in the documentation for <code>PQconnectdb</code> function
     in the PostgreSQL manual
-    (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>) <br>
+    (e.g. <small><code>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</code></small>) <br>
     See also: <a href="#environment_object">environment objects</a><br>
     Returns: a <a href="#connection_object">connection object</a></li>
 
-  <li> <b><tt>cur:numrows()</tt></b> <br>
+  <li> <b><code>cur:numrows()</code></b> <br>
     See also: <a href="#cursor_object">cursor objects</a><br>
     Returns: the number of rows in the query result.</li>
 </ul>
@@ -286,41 +280,32 @@ these extra features:
 <a name="mysql_extensions"></a>
 <h2>MySQL Extensions</h2>
 
-Besides the basic functionality
-provided by all drivers (see manual),
-the MySQL driver also offers these extra features:
+<p>Besides the basic functionality provided by all drivers (see manual),
+the MySQL driver also offers these extra features:</p>
 
 <ul>
-  <li> <b><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt></b> <br>
+  <li> <b><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></b> <br>
     In the MySQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     See also: <a href="#environment_object">environment objects</a><br>
     Returns: a <a href="#connection_object">connection object</a></li>
-
-<!--
-  <li> <b><tt>cur:numrows()</tt></b> <br>
-    This additional method returns the number of rows in the query result.<br>
-    See also: <a href="#cursor_object">cursor objects</a></li>
--->
 </ul>
 
-Note: This driver is compatible to version 4.0 and 4.1 (alpha) of MySQL API.
-Only version 4.1 provides support for transactions by using BDB or INNODB
-tables.
+<p>Note: This driver is compatible to version 4.0 and 4.1 (alpha) of
+MySQL API. Only version 4.1 provides support for transactions by using
+BDB or INNODB tables.
 Therefore, with version 4.0 or without one of these types of tables the
 methods <code>commit</code>, <code>rollback</code> and
-<code>setautocommit</code> would not work.
-
+<code>setautocommit</code> would not work.</p>
 
 <a name="oracle_extensions"></a>
 <h2>Oracle Extensions</h2>
 
-Besides the basic functionality
-provided by all drivers (see manual), the Oracle driver also offers
-this extra feature:
+<p>Besides the basic functionality provided by all drivers (see manual),
+the Oracle driver also offers this extra feature:</p>
 
 <ul>
-  <li> <b><tt>cur:numrows()</tt></b> <br>
+  <li> <b><code>cur:numrows()</code></b> <br>
     See also: <a href="#cursor_object">cursor objects</a><br>
     Returns: the number of rows in the query result.</li>
 </ul>
@@ -328,14 +313,14 @@ this extra feature:
 <a name="examples"></a>
 <h2>Examples</h2>
 
-Below is a small sample code displaying the basic use of the library.
+<p>Below is a small sample code displaying the basic use of the library.
 After that, another example shows how to create an
-<a href="#iterator_example">iterator</a> over the result of a select query.
+<a href="#iterator_example">iterator</a> over the result of a select
+query.</p>
 
 <a name="basic_use"></a>
 <h3>Basic use</h3>
-<blockquote>
-<pre>
+<pre class="example">
 -- load driver
 require"luasql.postgres"
 -- create environment object
@@ -375,24 +360,20 @@ cur:close()
 con:close()
 env:close()
 </pre>
-</blockquote>
 
-And the output of this script should be:
+<p>And the output of this script should be:</p>
 
-<blockquote>
-<pre>
+<pre class="example">
 Name: Jose das Couves, E-mail: jose@couves.com
 Name: Manoel Joaquim, E-mail: manoel.joaquim@cafundo.com
 Name: Maria das Dores, E-mail: maria@dores.com
 </pre>
-</blockquote>
 
 <a name="iterator_example"></a>
 <h3>Iterator use</h3>
-It may be useful to offer an iterator for the resulting rows:
+<p>It may be useful to offer an iterator for the resulting rows:</p>
 
-<blockquote>
-<pre>
+<pre class="example">
 function rows (connection, sql_statement)
   local cursor, err = connection:execute (sql_statement)
   assert (cursor, string.format ("%s (%s)", err, sql_statement))
@@ -401,12 +382,10 @@ function rows (connection, sql_statement)
   end
 end
 </pre>
-</blockquote>
 
-The iterator is used like:
+<p>This iterator is used like:</p>
  
-<blockquote>
-<pre>
+<pre class="example">
 require"luasql.mysql"
 env = assert (luasql.mysql())
 con = assert (env:connect"my_db")
@@ -414,7 +393,6 @@ for id, name, address in rows (con, "select * from contacts") do
   print ("%s: %s", name, address)
 end
 </pre>
-</blockquote>
 
 
 <a name="contents"></a>
@@ -463,7 +441,7 @@ end
 
 <hr>
 <small>
-$Id: manual.html,v 1.33 2005/03/07 03:00:43 carregal Exp $
+$Id: manual.html,v 1.34 2005/03/07 03:26:13 carregal Exp $
 </small>
 
 </body>
