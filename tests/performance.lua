@@ -4,7 +4,7 @@
 TOTAL_ROWS = 200
 
 ---------------------------------------------------------------------
--- checks for a value and throw an error if it's not the expected.
+-- checks for a value and throw an error if it is invalid.
 ---------------------------------------------------------------------
 function assert2 (expected, value, msg)
 	if not msg then

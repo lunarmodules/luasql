@@ -32,8 +32,8 @@ programming language
 <a href=#installation>installation</a> &middot;
 <a href="manual.html">manual</a> &middot;
 <a href="license.html">license</a> &middot;
-<a href="#hist">history</a> &middot;
-<a href="#contact">contact</a>
+<a href="#credits">credits</a> &middot;
+<a href="#contact">contact us</a>
 </small></center>
 <p>
 
@@ -59,8 +59,8 @@ programming language
 	<li> <a href="manual.html#examples">Examples</a>
 	</ul>
 <li> <a href="license.html">Copyright & License</a>
-<li> <a href=#hist>History</a>
-<li> <a href="#contact">Contact</a>
+<li> <a href="#credits">Credits</a>
+<li> <a href="#contact">Contact us</a>
 </ul>
 </p>
 
@@ -134,10 +134,10 @@ Version 2.0 has some design modifications and implementation improvements
 LuaSQL is distributed as a set of C source files and a Lua script that
 loads the dynamic library (if the library is not statically linked to
 the application).
-Each driver should be compiled together with luasql.c file (it's so small
+Each driver should be compiled together with luasql.c file (it is so small
 that we don't make another library of it) to generate a library.
 This library should be linked to the application (the initialization
-function is <tt>luasql_libopen_<i>drivername</i></tt> and it's a Lua
+function is <tt>luaopen_luasql_<i>drivername</i></tt> and it is a Lua
 open-library compatible function)
 or dynamically loaded.
 In this case, LuaSQL provide a Lua script template that must be
@@ -148,13 +148,13 @@ The distribution contains a Makefile that has lines to do this job,
 using <tt>sed</tt>, according to each driver and platform.
 
 
-<a name=hist>
-<h2>History</h2>
+<a name="credits">
+<h2>Credits</h2>
 
 <h4>LuaSQL 2.0</h4>
 <p>
 Version 2.0 was redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
-and Tom&aacute;s Guisasola behind the Kepler Project.
+and Tom&aacute;s Guisasola as part of the Kepler Project.
 The implementation is compatible with Lua 5.0 and was coded by
 Tom&aacute;s Guisasola, Eduardo Quint&atilde;o and Leonardo Godinho.
 
@@ -171,12 +171,11 @@ LuaSQL development was sponsored by
 
 
 <a name="contact"></a>
-<h2>Contact</h2>
+<h2>Contact us</h2>
 
 <p>
 For more information please
-<a href="mailto:tomas-NO-SPAM-THANKS@keplerproject.org">contact</a>
-us.
+<a href="mailto:tomas-NO-SPAM-THANKS@keplerproject.org">contact us</a>.
 Comments are welcome!
 </p>
 
@@ -190,14 +189,14 @@ Comments are welcome!
 <a href=#installation>installation</a> &middot;
 <a href="manual.html">manual</a> &middot;
 <a href="license.html">license</a> &middot;
-<a href="#hist">history</a> &middot;
-<a href="#contact">contact</a>
+<a href="#credits">credits</a> &middot;
+<a href="#contact">contact us</a>
 </small></center>
 <p>
 
 <hr>
 <small>
-$Id: index.html,v 1.20 2004/01/12 10:43:26 tomas Exp $
+$Id: index.html,v 1.21 2004/06/08 13:02:12 tomas Exp $
 </small>
 
 </body>

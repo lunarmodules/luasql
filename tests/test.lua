@@ -5,7 +5,7 @@ TOTAL_FIELDS = 800
 TOTAL_ROWS = 40
 
 ---------------------------------------------------------------------
--- checks for a value and throw an error if it's not the expected.
+-- checks for a value and throw an error if it is invalid.
 ---------------------------------------------------------------------
 function assert2 (expected, value, msg)
 	if not msg then
@@ -58,7 +58,7 @@ function basic_test ()
 	-- trying to connect with a closed environment.
 	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
 		"error connecting with a closed environment")
-	-- it's ok to close a closed object, but nil is returned instead of 1.
+	-- it is ok to close a closed object, but nil is returned instead of 1.
 	assert2 (false, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
@@ -70,7 +70,7 @@ function basic_test ()
 	-- trying to execute a statement with a closed connection.
 	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
 		"error connecting with a closed environment")
-	-- it's ok to close a closed object, but nil is returned instead of 1.
+	-- it is ok to close a closed object, but nil is returned instead of 1.
 	assert2 (false, conn:close())
 	-- Check error situation.
 	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
