@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.12 2003/09/12 18:48:55 tomas Exp $>
+<!$Id: manual.html,v 1.13 2003/10/24 10:58:18 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -26,7 +26,7 @@ ul { list-style-type: disc };
 <a href="#environment_object">environment</a> &middot;
 <a href="#connection_object">connection</a> &middot;
 <a href="#cursor_object">cursor</a> &middot;
-<a href="#postgres_extensions">extensions</a> &middot;
+<a href="#extensions">extensions</a> &middot;
 <a href="#examples">example</a>
 </small></center>
 <p>
@@ -154,7 +154,7 @@ A cursor object is created by using the
 <tt><a href="#conn_execute">connection:execute</a></tt>
 function.
 See also <a href="#postgres_extensions">PostgreSQL</a>
-and <a href="#mysql_extensions">MySQL</a> extensions.
+and <a href="#oracle_extensions">Oracle</a> extensions.
 
 <h4>Methods</h4>
 
@@ -202,6 +202,8 @@ Returns: a list of column types.
 </ul>
 
 
+<a name="extensions"></a>
+
 <a name="postgres_extensions"></a>
 <h2>PostgreSQL extensions</h2>
 
@@ -248,6 +250,20 @@ with support to BDB and INNODB tables.
 MySQL has types of tables that don't support transactions,
 so with these types, the methods <tt>setautocommit</tt>, <tt>commit</tt>
 and <tt>rollback</tt> don't work.
+
+
+<a name="oracle_extensions"></a>
+<h2>Oracle extensions</h2>
+
+Besides the basic functionality
+provided by all drivers (see manual), the Oracle driver also offers
+this extra feature:
+
+<ul>
+  <li> <b><tt>cur:numrows()</tt></b> <br>
+    This additional method returns the number of rows in the query result.<br>
+    See also: <a href="#cursor_object">cursor objects</a>
+</ul>
 
 
 <a name="examples"></a>
@@ -336,6 +352,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
   </ul>
 <li> <a href="#postgres_extensions">PostgreSQL extensions</a>
 <li> <a href="#mysql_extensions">MySQL extensions</a>
+<li> <a href="#oracle_extensions">Oracle extensions</a>
 <li> <a href="#examples">Example</a>
 </ul>
 </p>
@@ -347,7 +364,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <a href="#environment_object">environment</a> &middot;
 <a href="#connection_object">connection</a> &middot;
 <a href="#cursor_object">cursor</a> &middot;
-<a href="#postgres_extensions">extensions</a> &middot;
+<a href="#extensions">extensions</a> &middot;
 <a href="#examples">example</a>
 </small></center>
 <p>
@@ -355,7 +372,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <hr>
 <small>
 Last modified on
-Wed Jul 23 17:43:57 BRT 2003
+Fri Sep 12 18:31:45 BRT 2003
 </small>
 
 </body>
