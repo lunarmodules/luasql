@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_pg.c,v 1.19 2004/06/08 13:00:21 tomas Exp $
+** $Id: ls_pg.c,v 1.20 2004/09/15 16:14:24 tomas Exp $
 */
 
 #include <assert.h>
@@ -495,6 +495,7 @@ static void create_metatables (lua_State *L) {
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_PG, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_PG, connection_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_PG, cursor_methods);
+	lua_pop (L, 3);
 }
 
 /*
@@ -514,13 +515,33 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasql_postgres (lua_State *L) {
+LUASQL_API int luaopen_luasqlpostgres (lua_State *L) {
+	const char *name;
+	int luasql;
 	luasql_getlibtable (L);
 	lua_pushstring(L, "postgres");
 	lua_pushcfunction(L, create_environment);
 	lua_settable(L, -3);
+	luasql = lua_gettop (L);
 
 	create_metatables (L);
 
-	return 0;
+	/* if Lua 5.0 then Set pack.loaded[name] = luasql */
+	if (lua_isstring(L, 1))
+		name = lua_tostring (L, 1);
+	else {
+		lua_getglobal (L, "arg");
+		lua_rawgeti (L, -1, 1);
+		name = lua_tostring (L, -1);
+		lua_pop (L, 2);
+	}
+	lua_getglobal (L, "pack");
+	lua_pushliteral (L, "loaded");
+	lua_gettable (L, -2);
+	lua_pushstring (L, name);
+	lua_pushvalue (L, luasql);
+	lua_settable (L, -3); /* pack.loaded[name] = luasql */
+	lua_pop (L, 2);
+
+	return 1;
 }
