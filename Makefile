@@ -4,6 +4,7 @@ T= postgres
 #T= odbc
 #T= sqlite
 
+LUA_LIB_DIR= /usr/local/lib/lua/5.0
 #LIB_EXT= .so
 LIB_EXT= .dylib
 #LIB_OPTION= -shared
@@ -57,7 +58,9 @@ AR= ar rcu
 RANLIB= ranlib
 
 
-lib: $(OBJS)
+lib: $(LIBNAME)
+
+$(LIBNAME): $(OBJS)
 	$(CC) $(CFLAGS) -o $(LIBNAME) $(LIB_OPTION) $(OBJS) $(DRIVER_LIBS) $(LIBS)
 
 compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
@@ -73,8 +76,9 @@ dist_dir:
 	cp $(SRCS) $(DIST_DIR)
 
 install:
-	mkdir -p $(LIB_DIR)
-	cp $(LIBNAME) $(LOADLIB) $(LIB_DIR)
+	mkdir -p $(LUA_LIB_DIR)/luasql
+	cp $(LIBNAME) $(LUA_LIB_DIR)/luasql
+	cd $(LUA_LIB_DIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
 
 clean:
 	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o *.lua
