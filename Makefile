@@ -16,7 +16,7 @@ SRCS= $(LS_DIR)README $(LS_DIR)Makefile \
 	$(LS_DIR)ls_odbc.h $(LS_DIR)ls_odbc.c \
 	$(LS_DIR)ls_odbc.def $(LS_DIR)odbc.tmpl \
 	$(LS_DIR)test.lua $(LS_DIR)performance.lua \
-	$(LS_DIR)manual.html $(LS_DIR)lua.png 
+	$(LS_DIR)index.html $(LS_DIR)manual.html $(LS_DIR)lua.png 
 
 AR= ar rcu
 RANLIB= ranlib

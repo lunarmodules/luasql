@@ -1,0 +1,151 @@
+<html>
+<!$Id: index.html,v 1.1 2003/04/28 09:45:14 tomas Exp $>
+
+<head>
+<style type="text/css">
+ul { list-style-type: disc };
+</style>
+</head>
+
+<body bgcolor="#FFFFFF">
+
+<hr>
+
+<center>
+<table border=0 cellspacing=2 cellpadding=2>
+<tr><td align=center><a href="http://www.lua.org">
+<img border=0 alt="The Lua language" src="lua.png"></a>
+<tr><td align=center><big><b>LuaSQL</b></big>
+<tr><td align=center valign=top>Database connectivity for the Lua language
+</table>
+</center>
+<p>
+
+<center><small>
+<a href=#over>overview</a> &middot;
+<a href=#version>current version</a> &middot;
+<a href=#new>what's new</a> &middot;
+<a href=#down>download</a> &middot;
+<a href="manual.html">manual</a> &middot;
+<a href=#hist>history</a>
+</small></center>
+<p>
+
+<hr>
+
+<h2>Contents</h2>
+<p>
+<ul>
+<li> <a href=#over>Overview</a>
+<li> <a href=#current>Current Version</a>
+<li> <a href=#new>What's new</a>
+<li> <a href=#down>Download</a>
+<li> <a href="manual.html">User's manual</a>
+	<ul>
+	<li> <a href=#env>Environment class</a>
+	<li> <a href=#con>Connection class</a>
+	<li> <a href=#cur>Cursor class</a>
+	<li> <a href=#ex>Examples</a>
+	</ul>
+<li> <a href=#hist>History</a>
+</ul>
+</p>
+
+
+<a name=over>
+<h2>Overview</h2>
+<p>
+LuaSQL was  developed to ease  the usage  of data sources  from end-user
+applications.
+It provides  a simple API that enables access  to the most
+important  functionality  available  in  any database  manager.
+In its current version, LuaSQL enables users to, through Lua:
+</p>
+<ul>
+<li> Connect to ODBC and PostgreSQL databases;
+<li> Execute arbitrary SQL statements;
+<li> Retrieve results in a row-by-row cursor fashion.
+</ul>
+
+
+<a name=version>
+<h2>Current version</h2>
+<p>
+LuaSQL version 2.0 is now available for download!
+The PostgreSQL driver
+has been tested on Linux and MacOS X,
+and the ODBC driver has been tested on Windows
+(SQLServer and Microsoft Access drivers) and
+on Linux (Linux ODBC Informix driver).
+</p>
+
+
+<a name=down>
+<h2>Download</h2>
+
+LuaSQL can be downloaded in source code from the following links: <p>
+
+<blockquote>
+<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.tar.gz">luasql.tar.gz</a><br>
+<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.zip">luasql.zip</a>
+</blockquote><p>
+
+
+<a name=new>
+<h2>What's new</h2>
+<p>
+Version 2.0 has some design modifications and implementation improvements
+<ul>
+  <li>New <tt>fetch</tt> method: more eficient and more flexible
+  <li>New <tt>setautocommit</tt> method
+  <!--<li>No more <tt>Options</tt>-->
+  <li>Lua 5.0 compatible
+  <li>Dynamically loadable or statically linked
+</ul>
+</p>
+
+<!--
+Version 1.0 has been released because there have been some compatibility
+improvements in the ODBC driver.
+
+<ul>
+<li> Error message retrieval has been rewritten and is more stable;
+<li> Long value retrieval has been rewritten to support the informix
+	driver;
+<li> Bug-fix: TableList statement handle was not being closed;
+<li> Bug-fix: Connection handle was being released before error message 
+	retrieved.
+</ul>
+-->
+
+
+<h2><a name=hist>History</h2>
+
+LuaSQL   was  designed   by   Pedro  Miller   Rabinovitch  and   Roberto
+Ierusalimschy, sponsored by <a href="http://www.fabricadigital.com.br">
+Fábrica Digital</a>. The  first  implementation was  compatible with  Lua
+4.0a. The current ODBC driver has been adapted from the original version
+by Diego Nehab, and the PostgreSQL driver has been adapted by Roberto
+Ierusalimschy and Carlos Cassino.
+Version 1.1 was made by Diego Nehab, Eduardo Quint&atilde;o and
+Tom&aacute;s Guisasola.
+
+<p>
+<center>
+<a href=#over>overview</a> &middot;
+<a href=#current>current version</a> &middot;
+<a href=#new>what's new</a> &middot;
+<a href=#down>download</a> &middot;
+<a href=#manual>manual</a> &middot;
+<a href=#hist>history</a>
+</center>
+<p>
+
+<hr>
+<small>
+Last modified by Tom&aacute;s Guisasola on<br>
+Wed Feb 19 13:52:33 BRT 2003
+</small>
+
+</body>
+</html> 

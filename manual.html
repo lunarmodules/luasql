@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.2 2003/04/07 13:41:29 tomas Exp $>
+<!$Id: manual.html,v 1.3 2003/04/28 09:45:14 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -22,136 +22,61 @@ ul { list-style-type: disc };
 <p>
 
 <center><small>
-<a href=#over>overview</a> &middot;
-<a href=#current>current version</a> &middot;
-<a href=#new>what's new</a> &middot;
-<a href=#down>download</a> &middot;
-<a href=#manual>manual</a> &middot;
-<a href=#hist>history</a>
+<a href="index.html#over">overview</a> &middot;
+<a href="index.html#version">current version</a> &middot;
+<a href="index.html#new">what's new</a> &middot;
+<a href="index.html#down">download</a> &middot;
+<a href="index.html#hist">history</a>
 </small></center>
 <p>
 
 <hr>
 
-<h2> Contents </h2><p>
-
-<ul>
-<li> <a href=#over>Overview</a>
-<li> <a href=#current>Current Version</a>
-<li> <a href=#new>What's new</a>
-<li> <a href=#down>Download</a>
-<li> <a href=#manual>User's manual</a>
-	<ul>
-	<li> <a href=#env>Environment class</a>
-	<li> <a href=#con>Connection class</a>
-	<li> <a href=#cur>Cursor class</a>
-	<li> <a href=#ex>Examples</a>
-	</ul>
-<li> <a href=#hist>History</a>
-</ul>
-
-<h2><a name=over>Overview</h2>
-
-LuaSQL was  developed to ease  the usage  of data sources  from end-user
-applications.
-It provides  a simple API that enables access  to the most
-important  functionality  available  in  any database  manager.
-In its current version, LuaSQL enables users to, through Lua:
-
-<ul>
-<li> Connect to ODBC and PostgreSQL databases;
-<li> Execute arbitrary SQL statements;
-<li> Retrieve results in a row-by-row cursor fashion.
-</ul>
-
-<!--
-!!!!!! Rever o texto abaixo !!!!!!
-To have the LuaSQL functionality available to Lua scripts, the user must
-link  an   executable  with   the  <tt>luasql</tt>  library,   and  call
-<tt>luasql_libopen</tt> on the appropriate Lua state.
--->
-
-<h2><a name=current>Current version</h2>
-
-LuaSQL version 2.0 is now available for download!
-The PostgreSQL driver
-has been tested on Linux and MacOS X,
-and the ODBC driver has been tested on Windows
-(SQLServer and Microsoft Access drivers) and
-on Linux (Linux ODBC Informix driver).
-
-<h2><a name=new>What's new</h2>
-
+<h2>Contents</h2>
 <p>
-Version 2.0 has some design modifications and implementation improvements
 <ul>
-  <li>New <tt>fetch</tt> method: more eficient and more flexible
-  <li>New <tt>setautocommit</tt> method
-  <li>No more <tt>Options</tt>
-  <li>Lua 5.0 compatible
-  <li>Dynamically loadable or statically linked
+<li> <a href="#overview">Overview</a>
+<li> <a href="#environment">Environment class</a>
+<li> <a href="#connection">Connection class</a>
+<li> <a href="#cursor">Cursor class</a>
+<li> <a href="#examples">Examples</a>
 </ul>
 </p>
 
-<!--
-Version 1.0 has been released because there have been some compatibility
-improvements in the ODBC driver.
 
-<ul>
-<li> Error message retrieval has been rewritten and is more stable;
-<li> Long value retrieval has been rewritten to support the informix
-	driver;
-<li> Bug-fix: TableList statement handle was not being closed;
-<li> Bug-fix: Connection handle was being released before error message 
-	retrieved.
-</ul>
--->
-
-<h2><a name=down>Download</h2>
-
-LuaSQL can be downloaded in source code from the following links: <p>
-
-<blockquote>
-<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.tar.gz">luasql.tar.gz</a><br>
-<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.zip">luasql.zip</a>
-</blockquote><p>
-
-<h2><a name=manual>User's manual</h2>
-
-Below is a description of all functions present in the LuaSQL API. Some
-usage examples can be found at the end of the documentation.
-
-<h3><a name=init>Initialization</h3>
-
-There is only one global table in the LuaSQL Lua interface
-called <tt>sql</tt>.
-This table has one method responsible for the initialization of each
-driver; each one called by the name of the driver.
-
-<ul>
-<li> <tt>odbc ()</tt> <br>
-Creates and returns a new Environment object for the ODBC driver.
-<br>
-Returns: a reference to said Environment object.
-<li> <tt>postgres ()</tt> <br>
-Creates and returns a new Environment object for the PostgreSQL driver.
-<br>
-Returns: a reference to said Environment object.
-</ul>
-
-<h3><a name=errors>Error checking</h3>
-
-In case of error, all methods return <tt>nil</tt> followed by an error
-message, unless the documentation says otherwise.
-
+<a name="overview"></a>
+<h2>Overview</h2>
 <p>
+This library is a suite of drivers
+each one composed by two files: a C source file that implements the
+driver functions; and a Lua script used to load the dynamic library.
+The host application can be statically linked with one or more drivers
+or they can be loaded dynamically by the corresponding Lua script (that
+requires the built-in <tt>loadlib</tt> function Lua 5 offers).
+</p><p>
+Both ways when the driver is loaded it creates a method in a table
+called <tt>luasql</tt>; this method has the same name of the driver
+(postgres, odbc etc.).
+This method is used to create an <a href="#environment">Environment
+object</a> which is the basis to do whatever is needed.
+</p><p>
+LuaSQL has a common API that all drivers must implement,
+but other especial features can exist.
+This manual tries to explain both the common API and the particularities
+of each driver.
+</p>
 
-<h3><a name=env>Environment class</h3>
 
-An Environment object is created by calling <tt>sql[drivername] ()</tt>,
+<a name="environment">
+<h2>Environment class</h2>
+<p>
+An Environment object is created by calling the method with the
+same name of the driver it's used (odbc, postgres etc.).
+
+by calling <tt>sql[drivername] ()</tt>,
 where <tt>drivername</tt> is a string with the name of the driver.
 
-<h4>Fields</h4>
+<h3>Fields</h3>
 
 ==&gt; So' para o ODBC &lt;==
 <ul>
