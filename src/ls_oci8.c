@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.11 2003/06/09 19:16:03 tomas Exp $
+** $Id: ls_oci8.c,v 1.12 2003/06/09 20:07:54 tomas Exp $
 */
 
 #include <assert.h>
@@ -200,7 +200,7 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 				cur->errhp), cur->errhp);
 			col->val.s = calloc (col->max + 1, sizeof(col->val.s));
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-				cur->errhp, (ub4)i, col->val.s, col->max,
+				cur->errhp, (ub4)i, col->val.s, col->max+1,
 				SQLT_STR /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
@@ -307,8 +307,20 @@ static int pushvalue (lua_State *L, cur_data *cur, int i) {
 			ASSERT (L, OCILobGetLength (conn->svchp, cur->errhp,
 				(OCILobLocator *)col->val.s, &lob_len), cur->errhp);
 			if (lob_len > 0) {
+				char *lob_buffer=malloc(lob_len);
+				ub4 amount = lob_len;
+
+				ASSERT(L, OCILobRead(conn->svchp, cur->errhp,
+					(OCILobLocator *) col->val.s, &amount, (ub4) 1,
+					(dvoid *) lob_buffer, (ub4) lob_len, (dvoid *)0,
+					(sb4 (*) (dvoid *, CONST dvoid *, ub4, ub1)) 0,
+					(ub2) 0, (ub1) SQLCS_IMPLICIT), cur->errhp);
+				lua_pushlstring (L, lob_buffer, amount);
+				free(lob_buffer);
 			} else {
+				lua_pushstring (L, "");
 			}
+			break;
 		}
 		default:
 			luaL_error (L, LUASQL_PREFIX"unexpected error");
@@ -331,7 +343,6 @@ static int cur_fetch (lua_State *L) {
 		return 1;
 	} else if (status != OCI_SUCCESS) {
 		/* Error */
-//printf("(%d)!!\n",status);fflush(stdout);
 		return checkerr (L, status, cur->errhp);
 	}
 
