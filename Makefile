@@ -95,4 +95,4 @@ $(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
 	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(LIBS)
 
 clean:
-	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(ODBC_LIB) $(ODBC_DLL) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) postgres.lua odbc.lua oracle.lua mysql.lua
+	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(MY_OBJ) $(ODBC_LIB) $(ODBC_DLL) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) postgres.lua odbc.lua oracle.lua mysql.lua
