@@ -44,7 +44,7 @@ PKG= luasql-$(VERSION)
 TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
 SRCS= README Makefile \
-	luasql.h luasql.c def.tmpl loader.tmpl \
+	luasql.h luasql.c def.tmpl \
 	ls_pg.c \
 	ls_odbc.c \
 	ls_oci8.c \
@@ -69,30 +69,22 @@ dist:
 	rm -rf $(PKG)
 
 sqlitelinux: $(SQLITE_LIB) $(SQLITE_SO)
-	sed -e "s/LIB_NAME/$(SQLITE_SO)/" -e "s/DRIVER/sqlite/" loader.tmpl > sqlite.lua
 
 pglinux: $(PG_LIB) $(PG_SO)
-	sed -e "s/LIB_NAME/$(PG_SO)/" -e "s/DRIVER/postgres/" loader.tmpl > postgres.lua
 
 pgmac: $(PG_LIB) $(PG_DYLIB)
-	sed -e "s/LIB_NAME/$(PG_DYLIB)/" -e "s/DRIVER/postgres/" loader.tmpl > postgres.lua
 
 odbcwin:
-	sed -e "s/LIB_NAME/$(ODBC_DLL)/" -e "s/DRIVER/odbc/" loader.tmpl > odbc.lua
 	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/odbc/" def.tmpl > odbc.def
 
 ocilinux: $(OCI_LIB) $(OCI_SO)
-	sed -e "s/LIB_NAME/$(OCI_SO)/" -e "s/DRIVER/oracle/" loader.tmpl > oracle.lua
 
 ociwin:
-	sed -e "s/LIB_NAME/$(OCI_SO)/" -e "s/DRIVER/oracle/" loader.tmpl > oracle.lua
 	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/oracle/" def.tmpl > oracle.def
 
 mysqllinux: $(MYSQL_LIB) $(MYSQL_SO)
-	sed -e "s/LIB_NAME/$(MYSQL_SO)/" -e "s/DRIVER/mysql/" loader.tmpl > mysql.lua
 
 mysqlwin:
-	sed -e "s/LIB_NAME/$(MYSQL_SO)/" -e "s/DRIVER/mysql/" loader.tmpl > mysql.lua
 	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/mysql/" def.tmpl > mysql.def
 
 $(SQLITE_LIB): $(LS_OBJ) $(SQLITE_OBJ)
