@@ -135,6 +135,7 @@ function Private.createConnection(conObj, closeFunc)
         end
         
         isClosed = true
+        local cond, err = pcall(conObj.RollbackTrans, conObj)
         conObj:Close()
         closeFunc(conObj)
         
