@@ -31,7 +31,7 @@ public class LuaSQLCursor
       /**
        * Creates a LuaSQLCursor and returns it.
        */
-      public int foo() throws LuaException
+      public int execute() throws LuaException
       {
         ResultSet rs = (ResultSet) L.getObjectFromUserdata(2);
         
