@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.12 2003/06/09 20:07:54 tomas Exp $
+** $Id: ls_oci8.c,v 1.13 2003/10/24 10:48:12 tomas Exp $
 */
 
 #include <assert.h>
@@ -497,8 +497,8 @@ static int cur_getcoltypes (lua_State *L) {
 static int cur_numrows (lua_State *L) {
 	int n;
 	cur_data *cur = getcursor (L);
-	ASSERT (L, OCIAttrGet ((dvoid *) cur->stmthp, OCI_HTYPE_STMT, (dvoid *)&n, (ub4)0,
-		OCI_ATTR_NUM_ROWS, cur->errhp), cur->errhp);
+	ASSERT (L, OCIAttrGet ((dvoid *) cur->stmthp, OCI_HTYPE_STMT, (dvoid *)&n,
+		(ub4)0, OCI_ATTR_NUM_ROWS, cur->errhp), cur->errhp);
 	lua_pushnumber (L, n);
 	return 1;
 }
@@ -783,7 +783,7 @@ static int create_environment (lua_State *L) {
 	env->conn_counter = 0;
 	env->envhp = NULL;
 	env->errhp = NULL;
-/* talvez OCI_SHARED e OCI_THREADED ??? */
+/* maybe OCI_SHARED and OCI_THREADED ??? */
 	if (OCIEnvCreate ( &(env->envhp), (ub4)OCI_DEFAULT, (dvoid *)0,
 			(dvoid * (*)(dvoid *, size_t)) 0,
 			(dvoid * (*)(dvoid *, dvoid *, size_t)) 0,
@@ -834,7 +834,7 @@ static void create_metatables (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luasql_libopen_oracle (lua_State *L) { 
+LUASQL_API int luasql_libopen_oracle (lua_State *L) {
 	luasql_getlibtable (L);
 	lua_pushstring(L, "oracle");
 	lua_pushcfunction(L, create_environment);

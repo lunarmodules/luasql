@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
-** $Id: ls_mysql.c,v 1.6 2003/08/21 18:20:01 eduquintao Exp $
+** $Id: ls_mysql.c,v 1.7 2003/10/24 10:48:12 tomas Exp $
 */
 
 #include <assert.h>
@@ -93,7 +93,6 @@ static cur_data *getcursor (lua_State *L) {
 ** Push the value of #i field of #tuple row.
 */
 static void pushvalue (lua_State *L, void *row, long int len) {
-/* Levar em consideracao os tipos mais proximos a lua */
 	if (row == NULL)
 		lua_pushnil (L);
 	else

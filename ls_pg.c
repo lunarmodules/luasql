@@ -2,7 +2,7 @@
 ** LuaSQL, PostgreSQL driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
-** $Id: ls_pg.c,v 1.14 2003/05/30 10:04:59 tomas Exp $
+** $Id: ls_pg.c,v 1.15 2003/10/24 10:48:12 tomas Exp $
 */
 
 #include <assert.h>
@@ -330,8 +330,7 @@ static int conn_close (lua_State *L) {
 static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
-	PGresult *res;
-	res = PQexec(conn->pg_conn, statement);
+	PGresult *res = PQexec(conn->pg_conn, statement);
 	if (res && PQresultStatus(res)==PGRES_COMMAND_OK) {
 		/* no tuples returned */
 		lua_pushnumber(L, atof(PQcmdTuples(res)));
@@ -507,7 +506,7 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luasql_libopen_postgres (lua_State *L) { 
+LUASQL_API int luasql_libopen_postgres (lua_State *L) {
 	luasql_getlibtable (L);
 	lua_pushstring(L, "postgres");
 	lua_pushcfunction(L, create_environment);
