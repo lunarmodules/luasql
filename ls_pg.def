@@ -1,0 +1,5 @@
+LIBRARY		luasql_postgres
+DESCRIPTION "LuaSQL driver for Postgres"
+VERSION 2.0
+EXPORTS
+luasql_libopen_postgres

@@ -1,0 +1,5 @@
+LIBRARY		luasql_odbc
+DESCRIPTION "LuaSQL driver for ODBC"
+VERSION 2.0
+EXPORTS
+luasql_libopen_odbc
