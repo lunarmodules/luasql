@@ -3,14 +3,10 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "luasqlmysql_dll"=.\luasqlmysql_dll.dsp - Package Owner=<4>
+Project: "luasqlmysql40_dll"=.\luasqlmysql40_dll.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    luasqlmysql_dll
-    ..
-    end source code control
 }}}
 
 Package=<4>
@@ -19,14 +15,22 @@ Package=<4>
 
 ###############################################################################
 
-Project: "luasqlodbc_dll"=.\luasqlodbc_dll.dsp - Package Owner=<4>
+Project: "luasqlmysql41_dll"=.\luasqlmysql41_dll.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    luasqlodbc_dll
-    ..
-    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "luasqlmysql50_dll"=.\luasqlmysql50_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
 }}}
 
 Package=<4>
@@ -39,10 +43,18 @@ Project: "luasqloci8_dll"=.\luasqloci8_dll.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    luasqloci8_dll
-    ..
-    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "luasqlodbc_dll"=.\luasqlodbc_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
 }}}
 
 Package=<4>
@@ -55,10 +67,6 @@ Project: "luasqlpostgres_dll"=.\luasqlpostgres_dll.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    luasqlpostgres_dll
-    ..
-    end source code control
 }}}
 
 Package=<4>
