@@ -289,7 +289,8 @@ function Private.createCursor(rs, con, closeFunc)
         end
         
         for i = 0, cursor.Fields.Count-1 do
-          local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
+          local fields = cursor.Fields
+          local cond, field = pcall(fields.Item, fields, i)
           if not cond then
             return nil, field
           end
@@ -325,7 +326,8 @@ function Private.createCursor(rs, con, closeFunc)
         local tb = col_names
         
         for i = 0, cursor.Fields.Count-1 do
-          local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
+          local fields = cursor.Fields
+          local cond, field = pcall(fields.Item, fields, i)
           if not cond then
             return nil, field
           end
@@ -348,7 +350,8 @@ function Private.createCursor(rs, con, closeFunc)
         local tb = col_types
        
         for i = 0, cursor.Fields.Count-1 do
-          local cond, field = pcall(cursor.Fields.Item, cursor.Fields, i)
+          local fields = cursor.Fields
+          local cond, field = pcall(fields.Item, fields, i)
           if not cond then
             return nil, field
           end
