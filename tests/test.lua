@@ -56,6 +56,8 @@ function basic_test ()
 	-- trying to connect with a closed environment.
 	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
 		"error connecting with a closed environment")
+	-- it's ok to close a closed object, but nil is returned instead of 1.
+	assert2 (nil, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
 	-- Check connection object.
@@ -63,12 +65,17 @@ function basic_test ()
 	assert (conn, (err or '').." ("..datasource..")")
 	CONN_OK (conn)
 	assert2 (1, conn:close(), "couldn't close connection")
+	-- trying to execute a statement with a closed connection.
+	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
+		"error connecting with a closed environment")
+	-- it's ok to close a closed object, but nil is returned instead of 1.
+	assert2 (nil, conn:close())
 	-- Check error situation.
 	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
 end
 
 ---------------------------------------------------------------------
--- Build SQL command to create the test table
+-- Build SQL command to create the test table.
 ---------------------------------------------------------------------
 function define_table (n)
 	local s = "create table t ("
@@ -358,7 +365,7 @@ datasource = arg[2] or "luasql-test"
 username = arg[3] or nil
 password = arg[4] or nil
 
-require (arg[1])
+require (driver)
 assert (luasql, "no luasql table")
 
 for i = 1, table.getn (tests) do
