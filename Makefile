@@ -52,7 +52,7 @@ SRCS= README Makefile \
 	ls_mysql.c \
 	ls_sqlite.c \
 	test.lua performance.lua \
-	index.html manual.html license.html authors.html luasql.png 
+	index.html manual.html license.html authors.html luasql.png
 
 AR= ar rcu
 RANLIB= ranlib
@@ -73,7 +73,13 @@ dist: dist_dir
 
 dist_dir:
 	mkdir $(DIST_DIR)
+	mkdir -p $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
+	mkdir -p $(DIST_DIR)/jdbc/src/lua
 	cp $(SRCS) $(DIST_DIR)
+	cp jdbc/Makefile $(DIST_DIR)/jdbc
+	cp jdbc/build.xml $(DIST_DIR)/jdbc
+	cp jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
+	cp jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
 
 install:
 	mkdir -p $(LUA_LIB_DIR)/luasql
