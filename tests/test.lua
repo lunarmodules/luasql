@@ -73,7 +73,7 @@ if type(arg[1]) ~= "string" then
 end
 
 local driver = arg[1]
-local datasouce = arg[2] or "luasql-test"
+local datasource = arg[2] or "luasql-test"
 local username = arg[3] or nil
 local password = arg[4] or nil
 
@@ -202,3 +202,4 @@ assert (getmetatable(cur) == cur_type, err)
 local info, err = cur:colinfo ()
 assert (type(info) == "table", err)
 for i,v in info do print (i,v) end
+cur:close ()
