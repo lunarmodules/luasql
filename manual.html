@@ -100,8 +100,14 @@ For example,
 <pre>
 env = luasql.odbc()
 </pre>
-will try to create an environment
-object using the ODBC driver.
+will try to create an environment object using the ODBC driver.
+JDBC must know which driver to use, therefore when creating an environment, 
+the driver class name must be passed as the first parameter to the function 
+<code>luasql.jdbc</code>.
+For example:
+<pre>
+env = luasql.jdbc ("com.mysql.jdbc.Driver")
+</pre>
 </p>
 
 <h4>Methods</h4>
@@ -312,28 +318,6 @@ this extra feature:
     Returns: the number of rows in the query result.
 </ul>
 
-<a name="jdbc_extensions"></a>
-<h2>JDBC extensions</h2>
-<p>
-LuaSQL offers a way to use LuaSQL interface running over Java's JDBC.
-In order to do that, make sure that:
-<ul>
-  <li> Lua is running with <a href="http://www.keplerproject.org/luajava">LuaJava</a>
-  <li> LuaSQL driver for JDBC is in the Java's virtual machine classpath
-  <li> JDBC driver is also in the virtual machine classpath
-</ul>
-JDBC must know which driver to use, therefore when creating an environment, 
-the driver class name must be passed as the first parameter of the function 
-<code>luasql.jdbc</code>.
-For example:
-
-<code>
-<pre>
-env = luasql.jdbc ("com.mysql.jdbc.Driver")
-</pre>
-</code>
-
-
 <a name="examples"></a>
 <h2>Example</h2>
 
@@ -421,7 +405,6 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <li> <a href="#postgres_extensions">PostgreSQL extensions</a>
 <li> <a href="#mysql_extensions">MySQL extensions</a>
 <li> <a href="#oracle_extensions">Oracle extensions</a>
-<li> <a href="#jdbc_extensions">JDBC extensions</a>
 <li> <a href="#examples">Example</a>
 </ul>
 </p>
@@ -440,7 +423,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-$Id: manual.html,v 1.24 2004/11/17 16:58:40 tuler Exp $
+$Id: manual.html,v 1.25 2004/11/18 10:56:00 tuler Exp $
 </small>
 
 </body>
