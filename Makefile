@@ -23,10 +23,16 @@ ODBC_LIB= libluasqlodbc.2.0.a
 PG_LIB= libluasqlpostgres.2.0.a
 PG_SO= libluasqlpostgres.2.0.so
 PG_DYLIB= libluasqlpostgres.2.0.dylib
+ODBC_DLL= luasqlodbc.2.0.dll
 
 pglinux: $(PG_LIB) $(PG_SO)
+	sed "s/LIB_NAME/$(PG_SO)/" postgres.tmpl > postgres.lua
 
 pgmac: $(PG_LIB) $(PG_DYLIB)
+	sed "s/LIB_NAME/$(PG_DYLIB)/" postgres.tmpl > postgres.lua
+
+odbcwin:
+	sed "s/LIB_NAME/$(ODBC_DLL)/" odbc.tmpl > odbc.lua
 
 dist:
 	cd ..; tar -czf luasql-2.0.tar.gz $(SRCS)
