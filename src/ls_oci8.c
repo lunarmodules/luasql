@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.7 2003/06/02 18:05:20 tomas Exp $
+** $Id: ls_oci8.c,v 1.8 2003/06/09 14:00:54 tomas Exp $
 */
 
 #include <assert.h>
@@ -679,6 +679,11 @@ static int env_connect (lua_State *L) {
 	const char *sourcename = luaL_checkstring(L, 2);
 	const char *username = luaL_optstring(L, 3, NULL);
 	const char *password = luaL_optstring(L, 4, NULL);
+	/* Sizes of strings */
+	size_t snlen = strlen(sourcename);
+	size_t userlen = (username) ? strlen(username) : 0;
+	size_t passlen = (password) ? strlen(password) : 0;
+	/* Alloc connection object */
 	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
 
 	/* fill in structure */
@@ -705,9 +710,9 @@ static int env_connect (lua_State *L) {
 */
 	/* login */
 	ASSERT (L, OCILogon(env->envhp, conn->errhp, &(conn->svchp),
-		(CONST text*)username, strlen(username),
-		(CONST text*)password, strlen(password),
-		(CONST text*)sourcename, strlen(sourcename)), conn->errhp);
+		(CONST text*)username, userlen,
+		(CONST text*)password, passlen,
+		(CONST text*)sourcename, snlen), conn->errhp);
 	conn->loggedon = 1;
 
 	return 1;
