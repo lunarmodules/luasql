@@ -235,6 +235,7 @@ function column_info ()
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	local cur = assert (CONN:execute ("select f1,f2,f3,f4 from t"))
 	assert2 (CUR_TYPE, getmetatable(cur), "incorrect metatable")
+	-- get column information.
 	local names, types = cur:getcolnames(), cur:getcoltypes()
 	assert2 ("table", type(names), "getcolnames failed")
 	assert2 ("table", type(types), "getcoltypes failed")
@@ -242,10 +243,13 @@ function column_info ()
 	assert2 (4, table.getn(types), "incorrect column types table")
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
-		--assert2 ("string", types[i], "incorrect column types table")
 		local type_i = types[i]
 		assert (type_i == "varchar (30)" or type_i == "string", "incorrect column types table")
 	end
+	-- check if the tables are being reused.
+	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
+	assert2 (names, n2, "getcolnames is rebuilding the table")
+	assert2 (types, t2, "getcoltypes is rebuilding the table")
 	assert2 (1, cur:close(), "couldn't close cursor")
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
