@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.4 2003/04/28 16:02:58 tomas Exp $>
+<!$Id: manual.html,v 1.5 2003/04/30 16:12:06 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -35,23 +35,33 @@ ul { list-style-type: disc };
 <a name="overview"></a>
 <h2>Overview</h2>
 <p>
-This library is a suite of drivers
-each one composed by two files: a C source file that implements the
-driver functions; and a Lua script used to load the dynamic library.
+LuaSQL is a simple interface from Lua to a DBMS.
+It has a collection of drivers to some popular databases
+(actually PostgreSQL and ODBC, Oracle, MySQL and ADO will be
+ready soon).
+LuaSQL defines a simple object oriented API that must be
+implemented by all drivers but each one can offer other
+specific features.
+<p>
+LuaSQL defines one single global variable,
+a table called <tt>luasql</tt>.
+This table is used to store the initialization methods of the
+loaded drivers.
+This method is used to create an
+<a href="#environment_class">Environment object</a>
+which is used to create a
+<a href="#connection_class">Connection object</a>.
+A connection object can execute SQL statements and eventually
+create a
+<a href="#cursor_class">Cursor object</a>
+which is used to retrieve data.
+<p>
+Each LuaSQL driver is composed by two files:
+a C source file that implements the driver functions;
+and a Lua script used to load the dynamic library.
 The host application can be statically linked with one or more drivers
-or they can be loaded dynamically by the corresponding Lua script (that
+or they can be loaded dynamically by the corresponding Lua script (this
 requires the built-in <tt>loadlib</tt> function Lua 5 offers).
-</p><p>
-Both ways when the driver is loaded it creates a method in a table
-called <tt>luasql</tt>; this method has the same name of the driver
-(postgres, odbc etc.).
-This method is used to create an <a href="#environment_class">Environment
-object</a> which is the basis to do whatever is needed.
-</p><p>
-LuaSQL has a common API that all drivers must implement,
-but other especial features can exist.
-This manual tries to explain both the common API and the particularities
-of each driver.
 </p>
 
 
@@ -73,9 +83,10 @@ Connects to a data source specified in <tt>sourcename</tt> using
 <tt>username</tt> and <tt>password</tt> if they are supplied.<br>
 Returns: a <a href="connection_class">Connection object</a>.
 <ul> PostgreSQL extension:
-<li> Two more optionsl parameters (hostname and port)
-<li> Just one string containing all connection info, as described in
-     the PostgreSQL manual ("host=&lt;<i>source name</i>&gt; port=&lt;<i>port number</i>&gt;" etc.)
+<li> Two more optional parameters (hostname and port)
+<li> The first parameter can be a string containing all connection info,
+	as described in the PostgreSQL manual
+	(e.g. <small><tt>environment:connect("host=&lt;<i>source&nbsp;name</i>&gt; port=&lt;<i>port&nbsp;number</i>&gt;")</tt></small>)
 </ul>
 
 <a name="env_close"></a>
@@ -105,6 +116,10 @@ if there are results, or the number of rows affected by the command otherwise.
 <a name="conn_setautocommit"></a>
 <li> <tt>setautocommit (boolean)</tt> <br>
 Turns on or off the "auto commit" mode.
+This feature might not work on database systems that don't implement
+transactions.
+Turning off the "auto commit" mode should begin a new transaction;
+turning the mode on will roll back the current transaction.
 
 <!--
 <li> <tt>TableList()</tt> <br>==&gt; So' no ODBC &lt;==
@@ -112,6 +127,7 @@ Retrieves a list of all the tables in the data source. <br>
 Returns: a list of the table names.
 </p>
 -->
+
 <a name="conn_commit"></a>
 <li> <tt>commit()</tt> <br>
 Commits the current transaction.
@@ -128,7 +144,7 @@ Only successful if all cursors pertaining to it were closed first.
 
 
 <a name="cursor_class"></a>
-<h3>Cursor class</h3>
+<h2>Cursor class</h2>
 
 A Cursor object contains methods permitting the retrieval of 
 data resulting from an executed statement.
@@ -145,7 +161,7 @@ Retrieves the next row of results.<br>
 If <tt>fetch</tt> is called without parameters,
 the results will be returned to the caller directly.
 If <tt>fetch</tt> is called with a table, the results will be copied
-to the table.
+to the table and this table will be returned (for convenience).
 In this case, an optional <tt>mode</tt> parameter can be used.
 It is just a string indicating how the result table should be made.
 The mode string can contain:
@@ -159,29 +175,36 @@ This should improve the performance when retrieving many rows with many fields.<
 Returns: data, as above, or <tt>nil</tt> if there aren't any rows left
 followed by an error message if any.
 
-<a name="cur_colinfo"></a>
-<li> <tt>colinfo()</tt> <br>
+<a name="cur_colnames"></a>
+<li> <tt>getcolnames()</tt> <br>
+Returns: a table with the list of column names.
+
+<a name="cur_coltypes"></a>
+<li> <tt>getcoltypes()</tt> <br>
+Returns: a table with the list of column types.
 
 <a name="cur_close"></a>
 <li> <tt>close()</tt> <br>
 Closes this cursor. 
 </ul>
 
-<h3><a name=ex>Examples</h3>
+
+<a name="examples"></a>
+<h2>Examples</h2>
 
 Below is a small sample code displaying the basic use of the library.
 
 <blockquote>
 <pre>
 -- create environment object
-ENV, err = SQLOpen()
-assert(ENV, err)
+env, err = luasql.odbc()
+assert(env, err)
 -- connect to ODBC data source
-CON, err = ENV:Connect("LuaSQLTest")
-assert(CON, err)
+con, err = env:connect("luasql-test")
+assert(con, err)
 -- reset our table
-res, err = CON:Execute"DROP TABLE friends"
-res, err = CON:Execute[[
+res, err = con:execute"DROP TABLE friends"
+res, err = con:execute[[
   CREATE TABLE friends(
     friendid Number,
     friendname  String, 
@@ -196,31 +219,28 @@ friends = {
   {ID = 3, Name = "Rita", Age = 28}, 
   {ID = 4, Name = "Stephan", Age = 23}
 }
-for i, f in friends do
-  res, err = CON:Execute(format([[
+for i, f in pairs (friends) do
+  res, err = con:execute(string.format([[
     INSERT INTO friends(friendid, friendname, friendage)
     VALUES(%d, '%s', %d)]], f.ID, f.Name, f.Age)
   )
   assert(res, err)
 end
 -- retrieve a cursor for all friends, sorted by age
-CUR, err = CON:Execute[[
+cur, err = con:execute[[
 	SELECT friendname, friendage FROM friends ORDER BY friendage
 ]]
-assert(CUR, err)
--- rows will be indexed by column name
-res, err = CUR:SetOptions{name_columns = "true"}
-assert(res, err)
+assert(cur, err)
 -- print all rows of the result
-while 1 do
-	row = CUR:Fetch()
-	if not row then break end
-	print(format("Name: %s, Age: %d", row.friendname, row.friendage))
+row = cur:fetch ({}, "a")	-- the rows will be indexed by field names
+while row do
+	print(string.format("Name: %s, Age: %d", row.friendname, row.friendage))
+	row = cur:fetch (row, "a")	-- reusing the table of results
 end
 -- close everything
-CUR:Close()
-CON:Close()
-ENV:Close()
+cur:close()
+con:close()
+env:close()
 </pre>
 </blockquote>
 
@@ -290,7 +310,7 @@ case-sensitive.
 <hr>
 <small>
 Last modified by Tom&aacute;s Guisasola on<br>
-Wed Feb 19 13:52:33 BRT 2003
+Wed Apr 30 16:08:09 BRT 2003
 </small>
 
 </body>
