@@ -2,6 +2,7 @@
 ** LuaSQL, PostgreSQL driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
+** $Id: ls_pg.c,v 1.12 2003/05/08 21:43:39 tomas Exp $
 */
 
 #include <assert.h>
@@ -146,13 +147,9 @@ static int cur_close (lua_State *L) {
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	PQclear(cur->pg_res);
-	cur->pg_res = NULL;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
-	cur->conn = LUA_NOREF;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
-	cur->colnames = LUA_NOREF;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
-	cur->coltypes = LUA_NOREF;
 
 	lua_pushnumber(L, 1);
 	return 1;
@@ -315,9 +312,7 @@ static int conn_close (lua_State *L) {
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	conn->env = LUA_NOREF;
 	PQfinish(conn->pg_conn);
-	conn->pg_conn = NULL;
 	lua_pushnumber(L, 1);
 	return 1;
 }
@@ -423,10 +418,9 @@ static void notice_processor (void *arg, const char *message) {
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
-	/*env_data *env =*/ getenvironment (L);	/* validate environment */
 	const char *sourcename = luaL_checkstring(L, 2);
 	PGconn *conn;
-
+	getenvironment (L);	/* validate environment */
 	if ((lua_gettop (L) == 2) && (strchr (sourcename, '=') != NULL))
 		conn = PQconnectdb (luaL_check_string(L, 2));
 	else {

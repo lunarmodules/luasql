@@ -2,6 +2,7 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
+** $Id: ls_odbc.c,v 1.10 2003/05/08 21:43:39 tomas Exp $
 */
 
 #include <assert.h>
@@ -293,7 +294,6 @@ static int cur_fetch (lua_State *L) {
 ** Closes a cursor.
 */
 static int cur_close (lua_State *L) {
-	conn_data *conn;
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
 	SQLHSTMT hstmt = cur->hstmt;
 	SQLRETURN ret;
@@ -311,7 +311,6 @@ static int cur_close (lua_State *L) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
-	cur->conn = LUA_NOREF;
     return pass(L);
 }
 
@@ -393,22 +392,19 @@ static int create_cursor (lua_State *L, conn_data *conn,
 */
 static int conn_close (lua_State *L) {            
 	SQLRETURN ret;
-	env_data *env;
-    conn_data *conn = (conn_data *) luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
+    conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	if (conn->closed)
 		return 0;
 
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	conn->env = LUA_NOREF;
 	ret = SQLDisconnect(conn->hdbc);
 	if (error(ret))
 		return fail(L, hDBC, conn->hdbc);
 	ret = SQLFreeHandle(hDBC, conn->hdbc);
 	if (error(ret))
 		return fail(L, hDBC, conn->hdbc);
-	conn->hdbc = NULL;
     return pass(L);
 }
 
