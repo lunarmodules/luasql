@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.6 2003/05/02 10:51:33 tomas Exp $>
+<!$Id: manual.html,v 1.7 2003/05/02 15:16:15 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -37,23 +37,23 @@ ul { list-style-type: disc };
 <p>
 LuaSQL is a simple interface from Lua to a DBMS.
 It has a collection of drivers to some popular databases
-(actually PostgreSQL and ODBC, Oracle, MySQL and ADO will be
+(actually PostgreSQL and ODBC; Oracle, MySQL and ADO will be
 ready soon).
-LuaSQL defines a simple object oriented API that must be
-implemented by all drivers but each one can offer other
-specific features.
+LuaSQL defines a simple object-oriented API.
+All drivers should implement this common API,
+but each one is free to offer extensions.
 <p>
 LuaSQL defines one single global variable,
 a table called <tt>luasql</tt>.
 This table is used to store the initialization methods of the
 loaded drivers.
 This method is used to create an
-<a href="#environment_class">Environment object</a>
+<a href="#environment_object">environment object</a>
 which is used to create a
-<a href="#connection_class">Connection object</a>.
+<a href="#connection_object">connection object</a>.
 A connection object can execute SQL statements and eventually
 create a
-<a href="#cursor_class">Cursor object</a>
+<a href="#cursor_object">cursor object</a>
 which is used to retrieve data.
 <p>
 Each LuaSQL driver is composed by two files:
@@ -65,10 +65,10 @@ requires the built-in <tt>loadlib</tt> function Lua 5 offers).
 </p>
 
 
-<a name="environment_class">
-<h2>Environment class</h2>
+<a name="environment_object">
+<h2>Environment objects</h2>
 <p>
-An Environment object is created by calling the method with the
+An environment object is created by calling the method with the
 same name of the driver (odbc, postgres etc.).
 For example, <tt>luasql.odbc()</tt>, will try to create an environment
 object using the ODBC driver.
@@ -78,25 +78,25 @@ object using the ODBC driver.
 
 <ul>
 <a name="env_close"></a>
-<li> <tt>close()</tt> <br>
-Closes this environment. Only successful if all connections pertaining to
-it were closed first.
+<li> <tt>env:close()</tt> <br>
+Closes the environment <tt>env</tt>.
+Only successful if all connections pertaining to it were closed first.
 
 <a name="env_connect"></a>
-<li> <tt>connect(sourcename[,username[,password]])</tt> <br>
+<li> <tt>env:connect(sourcename[,username[,password]])</tt> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
 <tt>username</tt> and <tt>password</tt> if they are supplied.<br>
 See also: <a href="#postgres_extensions">PostgreSQL extensions</a><br>
-Returns: a <a href="connection_class">Connection object</a>.
+Returns: a <a href="connection_object">connection object</a>.
 
 </ul>
 
-<a name="connection_class">
-<h2>Connection class</h2>
+<a name="connection_object">
+<h2>Connection objects</h2>
 
-A Connection object contains specific attributes and parameters of a single
+A connection object contains specific attributes and parameters of a single
 data source connection.
-A Connection object is created by calling the
+A connection object is created by calling the
 <tt><a href="#env_connect">environment:connect</a></tt>
 method.
 
@@ -104,31 +104,33 @@ method.
 
 <ul>
 <a name="conn_close"></a>
-<li> <tt>close()</tt> <br>
-Closes this connection.
+<li> <tt>conn:close()</tt> <br>
+Closes the connection <tt>conn</tt>.
 Only successful if all cursors pertaining to it were closed first.
 
 <a name="conn_commit"></a>
-<li> <tt>commit()</tt> <br>
+<li> <tt>conn:commit()</tt> <br>
 Commits the current transaction.
 
 <a name="conn_execute"></a>
-<li> <tt>execute(statement)</tt> <br>
+<li> <tt>conn:execute(statement)</tt> <br>
 Executes the given SQL <tt>statement</tt>.<br>
-Returns: a <a href="cursor_class">Cursor object</a>
+Returns: a <a href="cursor_object">cursor object</a>
 if there are results, or the number of rows affected by the command otherwise.
 
 <a name="conn_rollback"></a>
-<li> <tt>rollback()</tt> <br>
+<li> <tt>conn:rollback()</tt> <br>
 Rolls back the current transaction.
 
 <a name="conn_setautocommit"></a>
-<li> <tt>setautocommit(boolean)</tt> <br>
+<li> <tt>conn:setautocommit(boolean)</tt> <br>
 Turns on or off the "auto commit" mode.
 This feature might not work on database systems that don't implement
 transactions.
+<!--
 Turning off the "auto commit" mode should begin a new transaction;
 turning the mode on will roll back the current transaction.
+-->
 
 <!--
 <li> <tt>TableList()</tt> <br>==&gt; So' no ODBC &lt;==
@@ -140,13 +142,13 @@ Returns: a list of the table names.
 </ul>
 
 
-<a name="cursor_class"></a>
-<h2>Cursor class</h2>
+<a name="cursor_object"></a>
+<h2>Cursor objects</h2>
 
-A Cursor object contains methods permitting the retrieval of 
+A cursor object contains methods to retrieve
 data resulting from an executed statement.
-A Cursor object is created by using the
-<tt><a href="#conn_execute">Connection:execute</a></tt>
+A cursor object is created by using the
+<tt><a href="#conn_execute">connection:execute</a></tt>
 function.
 See also <a href="#postgres_extensions">PostgreSQL extensions</a>.
 
@@ -154,16 +156,16 @@ See also <a href="#postgres_extensions">PostgreSQL extensions</a>.
 
 <ul>
 <a name="cur_close"></a>
-<li> <tt>close()</tt> <br>
+<li> <tt>cur:close()</tt> <br>
 Closes this cursor. 
 
 <a name="cur_fetch"></a>
-<li> <tt>fetch([table[,modestring]])</tt> <br>
+<li> <tt>cur:fetch([table[,modestring]])</tt> <br>
 Retrieves the next row of results.<br>
 If <tt>fetch</tt> is called without parameters,
 the results will be returned to the caller directly.
 If <tt>fetch</tt> is called with a table, the results will be copied
-to the table and this table will be returned (for convenience).
+into the table and this table will be returned (for convenience).
 In this case, an optional <tt>mode</tt> parameter can be used.
 It is just a string indicating how the result table should be made.
 The mode string can contain:
@@ -171,19 +173,22 @@ The mode string can contain:
   <li> <b>"n"</b> the resulting table will have numerical indices
   <li> <b>"a"</b> the resulting table will have alphanumerical indices
 </ul>
+The <i>numerical indexes</i> are the positions of the fields in the select
+statement;
+the <i>alphanumerical indexes</i> are the names of the fields.
 The optional <tt>table</tt> parameter is a table that should be
 used to store the next row.
-This should improve the performance when retrieving many rows with many fields.<br>
-Returns: data, as above, or <tt>nil</tt> if there aren't any rows left
-followed by an error message if any.
+This allows the use of a unique table for many fetches which
+can improve the overall performance.<br>
+Returns: data, as above, or <tt>nil</tt> if there are no more rows.
 
 <a name="cur_colnames"></a>
-<li> <tt>getcolnames()</tt> <br>
-Returns: a table with the list of column names.
+<li> <tt>cur:getcolnames()</tt> <br>
+Returns: a list of column names.
 
 <a name="cur_coltypes"></a>
-<li> <tt>getcoltypes()</tt> <br>
-Returns: a table with the list of column types.
+<li> <tt>cur:getcoltypes()</tt> <br>
+Returns: a list of column types.
 
 </ul>
 
@@ -196,14 +201,14 @@ provided by all drivers (see manual), the Postgres driver also offers
 these extra features:
 
 <ul>
-  <li><tt>environment:connect(sourcename[,username[,password[,hostname[,port]]]])</tt><br>
-    In PostgreSQL driver, this method has two other optional parameters
+  <li><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt><br>
+    In the PostgreSQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     Also, the first parameter can contain all connection information,
     as stated in the documentation for <tt>PQconnectdb</tt> function
     in the PostgreSQL manual
     (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>)
-  <li><tt>cursor:numrows()</tt><br>
+  <li><tt>cur:numrows()</tt><br>
     This additional method returns the number of rows in the query result.
 </ul>
 
@@ -218,41 +223,36 @@ Below is a small sample code displaying the basic use of the library.
 -- load driver
 require"postgres"
 -- create environment object
-env, err = luasql.postgres()
-assert(env, err)
+env = assert (luasql.postgres())
 -- connect to data source
-con, err = env:connect("luasql-test")
-assert(con, err)
+con = assert (env:connect("luasql-test"))
 -- reset our table
-res, err = con:execute"DROP TABLE people"
-res, err = con:execute[[
+res = con:execute"DROP TABLE people"
+res = assert (con:execute[[
   CREATE TABLE people(
     name  varchar(50),
     email varchar(50)
   )
-]]
-assert(res, err)
+]])
 -- add a few elements
 list = {
-    { name="Tomas Guisasola", email="tomas@kepler.org", },
-    { name="Roberto Ierusalimschy", email="roberto@kepler.org", },
-    { name="Andre Carregal", email="carregal@kepler.org", },
+  { name="Jose das Couves", email="jose@couves.com", },
+  { name="Manoel Joaquim", email="manoel.joaquim@cafundo.com", },
+  { name="Maria das Dores", email="maria@dores.com", },
 }
 for i, p in pairs (list) do
-  res, err = con:execute(string.format([[
+  res = assert (con:execute(string.format([[
     INSERT INTO people
     VALUES ('%s', '%s')]], p.name, p.email)
-  )
-  assert(res, err)
+  ))
 end
 -- retrieve a cursor
-cur, err = con:execute"SELECT name, email from people"
-assert(cur, err)
+cur = assert (con:execute"SELECT name, email from people")
 -- print all rows
 row = cur:fetch ({}, "a")	-- the rows will be indexed by field names
 while row do
-	print(string.format("Name: %s, E-mail: %s", row.name, row.email))
-	row = cur:fetch (row, "a")	-- reusing the table of results
+  print(string.format("Name: %s, E-mail: %s", row.name, row.email))
+  row = cur:fetch (row, "a")	-- reusing the table of results
 end
 -- close everything
 cur:close()
@@ -265,9 +265,9 @@ And the output of this script should be:
 
 <blockquote>
 <pre>
-Name: Tomas Guisasola, E-mail: tomas@kepler.org
-Name: Roberto Ierusalimschy, E-mail: roberto@kepler.org
-Name: Andre Carregal, E-mail: carregal@kepler.org
+Name: Jose das Couves, E-mail: jose@couves.com
+Name: Manoel Joaquim, E-mail: manoel.joaquim@cafundo.com
+Name: Maria das Dores, E-mail: maria@dores.com
 </pre>
 </blockquote>
 
@@ -277,12 +277,12 @@ Name: Andre Carregal, E-mail: carregal@kepler.org
 <p>
 <ul>
 <li> <a href="#overview">Overview</a>
-<li> <a href="#environment_class">Environment class</a>
+<li> <a href="#environment_object">Environment objects</a>
   <ul>
     <li> <a href="#env_close">close</a>
     <li> <a href="#env_connect">connect</a>
   </ul>
-<li> <a href="#connection_class">Connection class</a>
+<li> <a href="#connection_object">Connection object</a>
   <ul>
     <li> <a href="#conn_close">close</a>
     <li> <a href="#conn_commit">commit</a>
@@ -290,7 +290,7 @@ Name: Andre Carregal, E-mail: carregal@kepler.org
     <li> <a href="#conn_rollback">rollback</a>
     <li> <a href="#conn_setautocommit">setautocommit</a>
   </ul>
-<li> <a href="#cursor">Cursor class</a>
+<li> <a href="#cursor">Cursor objects</a>
   <ul>
     <li> <a href="#cur_close">close</a>
     <li> <a href="#cur_fetch">fetch</a>
@@ -317,7 +317,7 @@ Name: Andre Carregal, E-mail: carregal@kepler.org
 <hr>
 <small>
 Last modified by Tom&aacute;s Guisasola on<br>
-Fri May  2 10:50:37 BRT 2003
+Fri May  2 15:17:06 BRT 2003
 </small>
 
 </body>
