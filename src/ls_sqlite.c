@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.5 2004/10/15 12:19:35 tomas Exp $
+** $Id: ls_sqlite.c,v 1.6 2004/11/03 10:46:06 tomas Exp $
 */
 
 #include <stdio.h>
@@ -549,5 +549,6 @@ LUASQL_API int luaopen_luasqlsqlite(lua_State *L)
 	};
 	create_metatables (L);
 	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+	luasql_set_info (L);
 	return 1;
 }

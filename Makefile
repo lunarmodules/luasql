@@ -1,4 +1,4 @@
-VERSION= 2.0b
+VERSION= 2.0b2
 
 COMPAT_DIR= .
 

@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.16 2004/10/15 12:19:35 tomas Exp $
+** $Id: ls_mysql.c,v 1.17 2004/11/03 10:46:06 tomas Exp $
 */
 
 #include <assert.h>
@@ -506,5 +506,6 @@ LUASQL_API int luaopen_luasqlmysql (lua_State *L) {
 	};
 	create_metatables (L);
 	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+	luasql_set_info (L);
 	return 1;
 }

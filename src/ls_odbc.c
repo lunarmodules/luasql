@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.25 2004/10/15 12:19:35 tomas Exp $
+** $Id: ls_odbc.c,v 1.26 2004/11/03 10:46:06 tomas Exp $
 */
 
 #include <assert.h>
@@ -706,5 +706,6 @@ LUASQL_API int luaopen_luasqlodbc (lua_State *L) {
 	};
 	create_metatables (L);
 	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+	luasql_set_info (L);
 	return 1;
 } 

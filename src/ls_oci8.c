@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.22 2004/10/15 12:19:35 tomas Exp $
+** $Id: ls_oci8.c,v 1.23 2004/11/03 10:46:06 tomas Exp $
 */
 
 #include <assert.h>
@@ -848,5 +848,6 @@ LUASQL_API int luaopen_luasqloci8 (lua_State *L) {
 	};
 	create_metatables (L);
 	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+	luasql_set_info (L);
 	return 1;
 }
