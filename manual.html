@@ -136,6 +136,11 @@ the object is already closed.
 <li> <b><tt>env:connect(sourcename[,username[,password]])</tt></b> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
 <tt>username</tt> and <tt>password</tt> if they are supplied.<br>
+The <tt>sourcename</tt> may vary according to each driver.
+Some use a simple database name, like PostgreSQL, MySQL and SQLite;
+the ODBC driver expects the name of the DSN;
+the oracle driver ...;
+the JDBC driver expects a string like <tt>"jdbc:&lt;database system&gt;://&lt;database name&gt;"</tt>.<br>
 See also: <a href="#postgres_extensions">PostgreSQL</a>,
 	and <a href="#mysql_extensions">MySQL</a> extensions.<br>
 Returns: a <a href="#connection_object">connection object</a>.
@@ -431,7 +436,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-$Id: manual.html,v 1.20 2004/10/01 12:39:53 tomas Exp $
+$Id: manual.html,v 1.21 2004/10/01 15:20:06 tomas Exp $
 </small>
 
 </body>
