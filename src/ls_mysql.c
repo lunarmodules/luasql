@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.18 2004/11/17 14:16:52 tomas Exp $
+** $Id: ls_mysql.c,v 1.19 2004/12/14 19:27:05 eduquintao Exp $
 */
 
 #include <assert.h>
@@ -28,6 +28,38 @@
 #define LUASQL_CONNECTION_MYSQL "MySQL connection"
 #define LUASQL_CURSOR_MYSQL "MySQL cursor"
 
+/* For compat with old version 4.0 */
+#if (MYSQL_VERSION_ID < 40100) 
+#define MYSQL_TYPE_VAR_STRING   FIELD_TYPE_VAR_STRING 
+#define MYSQL_TYPE_STRING       FIELD_TYPE_STRING 
+#define MYSQL_TYPE_DECIMAL      FIELD_TYPE_DECIMAL 
+#define MYSQL_TYPE_SHORT        FIELD_TYPE_SHORT 
+#define MYSQL_TYPE_LONG         FIELD_TYPE_LONG 
+#define MYSQL_TYPE_FLOAT        FIELD_TYPE_FLOAT 
+#define MYSQL_TYPE_DOUBLE       FIELD_TYPE_DOUBLE 
+#define MYSQL_TYPE_LONGLONG     FIELD_TYPE_LONGLONG 
+#define MYSQL_TYPE_INT24        FIELD_TYPE_INT24 
+#define MYSQL_TYPE_YEAR         FIELD_TYPE_YEAR 
+#define MYSQL_TYPE_TINY         FIELD_TYPE_TINY 
+#define MYSQL_TYPE_TINY_BLOB    FIELD_TYPE_TINY_BLOB 
+#define MYSQL_TYPE_MEDIUM_BLOB  FIELD_TYPE_MEDIUM_BLOB 
+#define MYSQL_TYPE_LONG_BLOB    FIELD_TYPE_LONG_BLOB 
+#define MYSQL_TYPE_BLOB         FIELD_TYPE_BLOB 
+#define MYSQL_TYPE_DATE         FIELD_TYPE_DATE 
+#define MYSQL_TYPE_NEWDATE      FIELD_TYPE_NEWDATE 
+#define MYSQL_TYPE_DATETIME     FIELD_TYPE_DATETIME 
+#define MYSQL_TYPE_TIME         FIELD_TYPE_TIME 
+#define MYSQL_TYPE_TIMESTAMP    FIELD_TYPE_TIMESTAMP 
+#define MYSQL_TYPE_ENUM         FIELD_TYPE_ENUM 
+#define MYSQL_TYPE_SET          FIELD_TYPE_SET
+#define MYSQL_TYPE_NULL         FIELD_TYPE_NULL
+
+#define mysql_commit(_) ((void)_)
+#define mysql_rollback(_) ((void)_)
+#define mysql_autocommit(_,__) ((void)_)
+
+#endif
+
 typedef struct {
 	short      closed;
 } env_data;
@@ -46,7 +78,7 @@ typedef struct {
 	MYSQL_RES *my_res;
 } cur_data;
 
-LUASQL_API int luasql_libopen_mysql (lua_State *L);
+LUASQL_API int luaopen_luasqlmysql (lua_State *L);
 
 
 /*
@@ -507,5 +539,8 @@ LUASQL_API int luaopen_luasqlmysql (lua_State *L) {
 	create_metatables (L);
 	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
 	luasql_set_info (L);
+    lua_pushliteral (L, "_MYSQLVERSION");
+    lua_pushliteral (L, MYSQL_SERVER_VERSION);
+    lua_settable (L, -3);
 	return 1;
 }
