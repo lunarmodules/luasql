@@ -1,7 +1,7 @@
--- $Id: loader.tmpl,v 1.2 2003/05/30 10:04:59 tomas Exp $
-if not luasql and loadlib then
+-- $Id: loader.tmpl,v 1.3 2004/06/08 13:01:30 tomas Exp $
+if not (luasql or luasql.DRIVER) and loadlib then
 	local libname = "LIB_NAME"
-	local libopen = "luasql_libopen_DRIVER"
+	local libopen = "luaopen_luasql_DRIVER"
 	local init, err1, err2 = loadlib (libname, libopen)
 	assert (init, (err1 or '')..(err2 or ''))
 	init ()
