@@ -4,6 +4,13 @@ ODBC_OBJ= ls_odbc.o
 ODBC_LIB= libluasqlodbc.$(VERSION).a
 ODBC_DLL= luasqlodbc.$(VERSION).dll
 
+SQLITE_OBJ= ls_sqlite.o
+SQLITE_LIB= libluasqlsqlite.$(VERSION).a
+SQLITE_SO= libluasqlsqlite.$(VERSION).so
+SQLITE_DYLIB= libluasqlsqlite.$(VERSION).dylib
+SQLITE_LIBS= -lsqlite
+SQLITE_INCS=
+
 PG_OBJ= ls_pg.o
 PG_LIB= libluasqlpostgres.$(VERSION).a
 PG_SO= libluasqlpostgres.$(VERSION).so
@@ -40,6 +47,7 @@ SRCS= README Makefile \
 	ls_odbc.c \
 	ls_oci8.c \
 	ls_mysql.c \
+	ls_sqlite.c \
 	test.lua performance.lua \
 	index.html manual.html license.html authors.html luasql.png 
 
@@ -54,6 +62,9 @@ dist:
 	tar -czf $(TAR_FILE) $(PKG);
 	zip -lq $(ZIP_FILE) $(PKG)/*
 	rm -rf $(PKG)
+
+sqlitelinux: $(SQLITE_LIB) $(SQLITE_SO)
+	sed -e "s/LIB_NAME/$(SQLITE_SO)/" -e "s/DRIVER/sqlite/" loader.tmpl > sqlite.lua
 
 pglinux: $(PG_LIB) $(PG_SO)
 	sed -e "s/LIB_NAME/$(PG_SO)/" -e "s/DRIVER/postgres/" loader.tmpl > postgres.lua
@@ -78,6 +89,13 @@ mysqllinux: $(MYSQL_LIB) $(MYSQL_SO)
 mysqlwin:
 	sed -e "s/LIB_NAME/$(MYSQL_SO)/" -e "s/DRIVER/mysql/" loader.tmpl > mysql.lua
 	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/mysql/" def.tmpl > mysql.def
+
+$(SQLITE_LIB): $(LS_OBJ) $(SQLITE_OBJ)
+	$(AR) $@ $(LS_OBJ) $(SQLITE_OBJ)
+	$(RANLIB) $@
+
+$(SQLITE_SO): $(LS_OBJ) $(SQLITE_OBJ)
+	gcc -o $@ -shared $(LS_OBJ) $(SQLITE_OBJ) $(LIBS_DIR) $(SQLITE_LIBS) $(LIBS)
 
 $(PG_LIB): $(LS_OBJ) $(PG_OBJ)
 	$(AR) $@ $(LS_OBJ) $(PG_OBJ)
@@ -104,4 +122,7 @@ $(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
 	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(MYSQL_LIBS) $(LIBS)
 
 clean:
-	rm -f $(TAR_FILE) $(ZIP_FILE) $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(MY_OBJ) $(ODBC_LIB) $(ODBC_DLL) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) postgres.lua odbc.lua oracle.lua mysql.lua postgres.def odbc.def oracle.def mysql.def
+	rm -f $(TAR_FILE) $(ZIP_FILE) \
+		$(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(MYSQL_OBJ) $(SQLITE_OBJ)\
+		$(ODBC_LIB) $(ODBC_DLL) $(SQLITE_LIB) $(SQLITE_SO) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) \
+		sqlite.lua postgres.lua odbc.lua oracle.lua mysql.lua sqlite.def postgres.def odbc.def oracle.def mysql.def

@@ -2,7 +2,7 @@
 -- See Copyright Notice in license.html
 
 TOTAL_FIELDS = 800
-TOTAL_ROWS = 40
+TOTAL_ROWS = 40 --unused
 
 ---------------------------------------------------------------------
 -- checks for a value and throw an error if it is invalid.
@@ -73,7 +73,17 @@ function basic_test ()
 	-- it is ok to close a closed object, but nil is returned instead of 1.
 	assert2 (false, conn:close())
 	-- Check error situation.
-	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
+	assert2 (nil, ENV:connect ("/unknown-data-base"), "this should be an error")
+
+	-- force garbage collection
+	local a = {}
+	setmetatable(a, {__mode="v"})
+	a.ENV = ENV_OK (luasql[driver] ())
+	a.CONN = a.ENV:connect (datasource, username, password)
+	collectgarbage ()
+	collectgarbage ()
+	assert2(nil, a.ENV, "environment not collected")
+	assert2(nil, a.CONN, "connection not collected")
 end
 
 ---------------------------------------------------------------------
@@ -82,7 +92,7 @@ end
 function define_table (n)
 	local s = "create table t ("
 	for i = 1, n do
-		s = s.."f"..i.." varchar(30), "
+		s = s.."f"..i.." varchar (30), "
 	end
 	s = string.sub (s, 1, -3)
 	if driver == "mysql" then 
@@ -382,7 +392,7 @@ function rollback ()
 	assert2 (false, cur:close())
 --]]
 	-- clean the table.
-	if driver == "sqllite" then
+	if driver == "sqlite" then
 		assert2 (1, CONN:execute ("delete from t where 1"))
 	else
 		assert2 (1, CONN:execute ("delete from t"))
@@ -411,8 +421,8 @@ function column_info ()
 	assert2 (4, table.getn(types), "incorrect column types table")
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
-		local type_i = types[i]
-		assert (type_i == "varchar (30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
+		local type_i = string.gsub(types[i], "%s+", "")
+		assert (type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
@@ -422,6 +432,33 @@ function column_info ()
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function check_close()
+	-- an object with references to it can't be closed
+	local cmd = "select * from t"
+	local cur = CUR_OK(CONN:execute (cmd))
+	--assert2 (false, pcall (CONN.close, CONN), "open cursor could not prevent connection close")
+
+	assert2 (true, cur:close(), "couldn't close cursor")
+
+	-- force garbage collection
+	local a = {}
+	setmetatable(a, {__mode="v"})
+	a.CONN = ENV:connect (datasource, username, password)
+	cur = CUR_OK(a.CONN:execute (cmd))
+
+	collectgarbage ()
+	collectgarbage ()
+	CONN_OK (a.CONN)
+	a.cur = cur
+	cur = nil
+	collectgarbage ()
+	assert2(nil, a.cur, "cursor not collected")
+	collectgarbage ()
+	assert2(nil, a.CONN, "connection not collected")
 end
 
 ---------------------------------------------------------------------
@@ -448,6 +485,7 @@ tests = {
 	{ "fetch many", fetch_many },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
+	{ "close objects", check_close },
 	{ "drop table", drop_table },
 	{ "close connection", close_conn },
 }
