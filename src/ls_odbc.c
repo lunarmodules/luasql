@@ -30,14 +30,12 @@
 
 typedef struct {
 	short      closed;
-	unsigned   conn_counter;       /* active connections counter */
 	SQLHENV    henv;               /* environment handle */
 } env_data;
 
 
 typedef struct {
 	short      closed;
-	unsigned   cur_counter;        /* active cursors counter */
 	int        env;                /* reference to environment */
 	int        auto_commit;        /* 0 for manual commit */
 	SQLHDBC    hdbc;               /* database connection handle */
@@ -303,10 +301,6 @@ static int cur_close (lua_State *L) {
 	if (cur->closed)
 		return 0;
 
-	/* Decrement parent's cursor counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-	conn = (conn_data *)lua_touserdata (L, -1);
-	conn->cur_counter--;
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	ret = SQLCloseCursor(hstmt);
@@ -402,13 +396,7 @@ static int conn_close (lua_State *L) {
     conn_data *conn = (conn_data *) luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
 	if (conn->closed)
 		return 0;
-	if (conn->cur_counter > 0)
-		return luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
 
-	/* Decrement parent's connection counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = (env_data *)lua_touserdata (L, -1);
-	env->conn_counter--;
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
@@ -454,11 +442,9 @@ static int conn_execute (lua_State *L) {
 		SQLFreeHandle(hSTMT, hstmt);
 		return ret;
 	}
-	if (numcols > 0) {
+	if (numcols > 0)
     	/* if there is a results table (e.g., SELECT) */
-		conn->cur_counter++;
 		return create_cursor (L, conn, hstmt, numcols);
-	}
 	else {
 		/* if action has no results (e.g., UPDATE) */
 		SQLINTEGER numrows;
@@ -579,7 +565,6 @@ static int create_connection (lua_State *L, env_data *env, SQLHDBC hdbc) {
 
 	/* fill in structure */
 	conn->closed = 0;
-	conn->cur_counter = 0;
 	conn->hdbc = hdbc;
 	lua_pushvalue (L, 1);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
@@ -619,7 +604,6 @@ static int env_connect (lua_State *L) {
 		return ret;
 	}
 	/* success, return connection object */
-	env->conn_counter++;
 	return create_connection (L, env, hdbc);
 }
 
@@ -631,8 +615,6 @@ static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_ODBC);
 	if (env->closed)
 		return 0;
-	if (env->conn_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"unexpected error (EnvClose)");
 
 	env->closed = 1;
 	ret = SQLFreeHandle (hENV, env->henv);
@@ -691,7 +673,6 @@ static int create_environment (lua_State *L) {
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
 	/* fill in structure */
 	env->closed = 0;
-	env->conn_counter = 0;
 	env->henv = henv;
 	return 1;
 }

@@ -24,13 +24,11 @@
 
 typedef struct {
 	short      closed;
-	unsigned   conn_counter;       /* active connections counter */
 } env_data;
 
 
 typedef struct {
 	short      closed;
-	unsigned   cur_counter;        /* active cursors counter */
 	int        env;                /* reference to environment */
 	int        auto_commit;        /* 0 for manual commit */
 	PGconn    *pg_conn;
@@ -146,10 +144,6 @@ static int cur_close (lua_State *L) {
 	if (cur->closed)
 		return 0;
 
-	/* Decrement the parent's cursor counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-	conn = (conn_data *)lua_touserdata (L, -1);
-	conn->cur_counter--;
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	PQclear(cur->pg_res);
@@ -316,13 +310,7 @@ static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
 	if (conn->closed)
 		return 0;
-	if (conn->cur_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"there are open cursors");
 
-	/* Decrement parent's connection counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = (env_data *)lua_touserdata (L, -1);
-	env->conn_counter--;
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
@@ -349,14 +337,12 @@ static int conn_execute (lua_State *L) {
 		lua_pushnumber(L, atof(PQcmdTuples(res)));
 		return 1;
 	}
-	else if (res && PQresultStatus(res)==PGRES_TUPLES_OK) {
+	else if (res && PQresultStatus(res)==PGRES_TUPLES_OK)
 		/* tuples returned */
-		conn->cur_counter++;
 		return create_cursor (L, 1, res);
-	}
-	else {  /* error */
+	else
+		/* error */
 		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
-	}
 }
 
 
@@ -412,7 +398,6 @@ static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 
 	/* fill in structure */
 	conn->closed = 0;
-	conn->cur_counter = 0;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	conn->auto_commit = 1;
@@ -455,7 +440,6 @@ static int env_connect (lua_State *L) {
 	if (PQstatus(conn) == CONNECTION_BAD)
 		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting to database.");
 	PQsetNoticeProcessor(conn, notice_processor, NULL);
-	env->conn_counter++;
 	return create_connection(L, 1, conn);
 }
 
@@ -467,8 +451,6 @@ static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
 	if (env->closed)
 		return 0;
-	if (env->conn_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"there are open connections");
 
 	env->closed = 1;
 	lua_pushnumber (L, 1);
@@ -516,7 +498,6 @@ static int create_environment (lua_State *L) {
 
 	/* fill in structure */
 	env->closed = 0;
-	env->conn_counter = 0;
 	return 1;
 }
 
