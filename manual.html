@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.8 2003/05/07 04:07:52 tomas Exp $>
+<!$Id: manual.html,v 1.9 2003/05/07 06:20:50 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -22,18 +22,18 @@ ul { list-style-type: disc };
 <p>
 
 <center><small>
-<a href="index.html#over">overview</a> &middot;
-<a href="index.html#version">current version</a> &middot;
-<a href="index.html#new">what's new</a> &middot;
-<a href="index.html#down">download</a> &middot;
-<a href="index.html#hist">history</a>
+<a href="index.html">home</a> &middot;
+<a href="#environment_object">environment</a> &middot;
+<a href="#connection_object">connection</a> &middot;
+<a href="#cursor_object">cursor</a> &middot;
+<a href="#examples">example</a>
 </small></center>
 <p>
 
 <hr>
 
-<a name="overview"></a>
-<h2>Overview</h2>
+<a name="introduction"></a>
+<h2>Introduction</h2>
 <p>
 LuaSQL is a simple interface from Lua to a DBMS.
 It has a collection of drivers to some popular databases
@@ -208,14 +208,16 @@ these extra features:
     Also, the first parameter can contain all connection information,
     as stated in the documentation for <tt>PQconnectdb</tt> function
     in the PostgreSQL manual
-    (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>)
+    (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>) <br>
+    See also: <a href="#environment_object">environment objects</a>
   <li> <b><tt>cur:numrows()</tt></b> <br>
-    This additional method returns the number of rows in the query result.
+    This additional method returns the number of rows in the query result.<br>
+    See also: <a href="#cursor_object">cursor objects</a>
 </ul>
 
 
 <a name="examples"></a>
-<h2>Examples</h2>
+<h2>Example</h2>
 
 Below is a small sample code displaying the basic use of the library.
 
@@ -277,7 +279,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <h2>Contents</h2>
 <p>
 <ul>
-<li> <a href="#overview">Overview</a>
+<li> <a href="#introduction">Introduction</a>
 <li> <a href="#environment_object">Environment objects</a>
   <ul>
     <li> <a href="#env_close">close</a>
@@ -291,7 +293,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
     <li> <a href="#conn_rollback">rollback</a>
     <li> <a href="#conn_setautocommit">setautocommit</a>
   </ul>
-<li> <a href="#cursor">Cursor objects</a>
+<li> <a href="#cursor_object">Cursor objects</a>
   <ul>
     <li> <a href="#cur_close">close</a>
     <li> <a href="#cur_fetch">fetch</a>
@@ -299,26 +301,25 @@ Name: Maria das Dores, E-mail: maria@dores.com
     <li> <a href="#cur_coltypes">getcoltypes</a>
   </ul>
 <li> <a href="#postgres_extensions">PostgreSQL extensions</a>
-<li> <a href="#examples">Examples</a>
+<li> <a href="#examples">Example</a>
 </ul>
 </p>
 
 
 <p>
-<center>
-<a href=#over>overview</a> &middot;
-<a href=#current>current version</a> &middot;
-<a href=#new>what's new</a> &middot;
-<a href=#down>download</a> &middot;
-<a href=#manual>manual</a> &middot;
-<a href=#hist>history</a>
-</center>
+<center><small>
+<a href="index.html">home</a> &middot;
+<a href="#environment_object">environment</a> &middot;
+<a href="#connection_object">connection</a> &middot;
+<a href="#cursor_object">cursor</a> &middot;
+<a href="#examples">example</a>
+</small></center>
 <p>
 
 <hr>
 <small>
 Last modified by Tom&aacute;s Guisasola on<br>
-Wed May  7 04:00:54 BRT 2003
+Wed May  7 06:18:40 BRT 2003
 </small>
 
 </body>
