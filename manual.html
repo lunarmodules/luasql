@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.1 2003/03/26 15:06:30 tomas Exp $>
+<!$Id: manual.html,v 1.2 2003/04/07 13:41:29 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -21,14 +21,14 @@ ul { list-style-type: disc };
 </center>
 <p>
 
-<center>
+<center><small>
 <a href=#over>overview</a> &middot;
 <a href=#current>current version</a> &middot;
 <a href=#new>what's new</a> &middot;
 <a href=#down>download</a> &middot;
 <a href=#manual>manual</a> &middot;
 <a href=#hist>history</a>
-</center>
+</small></center>
 <p>
 
 <hr>
@@ -53,39 +53,47 @@ ul { list-style-type: disc };
 <h2><a name=over>Overview</h2>
 
 LuaSQL was  developed to ease  the usage  of data sources  from end-user
-applications. It provides  a simple API that enables access  to the most
-important  functionality  available  in  any database  manager.  In  its
-current version, LuaSQL enables users to, through Lua:
+applications.
+It provides  a simple API that enables access  to the most
+important  functionality  available  in  any database  manager.
+In its current version, LuaSQL enables users to, through Lua:
 
 <ul>
 <li> Connect to ODBC and PostgreSQL databases;
-<!--<li> List tables available in said database;-->
 <li> Execute arbitrary SQL statements;
 <li> Retrieve results in a row-by-row cursor fashion.
 </ul>
 
+<!--
 !!!!!! Rever o texto abaixo !!!!!!
 To have the LuaSQL functionality available to Lua scripts, the user must
 link  an   executable  with   the  <tt>luasql</tt>  library,   and  call
-<tt>lua_sqllibopen</tt> on the appropriate Lua state.
+<tt>luasql_libopen</tt> on the appropriate Lua state.
+-->
 
 <h2><a name=current>Current version</h2>
 
 LuaSQL version 2.0 is now available for download!
 The PostgreSQL driver
-has been tested on Linux, and the ODBC driver has been tested on Windows
-(SQLServer and Microsoft Access drivers) and on Linux (Informix driver).
+has been tested on Linux and MacOS X,
+and the ODBC driver has been tested on Windows
+(SQLServer and Microsoft Access drivers) and
+on Linux (Linux ODBC Informix driver).
 
 <h2><a name=new>What's new</h2>
 
 <p>
 Version 2.0 has some design modifications and implementation improvements
 <ul>
-  <li>New <tt>Fetch</tt> method: more eficient and more flexible
-  <li>New <tt>SetAutoCommit</tt> method
+  <li>New <tt>fetch</tt> method: more eficient and more flexible
+  <li>New <tt>setautocommit</tt> method
+  <li>No more <tt>Options</tt>
+  <li>Lua 5.0 compatible
+  <li>Dynamically loadable or statically linked
 </ul>
 </p>
 
+<!--
 Version 1.0 has been released because there have been some compatibility
 improvements in the ODBC driver.
 
@@ -97,14 +105,15 @@ improvements in the ODBC driver.
 <li> Bug-fix: Connection handle was being released before error message 
 	retrieved.
 </ul>
+-->
 
 <h2><a name=down>Download</h2>
 
 LuaSQL can be downloaded in source code from the following links: <p>
 
 <blockquote>
-<a href="luasql-1.0.tar.gz">luasql-1.0.tar.gz</a><br>
-<a href="luasql-1.0.zip">luasql-1.0.zip</a>
+<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.tar.gz">luasql.tar.gz</a><br>
+<a href="http://www.poison.les.inf.puc-rio.br/luasql/luasql.zip">luasql.zip</a>
 </blockquote><p>
 
 <h2><a name=manual>User's manual</h2>
@@ -116,26 +125,30 @@ usage examples can be found at the end of the documentation.
 
 There is only one global table in the LuaSQL Lua interface
 called <tt>sql</tt>.
-This table has a method responsible for the initialization of
-the drivers:
+This table has one method responsible for the initialization of each
+driver; each one called by the name of the driver.
 
 <ul>
-<li> <tt>Open(drivername)</tt> <br>
-Creates and returns a new Environment object using the given driver.
+<li> <tt>odbc ()</tt> <br>
+Creates and returns a new Environment object for the ODBC driver.
+<br>
+Returns: a reference to said Environment object.
+<li> <tt>postgres ()</tt> <br>
+Creates and returns a new Environment object for the PostgreSQL driver.
 <br>
 Returns: a reference to said Environment object.
 </ul>
 
 <h3><a name=errors>Error checking</h3>
 
-In case of  error, all methods return <tt>nil</tt> followed  by an error
-message, unless  the documentation  says otherwise.
+In case of error, all methods return <tt>nil</tt> followed by an error
+message, unless the documentation says otherwise.
 
 <p>
 
 <h3><a name=env>Environment class</h3>
 
-An Environment object is created by calling <tt>sql.Open(drivername)</tt>,
+An Environment object is created by calling <tt>sql[drivername] ()</tt>,
 where <tt>drivername</tt> is a string with the name of the driver.
 
 <h4>Fields</h4>
@@ -143,19 +156,24 @@ where <tt>drivername</tt> is a string with the name of the driver.
 ==&gt; So' para o ODBC &lt;==
 <ul>
 <li> <tt>Version</tt><br>
-(ODBC  only) The number  of the  version one
-requires the ODBC source to be compatible  with. Should be set to either
+(ODBC only) The number of the version one
+requires the ODBC source to be compatible with. Should be set to either
 2 or 3. 
 </ul>
 
 <h4>Methods</h4>
 
 <ul>
-<li> <tt>Connect(sourcename [, username [, password]])</tt> <br>
+<li> <tt>connect (sourcename [, username [, password]])</tt> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
 <tt>username</tt> and <tt>password</tt> if they are supplied. <br>
+<ul> PostgreSQL extension:
+<li> Two more optionsl parameters (hostname and port)
+<li> First string containing all connection info, as described in
+     the PostgreSQL manual ("host=&lt;sourcename&gt; port=&lt;port&gt;" etc.)
+</ul>
 Returns: a Connection object.
-<li> <tt>Close()</tt> <br>
+<li> <tt>close ()</tt> <br>
 Closes this environment. Only successful if all connections pertaining to
 it were closed first.
 </ul>
@@ -163,28 +181,32 @@ it were closed first.
 <h3><a name=con>Connection class</h3>
 
 A Connection object contains specific attributes and parameters of a single
-data source connection. One can create a Connection object by using the <tt>Environment:Connect</tt> method.
+data source connection.
+A Connection object is created by calling the <tt>Environment:connect</tt>
+method.
 
 <h4>Methods</h4>
 
 <ul>
-<li> <tt>Execute(statement)</tt> <br>
-Executes the given SQL  <tt>statement</tt>.
+<li> <tt>execute (statement)</tt> <br>
+Executes the given SQL <tt>statement</tt>.
 Returns: a  Cursor object if  there are results,  or the number  of rows
 affected by the command otherwise.
 
-<br>==&gt; So' no ODBC &lt;==
-<li> <tt>TableList()</tt> <br>
+<li> <tt>setautocommit (boolean)</tt> <br>
+Turns on or off the "auto commit" mode.
+
+<li> <tt>TableList()</tt> <br>==&gt; So' no ODBC &lt;==
 Retrieves a list of all the tables in the data source. <br>
 Returns: a list of the table names.
 
-<li> <tt>Commit()</tt> <br>
+<li> <tt>commit()</tt> <br>
 Commits the current transaction.
 
-<li> <tt>Rollback()</tt> <br>
+<li> <tt>rollback()</tt> <br>
 Rolls back the current transaction.
 
-<li> <tt>Close()</tt> <br>
+<li> <tt>close()</tt> <br>
 Closes this connection. 
 </ul>
 
@@ -192,21 +214,24 @@ Closes this connection.
 
 A Cursor object contains methods permitting the retrieval of 
 data resulting from an executed statement.
-One can create a Cursor object 
-by using <tt>Connection:Execute</tt>.
+A Cursor object is created by using the <tt>Connection:execute</tt>
+function.
 
 <h4>Methods</h4>
 
 <ul>
-<li> <tt>Fetch([mode [, table]])</tt> <br>
+<li> <tt>fetch ([table[,modestring]])</tt> <br>
 Retrieves the next row of results.<br>
-The optional <tt>mode</tt> parameter is a string indicating how the
-result table should be made.
-The mode string can be any of the following:
+If <tt>fetch</tt> is called without parameters,
+the results will be returned to the caller directly.
+If <tt>fetch</tt> is called with a table, the results will be copied
+to the table.
+In this case, an optional <tt>mode</tt> parameter can be used.
+It is just a string indicating how the result table should be made.
+The mode string can contain:
 <ul>
   <li> <b>"n"</b> the resulting table will have numerical indices
-  <li> <b>"s"</b> the resulting table will have string indices
-  <li> <b>"sn" or "ns"</b> the resulting table will have both numerical and string indices (default)
+  <li> <b>"a"</b> the resulting table will have alphanumerical indices
 </ul>
 The optional <tt>table</tt> parameter is a table that should be
 used to store the next row.

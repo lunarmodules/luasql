@@ -5,12 +5,17 @@ Here goes a small description of the files in the distribution
 
     ls_odbc.c        -- ODBC driver (source)
     ls_odbc.h        -- ODBC driver (header)
-    ls_pg.c          -- PostGreSQL driver (source)
-    ls_pg.h          -- PostGreSQL driver (header)
+    ls_pg.c          -- PostgreSQL driver (source)
+    ls_pg.h          -- PostgreSQL driver (header)
+    lua.png          -- Lua Logo
     luasql.c         -- Common functions
     luasql.h         -- Common definitions
-    luasql.lua       -- Dynamic loading stuf
-	manual.html      -- API manual
-	performance.lua  -- Performance test script
-	test.lua         -- API test script
+    Makefile         -- Makefile for Unix systems
+    manual.html      -- API manual
+    odbc.lua         -- ODBC driver (lua)
+    performance.lua  -- Performance test script
+    postgres.lua     -- PostgreSQL driver (lua)
+    README           -- This file
+    test.lua         -- API test script
 
+$Id: README,v 1.2 2003/04/07 13:41:29 tomas Exp $

@@ -1,6 +1,6 @@
 #ifndef _LUASQLODBC_
 #define _LUASQLODBC_
 
-LUASQL_API void lua_sqllibopen_odbc(lua_State *L);
+LUASQL_API int luasql_libopen_odbc(lua_State *L);
 
 #endif

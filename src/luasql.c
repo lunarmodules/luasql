@@ -4,6 +4,16 @@
 #include "luasql.h"
 
 /*
+** Typical database error situation
+*/
+LUASQL_API int luasql_faildirect(lua_State *L, const char *err) 
+{
+    lua_pushnil(L);
+    lua_pushstring(L, err);
+    return 2;
+}
+
+/*
 ** Create a metatable
 */
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods) {

@@ -17,14 +17,17 @@
 #include "luasql.h"
 #include "ls_pg.h"
 
+#define LUASQL_ENVIRONMENT_PG "PostgreSQL environment"
+#define LUASQL_CONNECTION_PG "PostgreSQL connection"
+#define LUASQL_CURSOR_PG "PostgreSQL cursor"
 
-typedef struct env_data {
+typedef struct {
 	short closed;
 	unsigned conn_counter;  /* active connections counter */
 } env_data;
 
 
-typedef struct conn_data {
+typedef struct {
 	short closed;
 	unsigned cur_counter;   /* active cursors counter */
 	int env;                /* reference to environment */
@@ -33,7 +36,7 @@ typedef struct conn_data {
 } conn_data;
 
 
-typedef struct cur_data {
+typedef struct {
 	short closed;
 	int conn;               /* reference to connection */
 	int numcols;            /* number of columns */
@@ -42,18 +45,11 @@ typedef struct cur_data {
 } cur_data;
 
 
-static int fail_direct (lua_State *L, const char *msg) {
-  lua_pushnil(L);
-  lua_pushstring(L, msg);
-  return 2;
-}
-
-
 /*
 ** Check for valid environment.
 */
 static env_data *getenvironment (lua_State *L) {
-	env_data *env = luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
+	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
 	luaL_argcheck (L, env != NULL, 1, "environment expected");
 	luaL_argcheck (L, !env->closed, 1, "environment is closed");
 	return env;
@@ -64,7 +60,7 @@ static env_data *getenvironment (lua_State *L) {
 ** Check for valid connection.
 */
 static conn_data *getconnection (lua_State *L) {
-	conn_data *conn = luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
+	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
 	luaL_argcheck (L, conn != NULL, 1, "connection expected");
 	luaL_argcheck (L, !conn->closed, 1, "connection is closed");
 	return conn;
@@ -75,10 +71,10 @@ static conn_data *getconnection (lua_State *L) {
 ** Check for valid cursor.
 */
 static cur_data *getcursor (lua_State *L) {
-	cur_data *cursor = luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
-	luaL_argcheck (L, cursor != NULL, 1, "cursor expected");
-	luaL_argcheck (L, !cursor->closed, 1, "cursor is closed");
-	return cursor;
+	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
+	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
+	luaL_argcheck (L, !cur->closed, 1, "cursor is closed");
+	return cur;
 }
 
 
@@ -96,34 +92,29 @@ static void pushvalue (lua_State *L, PGresult *res, int tuple, int i) {
 /*
 ** Get another row of the given cursor.
 */
-static int sqlCurFetch (lua_State *L) {
-	cur_data *cursor = (cur_data *)getcursor (L);
-	if (cursor->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
-	PGresult *res = cursor->pg_res;
-	int tuple = cursor->curr_tuple;
+static int cur_fetch (lua_State *L) {
+	cur_data *cur = (cur_data *)getcursor (L);
+	PGresult *res = cur->pg_res;
+	int tuple = cur->curr_tuple;
 
-	if (tuple >= PQntuples(cursor->pg_res)) {
+	if (tuple >= PQntuples(cur->pg_res)) {
 		lua_pushnil(L);  /* no more results */
 		return 1;
 	}
 
-	cursor->curr_tuple++;
+	cur->curr_tuple++;
 	if (lua_istable (L, 2)) {
 		int i;
 		const char *opts = luaL_optstring (L, 3, "n");
 		if (strchr (opts, 'n') != NULL)
 			/* Copy values to numerical indices */
-			for (i = 1; i <= cursor->numcols; i++) {
+			for (i = 1; i <= cur->numcols; i++) {
 				pushvalue (L, res, tuple, i);
 				lua_rawseti (L, 2, i);
 			}
 		if (strchr (opts, 'a') != NULL)
 			/* Copy values to alphanumerical indices */
-			for (i = 1; i <= cursor->numcols; i++) {
+			for (i = 1; i <= cur->numcols; i++) {
 				lua_pushstring (L, PQfname (res, i-1));
 				pushvalue (L, res, tuple, i);
 				lua_rawset (L, 2);
@@ -133,9 +124,9 @@ static int sqlCurFetch (lua_State *L) {
 	}
 	else {
 		int i;
-		for (i = 1; i <= cursor->numcols; i++)
+		for (i = 1; i <= cur->numcols; i++)
 			pushvalue (L, res, tuple, i);
-		return cursor->numcols; /* return #numcols values */
+		return cur->numcols; /* return #numcols values */
 	}
 }
 
@@ -144,22 +135,22 @@ static int sqlCurFetch (lua_State *L) {
 ** Close the cursor on top of the stack.
 ** Return 1
 */
-static int sqlCurClose (lua_State *L) {
+static int cur_close (lua_State *L) {
 	conn_data *conn;
-	cur_data *cursor = (cur_data *)getcursor (L);
-	if (cursor->closed)
+	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
+	if (cur->closed)
 		return 0;
 
 	/* Decrement the parent's cursor counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cursor->conn);
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	conn = (conn_data *)lua_touserdata (L, -1);
 	conn->cur_counter--;
 	/* Nullify structure fields. */
-	cursor->closed = 1;
-	PQclear(cursor->pg_res);
-	cursor->pg_res = NULL;
-	luaL_unref (L, LUA_REGISTRYINDEX, cursor->conn);
-	cursor->conn = LUA_NOREF;
+	cur->closed = 1;
+	PQclear(cur->pg_res);
+	cur->pg_res = NULL;
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	cur->conn = LUA_NOREF;
 	lua_pushnumber(L, 1);
 	return 1;
 }
@@ -198,24 +189,19 @@ static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
 ** The names are stored at the position they appear in the result;
 ** the types are stored in entries named by the corresponding field.
 */
-static int sqlCurGetColInfo (lua_State *L) {
-	cur_data *cursor = (cur_data *)getcursor (L);
-	if (cursor->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
-	PGresult *result = cursor->pg_res;
+static int cur_colinfo (lua_State *L) {
+	cur_data *cur = (cur_data *)getcursor (L);
+	PGresult *result = cur->pg_res;
 	conn_data *conn;
 	char typename[100];
 	int i;
 
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cursor->conn);
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	if (!lua_isuserdata (L, -1))
 		luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
 	conn = (conn_data *)lua_touserdata (L, -1);
 	lua_newtable (L);
-	for (i = 1; i <= cursor->numcols; i++) {
+	for (i = 1; i <= cur->numcols; i++) {
 		lua_pushstring(L, PQfname(result, i-1));
 		lua_pushvalue(L, -1);
 		lua_rawseti(L, -3, i);
@@ -229,14 +215,9 @@ static int sqlCurGetColInfo (lua_State *L) {
 /*
 ** Push the number of rows.
 */
-static int sqlCurNumRows (lua_State *L) {
-	cur_data *cursor = (cur_data *)getcursor (L);
-	if (cursor->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
-	lua_pushnumber (L, PQntuples (cursor->pg_res));
+static int cur_numrows (lua_State *L) {
+	cur_data *cur = (cur_data *)getcursor (L);
+	lua_pushnumber (L, PQntuples (cur->pg_res));
 	return 1;
 }
 
@@ -245,32 +226,32 @@ static int sqlCurNumRows (lua_State *L) {
 ** Create a new Cursor object and push it on top of the stack.
 */
 static int create_cursor  (lua_State *L, conn_data *conn, PGresult *result) {
-	cur_data *cursor = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
+	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_PG);
 
 	/* fill in structure */
-	cursor->closed = 0;
-	cursor->pg_res = result;
-	cursor->numcols = PQnfields(result);
-	cursor->curr_tuple = 0;
+	cur->closed = 0;
+	cur->pg_res = result;
+	cur->numcols = PQnfields(result);
+	cur->curr_tuple = 0;
 	lua_pushvalue (L, 1);
-	cursor->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
 
 
-static void sqlCommit(conn_data *conn) {
+static void sql_commit(conn_data *conn) {
 	PQexec(conn->pg_conn, "COMMIT");
 }
 
 
-static void sqlBegin(conn_data *conn) {
+static void sql_begin(conn_data *conn) {
 	PQexec(conn->pg_conn, "BEGIN"); 
 }
 
 
-static void sqlRollback(conn_data *conn) {
+static void sql_rollback(conn_data *conn) {
 	PQexec(conn->pg_conn, "ROLLBACK");
 }
 
@@ -280,13 +261,8 @@ static void sqlRollback(conn_data *conn) {
 ** Return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
 */
-static int sqlConnExecute (lua_State *L) {
+static int conn_execute (lua_State *L) {
 	conn_data *conn = (conn_data *)getconnection (L);
-	if (conn->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
 	const char *statement = luaL_checkstring (L, 2);
 	PGresult *res;
 	res = PQexec(conn->pg_conn, statement);
@@ -301,7 +277,7 @@ static int sqlConnExecute (lua_State *L) {
 		return create_cursor (L, conn, res);
 	}
 	else {  /* error */
-		return fail_direct(L, PQerrorMessage(conn->pg_conn));
+		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
 	}
 }
 
@@ -312,11 +288,6 @@ static int sqlConnExecute (lua_State *L) {
 /*
 static int sqlConnTableList (lua_State *L) {
 	conn_data *conn = (conn_data *)getconnection (L);
-	if (cursor->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
 	PGresult *pg_res = PQexec(conn->pg_conn,
 		"SELECT relname FROM pg_class WHERE relkind = 'r' AND "
 		"relowner != (SELECT relowner FROM pg_class WHERE relname = 'pg_class');");
@@ -337,20 +308,15 @@ static int sqlConnTableList (lua_State *L) {
 ** If 'true', then rollback current transaction.
 ** If 'false', then start a new transaction.
 */
-static int sqlConnSetAutoCommit (lua_State *L) {
+static int conn_setautocommit (lua_State *L) {
 	conn_data *conn = (conn_data *)getconnection (L);
-	if (conn->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
 	if (lua_toboolean (L, 2)) {
 		conn->auto_commit = 1;
-		sqlRollback(conn); /* Undo active transaction. */
+		sql_rollback(conn); /* Undo active transaction. */
 	}
 	else {
 		conn->auto_commit = 0;
-		sqlBegin(conn);
+		sql_begin(conn);
 	}
 	return 0;
 }
@@ -359,17 +325,11 @@ static int sqlConnSetAutoCommit (lua_State *L) {
 /*
 ** Commit the current transaction.
 */
-static int sqlConnCommit (lua_State *L) {
+static int conn_commit (lua_State *L) {
 	conn_data *conn = (conn_data *)getconnection (L);
-	if (conn->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
-	sqlCommit(conn);
+	sql_commit(conn);
 	if (conn->auto_commit == 0) 
-		sqlBegin(conn); 
-
+		sql_begin(conn); 
 	return 0;
 }
 
@@ -377,17 +337,11 @@ static int sqlConnCommit (lua_State *L) {
 /*
 ** Rollback the current transaction.
 */
-static int sqlConnRollback (lua_State *L) {
+static int conn_rollback (lua_State *L) {
 	conn_data *conn = (conn_data *)getconnection (L);
-	if (conn->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
-	sqlRollback(conn);
+	sql_rollback(conn);
 	if (conn->auto_commit == 0) 
-		sqlBegin(conn); 
-
+		sql_begin(conn); 
 	return 0;
 }
 
@@ -395,9 +349,9 @@ static int sqlConnRollback (lua_State *L) {
 /*
 ** Close a Connection object.
 */
-static int sqlConnClose (lua_State *L) {
+static int conn_close (lua_State *L) {
 	env_data *env;
-	conn_data *conn = (conn_data *)getconnection (L);
+	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
 	if (conn->closed)
 		return 0;
 	if (conn->cur_counter > 0)
@@ -444,28 +398,31 @@ static void notice_processor (void *arg, const char *message) {
 
 /*
 ** Connects to a data source.
+** This driver provides two ways to connect to a data source:
+** (1) giving the connection parameters as a set of pairs separated
+**     by whitespaces in a string (first method parameter)
+** (2) giving one string for each connection parameter, said
+**     datasource, username, password, host and port.
 */
-static int sqlEnvConnect (lua_State *L) {
+static int env_connect (lua_State *L) {
 	env_data *env = (env_data *) getenvironment (L);
-	if (env->closed) {
-		lua_pushnil (L);
-		lua_pushstring (L, "closed object");
-		return 2;
-	}
 	const char *sourcename = luaL_checkstring(L, 2);
-	const char *username = luaL_optstring(L, 3, NULL);
-	const char *password = luaL_optstring(L, 4, NULL);
-	const char *pghost = luaL_optstring(L, 5, NULL);
-	const char *pgport = luaL_optstring(L, 6, NULL);
+	PGconn *conn;
 
-	PGconn *conn = PQsetdbLogin(pghost, pgport, NULL, NULL,
-                              sourcename, username, password);
-/*	PGconn *conn = PQconnectdb (luaL_check_string(L, 2)); */
+	if ((lua_gettop (L) == 2) && (strchr (sourcename, '=') != NULL))
+		conn = PQconnectdb (luaL_check_string(L, 2));
+	else {
+		const char *username = luaL_optstring(L, 3, NULL);
+		const char *password = luaL_optstring(L, 4, NULL);
+		const char *pghost = luaL_optstring(L, 5, NULL);
+		const char *pgport = luaL_optstring(L, 6, NULL);
 
-	if (PQstatus(conn) == CONNECTION_BAD) {
-		const char *msg = LUASQL_PREFIX"Error connecting to database.";
-		return fail_direct(L, msg);
+		conn = PQsetdbLogin(pghost, pgport, NULL, NULL,
+			sourcename, username, password);
 	}
+
+	if (PQstatus(conn) == CONNECTION_BAD)
+		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting to database.");
 	PQsetNoticeProcessor(conn, notice_processor, NULL);
 	env->conn_counter++;
 	return create_connection(L, env, conn);
@@ -475,8 +432,8 @@ static int sqlEnvConnect (lua_State *L) {
 /*
 ** Close environment object.
 */
-static int sqlEnvClose (lua_State *L) {
-	env_data *env = (env_data *)getenvironment (L);
+static int env_close (lua_State *L) {
+	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
 	if (env->closed)
 		return 0;
 	if (env->conn_counter > 0)
@@ -492,27 +449,26 @@ static int sqlEnvClose (lua_State *L) {
 /*
 ** Create metatables for each class of object.
 */
-static void createmetatables (lua_State *L)
-{
+static void create_metatables (lua_State *L) {
     struct luaL_reg environment_methods[] = {
-        {"Close", sqlEnvClose},
-        {"Connect", sqlEnvConnect},
+        {"close", env_close},
+        {"connect", env_connect},
 		{NULL, NULL}
 	};
     struct luaL_reg connection_methods[] = {
-        {"Close", sqlConnClose},
+        {"close", conn_close},
         /*{"TableList", sqlConnTableList},*/
-        {"Commit", sqlConnCommit},
-        {"Rollback", sqlConnRollback},
-        {"Execute", sqlConnExecute},
-        {"SetAutoCommit", sqlConnSetAutoCommit},
+        {"commit", conn_commit},
+        {"rollback", conn_rollback},
+        {"execute", conn_execute},
+        {"setautocommit", conn_setautocommit},
 		{NULL, NULL}
     };
     struct luaL_reg cursor_methods[] = {
-        {"Close", sqlCurClose},
-        {"Fetch", sqlCurFetch},
-        {"ColInfo", sqlCurGetColInfo},
-		{"NumRows", sqlCurNumRows},
+        {"close", cur_close},
+        {"fetch", cur_fetch},
+        {"colinfo", cur_colinfo},
+		{"numrows", cur_numrows},
 		{NULL, NULL}
     };
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_PG, environment_methods);
@@ -521,9 +477,9 @@ static void createmetatables (lua_State *L)
 }
 
 /*
-** Creates an Environment and returns.
+** Creates an Environment and returns it.
 */
-static int sqlOpen (lua_State *L) {
+static int create_environment (lua_State *L) {
 	env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_PG);
 
@@ -535,8 +491,8 @@ static int sqlOpen (lua_State *L) {
 
 
 /*
-** Creates the global table, registers the Open method for the driver
-** and creates the tags.
+** Creates the metatables for the objects and registers the
+** driver open method.
 */
 LUASQL_API int luasql_libopen_postgres (lua_State *L) { 
 	lua_getglobal(L, LUASQL_TABLENAME);
@@ -546,10 +502,10 @@ LUASQL_API int luasql_libopen_postgres (lua_State *L) {
 		lua_setglobal (L, LUASQL_TABLENAME);
 	}
 	lua_pushstring(L, "postgres");
-	lua_pushcfunction(L, sqlOpen);
+	lua_pushcfunction(L, create_environment);
 	lua_settable(L, -3);
 
-	createmetatables (L);
+	create_metatables (L);
 
 	return 0;
 }
