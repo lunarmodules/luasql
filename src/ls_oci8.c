@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.10 2003/06/09 15:42:23 tomas Exp $
+** $Id: ls_oci8.c,v 1.11 2003/06/09 19:16:03 tomas Exp $
 */
 
 #include <assert.h>
@@ -160,7 +160,7 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 /*
 ** Copy the column name to the column structure and convert it to lower case.
 */
-static int copy_column_name (column_data *col, text *name) {
+static void copy_column_name (column_data *col, text *name) {
 	int i;
 	col->name = (text *)malloc (col->namelen);
 	memcpy (col->name, name, col->namelen);
@@ -244,6 +244,7 @@ static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
 	/* column index ranges from 1 to numcols */
 	/* C array index ranges from 0 to numcols-1 */
 	column_data *col = &(cur->cols[i-1]);
+	free (col->name);
 	switch (col->type) {
 		case SQLT_INT:
 		case SQLT_FLT:
@@ -330,7 +331,7 @@ static int cur_fetch (lua_State *L) {
 		return 1;
 	} else if (status != OCI_SUCCESS) {
 		/* Error */
-printf("(%d)!!\n",status);
+//printf("(%d)!!\n",status);fflush(stdout);
 		return checkerr (L, status, cur->errhp);
 	}
 
@@ -402,6 +403,8 @@ static int cur_close (lua_State *L) {
 	conn = lua_touserdata (L, -1);
 	conn->cur_counter--;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 
 	lua_pushnumber(L, 1);
 	return 1;
@@ -409,68 +412,69 @@ static int cur_close (lua_State *L) {
 
 
 /*
-** Create a table with the names and the types of the fields.
-** The names are stored at the position they appear in the result;
-** the types are stored in entries named by the corresponding field.
+** Return the list of field names as a table on top of the stack.
 */
-static int cur_colinfo (lua_State *L) {
-	cur_data *cur = getcursor (L);
-	/*PGresult *result = cur->pg_res;*/
-	conn_data *conn;
-	/*char typename[100];*/
-	int i;
-
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-	if (!lua_isuserdata (L, -1))
-		luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
-	conn = (conn_data *)lua_touserdata (L, -1);
-	lua_newtable (L);
-	for (i = 1; i <= cur->numcols; i++) {
-		/*lua_pushstring(L, PQfname(result, i-1));*/
-		lua_pushvalue(L, -1);
-		lua_rawseti(L, -3, i);
-		/*lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));*/
-		lua_rawset(L, -3);
-	}
-	return 1;
-}
-
-
 static int cur_getcolnames (lua_State *L) {
 	cur_data *cur = getcursor (L);
 	if (cur->colnames != LUA_NOREF)
 		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
 	else {
-		/*PGresult *result = cur->pg_res;*/
 		int i;
 		lua_newtable (L);
 		for (i = 1; i <= cur->numcols; i++) {
-			/*lua_pushstring (L, PQfname (result, i-1));*/
+			column_data *col = &(cur->cols[i-1]);
+			lua_pushlstring (L, col->name, col->namelen);
 			lua_rawseti (L, -2, i);
 		}
+		lua_pushvalue (L, -1);
+		cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
 	return 1;
 }
 
 
+/*
+**
+*/
+static char *getcolumntype (column_data *col) {
+	switch (col->type) {
+		case SQLT_CHR:
+		case SQLT_STR:
+		case SQLT_VCS:
+		case SQLT_AFC:
+		case SQLT_AVC:
+			return "string";
+		case SQLT_NUM:
+		case SQLT_FLT:
+		case SQLT_INT:
+		/* case SQLT_UIN: */
+			return "number";
+		case SQLT_CLOB:
+			return "string";
+		default:
+			return "";
+	}
+}
+
+
+/*
+** Return the list of field types as a table on top of the stack.
+*/
 static int cur_getcoltypes (lua_State *L) {
 	cur_data *cur = getcursor (L);
 	if (cur->coltypes != LUA_NOREF)
 		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
 	else {
-		/*PGresult *result = cur->pg_res;*/
-		conn_data *conn;
-		/*char typename[100];*/
 		int i;
-		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-		if (!lua_isuserdata (L, -1))
-			luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
-		conn = (conn_data *)lua_touserdata (L, -1);
 		lua_newtable (L);
 		for (i = 1; i <= cur->numcols; i++) {
-			/*lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));*/
-			lua_rawseti (L, -2, i);
+			column_data *col = &(cur->cols[i-1]);
+			lua_pushnumber (L, i);
+			lua_pushstring (L, getcolumntype (col));
+			lua_rawset (L, -3);
 		}
+		lua_pushvalue (L, -1);
+		cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
 	return 1;
 }
@@ -520,33 +524,6 @@ static int conn_close (lua_State *L) {
 	lua_pushnumber(L, 1);
 	return 1;
 }
-
-
-/* colinfo ???
-	for (i = 1; i <= conn->numcols; i++) {
-		dvoid **parmdpp;
-		text *name;
-		ub4 name_len;
-		ub2 max_size;
-		ASSERT (L, OCIParamGet (conn->stmthp, OCI_HTYPE_STMT, cur->errhp,
-			&parmdpp, (ub4)i), cur->errhp);
-		ASSERT (L, OCIAttrGet (parmdpp, (ub4)OCI_DTYPE_PARAM,
-			(dvoid **)&name, name_len, OCI_ATTR_NAME, cur->errhp), cur->errhp);
-		ASSERT (L, OCIAttrGet (kk));
-	}
-*/
-
-
-/*
-static char *oracle2luatypa (ub2 data_type) {
-	switch (data_type) {
-		case SQLT_CHR:
-			return "string";
-		case SQLT_INT:
-			return "number";
-	}
-}
-*/
 
 
 /*
@@ -667,6 +644,12 @@ static int conn_execute (lua_State *L) {
 */
 static int conn_commit (lua_State *L) {
 	conn_data *conn = getconnection (L);
+	ASSERT (L, OCITransCommit (conn->svchp, conn->errhp, OCI_DEFAULT),
+		conn->errhp);
+/*
+	if (conn->auto_commit == 0) 
+		ASSERT (L, OCITransStart (conn->svchp, conn->errhp...
+*/
 	return 0;
 }
 
@@ -676,6 +659,12 @@ static int conn_commit (lua_State *L) {
 */
 static int conn_rollback (lua_State *L) {
 	conn_data *conn = getconnection (L);
+	ASSERT (L, OCITransRollback (conn->svchp, conn->errhp, OCI_DEFAULT),
+		conn->errhp);
+/*
+	if (conn->auto_commit == 0) 
+		sql_begin(conn); 
+*/
 	return 0;
 }
 
@@ -687,6 +676,16 @@ static int conn_rollback (lua_State *L) {
 */
 static int conn_setautocommit (lua_State *L) {
 	conn_data *conn = getconnection (L);
+	if (lua_toboolean (L, 2)) {
+		conn->auto_commit = 1;
+		/* Undo active transaction. */
+		ASSERT (L, OCITransRollback (conn->svchp, conn->errhp,
+			OCI_DEFAULT), conn->errhp);
+	}
+	else {
+		conn->auto_commit = 0;
+		/* sql_begin(conn);*/
+	}
 	return 0;
 }
 
@@ -709,13 +708,12 @@ static int env_connect (lua_State *L) {
 	/* fill in structure */
 	luasql_setmeta (L, LUASQL_CONNECTION_OCI8);
 	conn->env = LUA_NOREF;
-	conn->closed = 0;
+	conn->closed = 1;
 	conn->auto_commit = 1;
 	conn->cur_counter = 0;
 	conn->loggedon = 0;
 	conn->svchp = NULL;
 	conn->errhp = NULL;
-	env->conn_counter++;
 	lua_pushvalue (L, 1);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -733,6 +731,8 @@ static int env_connect (lua_State *L) {
 		(CONST text*)username, userlen,
 		(CONST text*)password, passlen,
 		(CONST text*)sourcename, snlen), conn->errhp);
+	conn->closed = 0;
+	env->conn_counter++;
 	conn->loggedon = 1;
 
 	return 1;
