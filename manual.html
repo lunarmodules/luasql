@@ -331,14 +331,14 @@ this extra feature:
 </ul>
 
 <a name="examples"></a>
-<h2>Example</h2>
+<h2>Examples</h2>
+
+Below is a small sample code displaying the basic use of the library.
+After that, another example shows how to create an
+<a href="#iterator_example">iterator</a> over the result of a select query.
 
 <a name="basic_use"></a>
-Below is a small sample code displaying the basic use of the library.
-Follows another example on how to create an
-<a href="#iterator_example">iterator</a>
-on the result of a select query.
-
+<h3>Basic use</h3>
 <blockquote>
 <pre>
 -- load driver
@@ -393,7 +393,8 @@ Name: Maria das Dores, E-mail: maria@dores.com
 </blockquote>
 
 <a name="iterator_example"></a>
-Another example which might be useful is creating an iterator:
+<h3>Iterator use</h3>
+It may be useful to offer an iterator for the resulting rows:
 
 <blockquote>
 <pre>
@@ -404,7 +405,13 @@ function rows (connection, sql_statement)
     return cursor:fetch()
   end
 end
+</pre>
+</blockquote>
 
+The iterator is used like:
+ 
+<blockquote>
+<pre>
 require"luasql.mysql"
 env = assert (luasql.mysql())
 con = assert (env:connect"my_db")
@@ -461,7 +468,7 @@ end
 
 <hr>
 <small>
-$Id: manual.html,v 1.30 2005/02/17 14:10:33 tomas Exp $
+$Id: manual.html,v 1.31 2005/02/17 14:37:19 carregal Exp $
 </small>
 
 </body>
