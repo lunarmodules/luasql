@@ -56,8 +56,7 @@ SRCS= README Makefile \
 	ls_oci8.c \
 	ls_mysql.c \
 	ls_sqlite.c \
-	test.lua performance.lua \
-	index.html manual.html license.html authors.html luasql.png
+	test.lua performance.lua
 
 AR= ar rcu
 RANLIB= ranlib
@@ -82,6 +81,7 @@ dist_dir:
 	mkdir -p $(DIST_DIR)/jdbc/src/lua
 	mkdir -p $(DIST_DIR)/ado
 	cp $(SRCS) $(DIST_DIR)
+	cp -R doc $(DIST_DIR)
 	cp jdbc/Makefile $(DIST_DIR)/jdbc
 	cp jdbc/build.xml $(DIST_DIR)/jdbc
 	cp jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
