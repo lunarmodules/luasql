@@ -1,5 +1,7 @@
 VERSION= 2.0b
 
+COMPAT_DIR= .
+
 ODBC_OBJ= ls_odbc.o
 ODBC_LIB= libluasqlodbc.$(VERSION).a
 ODBC_DLL= luasqlodbc.$(VERSION).dll
@@ -33,7 +35,7 @@ MYSQL_LIBS= -L/usr/local/mysql/lib -lmysqlclient
 MYSQL_INCS= -I/usr/local/mysql/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
-INCS= -I/usr/local/include/lua5 $(PG_INCS) $(OCI_INCS) $(MYSQL_INCS)
+INCS= -I/usr/local/include/lua5 -I$(COMPAT_DIR) $(PG_INCS) $(OCI_INCS) $(MYSQL_INCS)
 #LIBS_DIR= -L../lua-5.0/lib
 LIBS= -llua.5.0 -llualib.5.0 -lm -ldl
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)
@@ -54,7 +56,10 @@ SRCS= README Makefile \
 AR= ar rcu
 RANLIB= ranlib
 
-LS_OBJ= luasql.o
+LS_OBJ= luasql.o compat-5.1.o
+
+compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
+	$(CC) -c $(CFLAGS) -o $@ $(COMPAT_DIR)/compat-5.1.c
 
 dist:
 	mkdir $(PKG);
