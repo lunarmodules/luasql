@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.16 2004/01/02 12:30:25 tomas Exp $
+** $Id: ls_odbc.c,v 1.17 2004/01/06 13:26:52 tomas Exp $
 */
 
 #include <assert.h>
@@ -183,66 +183,72 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
     switch (type) {
         /* nUmber */
         case 'u': { 
-              double num;
-              SQLINTEGER got;
-              SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
-              if (error(rc)) return fail(L, hSTMT, hstmt);
-              if (got == SQL_NULL_DATA) lua_pushnil(L);
-              else lua_pushnumber(L, num);
-              return 0;
-          }
+			double num;
+			SQLINTEGER got;
+			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
+			if (error(rc))
+				return fail(L, hSTMT, hstmt);
+			if (got == SQL_NULL_DATA)
+				lua_pushnil(L);
+			else
+				lua_pushnumber(L, num);
+			return 0;
+		}
                   /* bOol */
         case 'o': { 
-              char b;
-              SQLINTEGER got;
-              SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
-              if (error(rc)) return fail(L, hSTMT, hstmt);
-              if (got == SQL_NULL_DATA) lua_pushnil(L);
-              else lua_pushstring(L, b ? "true" : "false");
-              return 0;
-          }
+			char b;
+			SQLINTEGER got;
+			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
+			if (error(rc))
+				return fail(L, hSTMT, hstmt);
+			if (got == SQL_NULL_DATA)
+				lua_pushnil(L);
+			else
+				lua_pushboolean(L, b);
+			return 0;
+		}
         /* sTring */
         case 't': 
         /* bInary */
         case 'i': { 
-              SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
-              SQLINTEGER got;
-              char *buffer;
-              luaL_Buffer b;
-              SQLRETURN rc;
-              luaL_buffinit(L, &b);
-              buffer = luaL_prepbuffer(&b);
-              rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
-              if (got == SQL_NULL_DATA) {
-                  lua_pushnil(L);
-                  return 0;
-              }
-              /* concat intermediary chunks */
-              while (rc == SQL_SUCCESS_WITH_INFO) {
-                  if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-                      got = LUAL_BUFFERSIZE;
-                      /* get rid of null termination in string block */
-                      if (stype == SQL_C_CHAR) got--;
-                  }
-                  luaL_addsize(&b, got);
-                  buffer = luaL_prepbuffer(&b);
-                  rc = SQLGetData(hstmt, i, stype, buffer, 
-                          LUAL_BUFFERSIZE, &got);
-              }
-              /* concat last chunk */
-              if (rc == SQL_SUCCESS) {
-                  if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-                      got = LUAL_BUFFERSIZE;
-                      /* get rid of null termination in string block */
-                      if (stype == SQL_C_CHAR) got--;
-                  }
-                  luaL_addsize(&b, got);
-              }
-              if (rc == SQL_ERROR) return fail(L, hSTMT, hstmt);
-              /* return everything we got */
-              luaL_pushresult(&b);
-              return 0;
-          }
+			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
+			SQLINTEGER got;
+			char *buffer;
+			luaL_Buffer b;
+			SQLRETURN rc;
+			luaL_buffinit(L, &b);
+			buffer = luaL_prepbuffer(&b);
+			rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
+			if (got == SQL_NULL_DATA) {
+				lua_pushnil(L);
+				return 0;
+			}
+			/* concat intermediary chunks */
+			while (rc == SQL_SUCCESS_WITH_INFO) {
+				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
+					got = LUAL_BUFFERSIZE;
+					/* get rid of null termination in string block */
+					if (stype == SQL_C_CHAR) got--;
+				}
+				luaL_addsize(&b, got);
+				buffer = luaL_prepbuffer(&b);
+				rc = SQLGetData(hstmt, i, stype, buffer, 
+					LUAL_BUFFERSIZE, &got);
+			}
+			/* concat last chunk */
+			if (rc == SQL_SUCCESS) {
+				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
+					got = LUAL_BUFFERSIZE;
+					/* get rid of null termination in string block */
+					if (stype == SQL_C_CHAR) got--;
+				}
+				luaL_addsize(&b, got);
+			}
+			if (rc == SQL_ERROR) return fail(L, hSTMT, hstmt);
+			/* return everything we got */
+			luaL_pushresult(&b);
+			return 0;
+		}
     }
     return 0;
 }
