@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_pg.c,v 1.20 2004/09/15 16:14:24 tomas Exp $
+** $Id: ls_pg.c,v 1.21 2004/09/17 15:37:30 tomas Exp $
 */
 
 #include <assert.h>
@@ -526,7 +526,7 @@ LUASQL_API int luaopen_luasqlpostgres (lua_State *L) {
 
 	create_metatables (L);
 
-	/* if Lua 5.0 then Set pack.loaded[name] = luasql */
+	/* if Lua 5.0 then Set package.loaded[name] = luasql */
 	if (lua_isstring(L, 1))
 		name = lua_tostring (L, 1);
 	else {
@@ -535,12 +535,12 @@ LUASQL_API int luaopen_luasqlpostgres (lua_State *L) {
 		name = lua_tostring (L, -1);
 		lua_pop (L, 2);
 	}
-	lua_getglobal (L, "pack");
+	lua_getglobal (L, "package");
 	lua_pushliteral (L, "loaded");
 	lua_gettable (L, -2);
 	lua_pushstring (L, name);
 	lua_pushvalue (L, luasql);
-	lua_settable (L, -3); /* pack.loaded[name] = luasql */
+	lua_settable (L, -3); /* package.loaded[name] = luasql */
 	lua_pop (L, 2);
 
 	return 1;
