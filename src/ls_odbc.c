@@ -2,7 +2,7 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
-** $Id: ls_odbc.c,v 1.13 2003/08/29 14:21:28 tomas Exp $
+** $Id: ls_odbc.c,v 1.14 2003/10/24 10:45:01 tomas Exp $
 */
 
 #include <assert.h>
@@ -257,7 +257,7 @@ static int cur_fetch (lua_State *L) {
     if (rc == SQL_NO_DATA) {
         lua_pushnil(L);
         return 1;
-    } else if (error(rc)) fail(L, hSTMT, hstmt);
+    } else if (error(rc)) return fail(L, hSTMT, hstmt);
 
 	if (lua_istable (L, 2)) {
 		SQLUSMALLINT i;
@@ -297,20 +297,19 @@ static int cur_fetch (lua_State *L) {
 */
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
-	luaL_argcheck (L, cursor != NULL, 1, LUASQL_PREFIX"cursor expected");
-	SQLHSTMT hstmt = cur->hstmt;
 	SQLRETURN ret;
+	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed)
 		return 0;
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
-	ret = SQLCloseCursor(hstmt);
+	ret = SQLCloseCursor(cur->hstmt);
     if (error(ret))
-		return fail(L, hSTMT, hstmt);
-	ret = SQLFreeHandle(hSTMT, hstmt);
+		return fail(L, hSTMT, cur->hstmt);
+	ret = SQLFreeHandle(hSTMT, cur->hstmt);
 	if (error(ret))
-		return fail(L, hSTMT, hstmt);
+		return fail(L, hSTMT, cur->hstmt);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
@@ -368,7 +367,7 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 /*
 ** Creates a cursor table and leave it on the top of the stack.
 */
-static int create_cursor (lua_State *L, conn_data *conn, 
+static int create_cursor (lua_State *L, int conn, 
         const SQLHSTMT hstmt, const SQLSMALLINT numcols) {
     cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
@@ -380,7 +379,7 @@ static int create_cursor (lua_State *L, conn_data *conn,
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
     cur->hstmt = hstmt;
-	lua_pushvalue (L, 1);
+	lua_pushvalue (L, conn);
     cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	/* make and store column information table */
@@ -393,7 +392,7 @@ static int create_cursor (lua_State *L, conn_data *conn,
 /*
 ** Closes a connection.
 */
-static int conn_close (lua_State *L) {            
+static int conn_close (lua_State *L) {
 	SQLRETURN ret;
     conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
@@ -445,7 +444,7 @@ static int conn_execute (lua_State *L) {
 	}
 	if (numcols > 0)
     	/* if there is a results table (e.g., SELECT) */
-		return create_cursor (L, conn, hstmt, numcols);
+		return create_cursor (L, 1, hstmt, numcols);
 	else {
 		/* if action has no results (e.g., UPDATE) */
 		SQLINTEGER numrows;
@@ -606,7 +605,7 @@ static int env_connect (lua_State *L) {
 		return ret;
 	}
 	/* success, return connection object */
-	return create_connection (L, env, hdbc);
+	return create_connection (L, 1, hdbc);
 }
 
 /*
