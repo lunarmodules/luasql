@@ -40,6 +40,7 @@ typedef struct {
 	short closed;
 	int conn;               /* reference to connection */
 	int numcols;            /* number of columns */
+	int colnames, coltypes; /* reference to column information tables */
 	int curr_tuple;         /* next tuple to be read */
 	PGresult *pg_res;
 } cur_data;
@@ -211,6 +212,44 @@ static int cur_colinfo (lua_State *L) {
 	return 1;
 }
 
+static int cur_getcolnames (lua_State *L) {
+	cur_data *cur = (cur_data *)getcursor (L);
+	if (cur->colnames != LUA_NOREF)
+		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
+	else {
+		PGresult *result = cur->pg_res;
+		int i;
+		lua_newtable (L);
+		for (i = 1; i <= cur->numcols; i++) {
+			lua_pushstring (L, PQfname (result, i-1));
+			lua_rawseti (L, -2, i);
+		}
+	}
+	return 1;
+}
+
+static int cur_getcoltypes (lua_State *L) {
+	cur_data *cur = (cur_data *)getcursor (L);
+	if (cur->coltypes != LUA_NOREF)
+		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
+	else {
+		PGresult *result = cur->pg_res;
+		conn_data *conn;
+		char typename[100];
+		int i;
+		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+		if (!lua_isuserdata (L, -1))
+			luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
+		conn = (conn_data *)lua_touserdata (L, -1);
+		lua_newtable (L);
+		for (i = 1; i <= cur->numcols; i++) {
+			lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
+			lua_rawseti (L, -2, i);
+		}
+	}
+	return 1;
+}
+
 
 /*
 ** Push the number of rows.
@@ -225,17 +264,19 @@ static int cur_numrows (lua_State *L) {
 /*
 ** Create a new Cursor object and push it on top of the stack.
 */
-static int create_cursor  (lua_State *L, conn_data *conn, PGresult *result) {
+static int create_cursor  (lua_State *L, int conn, PGresult *result) {
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_PG);
 
 	/* fill in structure */
 	cur->closed = 0;
-	cur->pg_res = result;
-	cur->numcols = PQnfields(result);
-	cur->curr_tuple = 0;
-	lua_pushvalue (L, 1);
+	lua_pushvalue (L, conn);
 	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->numcols = PQnfields(result);
+	cur->colnames = LUA_NOREF;
+	cur->coltypes = LUA_NOREF;
+	cur->curr_tuple = 0;
+	cur->pg_res = result;
 
 	return 1;
 }
@@ -300,7 +341,7 @@ static int conn_execute (lua_State *L) {
 	else if (res && PQresultStatus(res)==PGRES_TUPLES_OK) {
 		/* tuples returned */
 		conn->cur_counter++;
-		return create_cursor (L, conn, res);
+		return create_cursor (L, 1, res);
 	}
 	else {  /* error */
 		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
@@ -375,17 +416,17 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, env_data *env, PGconn *const pg_conn) {
+static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_PG);
 
 	/* fill in structure */
 	conn->closed = 0;
 	conn->cur_counter = 0;
-	conn->pg_conn = pg_conn;
-	conn->auto_commit = 1;
-	lua_pushvalue (L, 1);
+	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
+	conn->auto_commit = 1;
+	conn->pg_conn = pg_conn;
 	return 1;
 }
 
@@ -425,7 +466,7 @@ static int env_connect (lua_State *L) {
 		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting to database.");
 	PQsetNoticeProcessor(conn, notice_processor, NULL);
 	env->conn_counter++;
-	return create_connection(L, env, conn);
+	return create_connection(L, 1, conn);
 }
 
 
@@ -466,8 +507,9 @@ static void create_metatables (lua_State *L) {
     };
     struct luaL_reg cursor_methods[] = {
         {"close", cur_close},
+        {"getcolnames", cur_getcolnames},
+        {"getcoltypes", cur_getcoltypes},
         {"fetch", cur_fetch},
-        {"colinfo", cur_colinfo},
 		{"numrows", cur_numrows},
 		{NULL, NULL},
     };
