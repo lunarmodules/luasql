@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.7 2003/05/02 15:16:15 tomas Exp $>
+<!$Id: manual.html,v 1.8 2003/05/07 04:07:52 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -68,8 +68,9 @@ requires the built-in <tt>loadlib</tt> function Lua 5 offers).
 <a name="environment_object">
 <h2>Environment objects</h2>
 <p>
-An environment object is created by calling the method with the
-same name of the driver (odbc, postgres etc.).
+An environment object is created by calling the driver's initialization
+function that is stored into the table <tt>luasql</tt> with the same
+name of the driver (odbc, postgres etc.).
 For example, <tt>luasql.odbc()</tt>, will try to create an environment
 object using the ODBC driver.
 </p>
@@ -78,16 +79,16 @@ object using the ODBC driver.
 
 <ul>
 <a name="env_close"></a>
-<li> <tt>env:close()</tt> <br>
+<li> <b><tt>env:close()</tt></b> <br>
 Closes the environment <tt>env</tt>.
 Only successful if all connections pertaining to it were closed first.
 
 <a name="env_connect"></a>
-<li> <tt>env:connect(sourcename[,username[,password]])</tt> <br>
+<li> <b><tt>env:connect(sourcename[,username[,password]])</tt></b> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
 <tt>username</tt> and <tt>password</tt> if they are supplied.<br>
 See also: <a href="#postgres_extensions">PostgreSQL extensions</a><br>
-Returns: a <a href="connection_object">connection object</a>.
+Returns: a <a href="#connection_object">connection object</a>.
 
 </ul>
 
@@ -104,26 +105,26 @@ method.
 
 <ul>
 <a name="conn_close"></a>
-<li> <tt>conn:close()</tt> <br>
+<li> <b><tt>conn:close()</tt></b> <br>
 Closes the connection <tt>conn</tt>.
 Only successful if all cursors pertaining to it were closed first.
 
 <a name="conn_commit"></a>
-<li> <tt>conn:commit()</tt> <br>
+<li> <b><tt>conn:commit()</tt></b> <br>
 Commits the current transaction.
 
 <a name="conn_execute"></a>
-<li> <tt>conn:execute(statement)</tt> <br>
+<li> <b><tt>conn:execute(statement)</tt></b> <br>
 Executes the given SQL <tt>statement</tt>.<br>
-Returns: a <a href="cursor_object">cursor object</a>
+Returns: a <a href="#cursor_object">cursor object</a>
 if there are results, or the number of rows affected by the command otherwise.
 
 <a name="conn_rollback"></a>
-<li> <tt>conn:rollback()</tt> <br>
+<li> <b><tt>conn:rollback()</tt></b> <br>
 Rolls back the current transaction.
 
 <a name="conn_setautocommit"></a>
-<li> <tt>conn:setautocommit(boolean)</tt> <br>
+<li> <b><tt>conn:setautocommit(boolean)</tt></b> <br>
 Turns on or off the "auto commit" mode.
 This feature might not work on database systems that don't implement
 transactions.
@@ -156,11 +157,11 @@ See also <a href="#postgres_extensions">PostgreSQL extensions</a>.
 
 <ul>
 <a name="cur_close"></a>
-<li> <tt>cur:close()</tt> <br>
+<li> <b><tt>cur:close()</tt></b> <br>
 Closes this cursor. 
 
 <a name="cur_fetch"></a>
-<li> <tt>cur:fetch([table[,modestring]])</tt> <br>
+<li> <b><tt>cur:fetch([table[,modestring]])</tt></b> <br>
 Retrieves the next row of results.<br>
 If <tt>fetch</tt> is called without parameters,
 the results will be returned to the caller directly.
@@ -170,7 +171,7 @@ In this case, an optional <tt>mode</tt> parameter can be used.
 It is just a string indicating how the result table should be made.
 The mode string can contain:
 <ul>
-  <li> <b>"n"</b> the resulting table will have numerical indices
+  <li> <b>"n"</b> the resulting table will have numerical indices (default)
   <li> <b>"a"</b> the resulting table will have alphanumerical indices
 </ul>
 The <i>numerical indexes</i> are the positions of the fields in the select
@@ -183,11 +184,11 @@ can improve the overall performance.<br>
 Returns: data, as above, or <tt>nil</tt> if there are no more rows.
 
 <a name="cur_colnames"></a>
-<li> <tt>cur:getcolnames()</tt> <br>
+<li> <b><tt>cur:getcolnames()</tt></b> <br>
 Returns: a list of column names.
 
 <a name="cur_coltypes"></a>
-<li> <tt>cur:getcoltypes()</tt> <br>
+<li> <b><tt>cur:getcoltypes()</tt></b> <br>
 Returns: a list of column types.
 
 </ul>
@@ -201,14 +202,14 @@ provided by all drivers (see manual), the Postgres driver also offers
 these extra features:
 
 <ul>
-  <li><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt><br>
+  <li> <b><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt></b> <br>
     In the PostgreSQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     Also, the first parameter can contain all connection information,
     as stated in the documentation for <tt>PQconnectdb</tt> function
     in the PostgreSQL manual
     (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>)
-  <li><tt>cur:numrows()</tt><br>
+  <li> <b><tt>cur:numrows()</tt></b> <br>
     This additional method returns the number of rows in the query result.
 </ul>
 
@@ -297,7 +298,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
     <li> <a href="#cur_colnames">getcolnames</a>
     <li> <a href="#cur_coltypes">getcoltypes</a>
   </ul>
-<li> <a href="postgres_extensions">PostgreSQL extensions</a>
+<li> <a href="#postgres_extensions">PostgreSQL extensions</a>
 <li> <a href="#examples">Examples</a>
 </ul>
 </p>
@@ -317,7 +318,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <hr>
 <small>
 Last modified by Tom&aacute;s Guisasola on<br>
-Fri May  2 15:17:06 BRT 2003
+Wed May  7 04:00:54 BRT 2003
 </small>
 
 </body>
