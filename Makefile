@@ -1,11 +1,13 @@
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations
-INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include
+INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include
 LIBS_DIR= -L/usr/local/pgsql/lib
 LIBS= -llua.5.0 -llualib.5.0 -lm -lpq -lz -ldl
 CFLAGS= $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
 
 ODBC_OBJ= ls_odbc.o
 PG_OBJ= ls_pg.o
+OCI_OBJ= ls_oci8.o
+MYSQL_OBJ= ls_mysql.o
 LS_OBJ= luasql.o
 
 VERSION= 2.0a
@@ -14,10 +16,10 @@ TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
 SRCS= README Makefile \
 	luasql.h luasql.c \
-	ls_pg.h ls_pg.c \
-	ls_pg.def postgres.tmpl \
-	ls_odbc.h ls_odbc.c \
-	ls_odbc.def odbc.tmpl \
+	ls_pg.c ls_pg.def postgres.tmpl \
+	ls_odbc.c ls_odbc.def odbc.tmpl \
+	ls_oci8.c ls_oci8.def oracle.tmpl \
+	ls_mysql.c mysql.tmpl \
 	test.lua performance.lua \
 	index.html manual.html lua.png 
 
@@ -25,10 +27,16 @@ AR= ar rcu
 RANLIB= ranlib
 
 ODBC_LIB= libluasqlodbc.$(VERSION).a
+ODBC_DLL= luasqlodbc.$(VERSION).dll
 PG_LIB= libluasqlpostgres.$(VERSION).a
 PG_SO= libluasqlpostgres.$(VERSION).so
 PG_DYLIB= libluasqlpostgres.$(VERSION).dylib
-ODBC_DLL= luasqlodbc.$(VERSION).dll
+OCI_LIB= libluasqloci8.$(VERSION).a
+OCI_SO= libluasqloci8.$(VERSIOIN).so
+OCI_DLL= luasqloracle.$(VERSION).dll
+MYSQL_LIB= libluasqlmysql.$(VERSION).a
+MYSQL_SO= libluasqlmysql.$(VERSIOIN).so
+MYSQL_DLL= luasqlmysql.$(VERSION).dll
 
 dist:
 	#cd ..; tar -czf luasql-2.0.tar.gz $(SRCS)
@@ -39,13 +47,28 @@ dist:
 	rm -rf $(PKG)
 
 pglinux: $(PG_LIB) $(PG_SO)
-	sed "s/LIB_NAME/$(PG_SO)/" postgres.tmpl > postgres.lua
+	sed -e "s/LIB_NAME/$(PG_SO)/" -e "s/DRIVER/postgres/" loader.tmpl > postgres.lua
 
 pgmac: $(PG_LIB) $(PG_DYLIB)
-	sed "s/LIB_NAME/$(PG_DYLIB)/" postgres.tmpl > postgres.lua
+	sed -e "s/LIB_NAME/$(PG_DYLIB)/" -e "s/DRIVER/postgres/" loader.tmpl > postgres.lua
 
 odbcwin:
-	sed "s/LIB_NAME/$(ODBC_DLL)/" odbc.tmpl > odbc.lua
+	sed -e "s/LIB_NAME/$(ODBC_DLL)/" -e "s/DRIVER/odbc/" loader.tmpl > odbc.lua
+	sed -e "s/VERSION/$(VERSION)/" -e "s/DRIVER/odbc/" def.tmpl > odbc.def
+
+ocilinux: $(OCI_LIB) $(OCI_SO)
+	sed -e "s/LIB_NAME/$(OCI_SO)/" -e "s/DRIVER/oracle/" loader.tmpl > oracle.lua
+
+ociwin:
+	sed -e "s/LIB_NAME/$(OCI_SO)/" -e "s/DRIVER/oracle/" loader.tmpl > oracle.lua
+	sed -e "s/VERSION/$(VERSION)/" -e "s/DRIVER/oracle/" def.tmpl > oracle.def
+
+mysqllinux: $(MYSQL_LIB) $(MYSQL_SO)
+	sed -e "s/LIB_NAME/$(MYSQL_SO)/" -e "s/DRIVER/mysql/" loader.tmpl > mysql.lua
+
+mysqlwin:
+	sed -e "s/LIB_NAME/$(MYSQL_SO)/" -e "s/DRIVER/mysql/" loader.tmpl > mysql.lua
+	sed -e "s/VERSION/$(VERSION)/" -e "s/DRIVER/mysql/" def.tmpl > mysql.def
 
 $(PG_LIB): $(LS_OBJ) $(PG_OBJ)
 	$(AR) $@ $(LS_OBJ) $(PG_OBJ)
@@ -57,5 +80,19 @@ $(PG_SO): $(LS_OBJ) $(PG_OBJ)
 $(PG_DYLIB): $(LS_OBJ) $(PG_OBJ)
 	gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(LIBS)
 
+$(OCI_LIB): $(LS_OBJ) $(OCI_OBJ)
+	$(AR) $@ $(LS_OBJ) $(OCI_OBJ)
+	$(RANLIB) $@
+
+$(OCI_SO): $(LS_OBJ) $(OCI_OBJ)
+	gcc -o $@ -shared $(LS_OBJ) $(OCI_OBJ) $(LIBS_DIR) $(LIBS)
+
+$(MYSQL_LIB): $(LS_OBJ) $(MYSQL_OBJ)
+	$(AR) $@ $(LS_OBJ) $(MYSQL_OBJ)
+	$(RANLIB) $@
+
+$(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
+	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(LIBS)
+
 clean:
-	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(PG_LIB) $(ODBC_LIB) $(PG_DYLIB) postgres.lua odbc.lua
+	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(ODBC_LIB) $(ODBC_DLL) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) postgres.lua odbc.lua oracle.lua mysql.lua
