@@ -15,11 +15,11 @@ PKG= luasql-$(VERSION)
 TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
 SRCS= README Makefile \
-	luasql.h luasql.c \
-	ls_pg.c ls_pg.def postgres.tmpl \
-	ls_odbc.c ls_odbc.def odbc.tmpl \
-	ls_oci8.c ls_oci8.def oracle.tmpl \
-	ls_mysql.c mysql.tmpl \
+	luasql.h luasql.c loader.tmpl \
+	ls_pg.c ls_pg.def \
+	ls_odbc.c ls_odbc.def \
+	ls_oci8.c ls_oci8.def \
+	ls_mysql.c ls_mysql.def \
 	test.lua performance.lua \
 	index.html manual.html lua.png 
 
