@@ -1,26 +1,23 @@
 LuaSQL is a Lua library that provides access to the most important
-functionality available in any database manager.
+functionality available in any database manager. For more details check
+http://www.keplerproject.org/luasql/
 
 Here goes a small description of the files in the distribution
 
-    authors.html     -- List of authors
     def.tmpl         -- .DEF template
-    index.html       -- Home page
-    licence.html     -- Copyright & License
     loader.tmpl      -- Lua loader template
     ls_mysql.c       -- MySQL driver
     ls_oci8.c        -- Oracle OCI 8 driver
     ls_odbc.c        -- ODBC driver
     ls_pg.c          -- PostgreSQL driver
-    jdbc/*           -- JDBC driver
     ado/*            -- ADO driver
-    luasql.png       -- LuaSQL Logo
+    doc/us/*         -- Documentation
+    jdbc/*           -- JDBC driver
     luasql.c         -- Common functions
     luasql.h         -- Common definitions
     Makefile         -- Makefile for Unix systems
-    manual.html      -- Reference manual
     performance.lua  -- Performance test script
     README           -- This file
     test.lua         -- Overall API test script
 
-$Id: README,v 1.7 2005/03/01 15:03:57 tuler Exp $
+$Id: README,v 1.8 2005/03/22 23:46:05 carregal Exp $
