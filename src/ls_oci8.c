@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.1 2003/05/26 11:28:31 tomas Exp $
+** $Id: ls_oci8.c,v 1.2 2003/05/26 17:23:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -46,6 +46,15 @@ typedef struct {
 
 
 typedef struct {
+	ub2        type;
+	ub4        max;
+	sb2        null;
+	OCIDefine *define;
+	void      *buffer;
+} col_info;
+
+
+typedef struct {
 	short      closed;
 	int        conn;               /* reference to connection */
 	int        numcols;            /* number of columns */
@@ -53,7 +62,7 @@ typedef struct {
 	int        curr_tuple;         /* next tuple to be read */
 	OCIStmt   *stmthp;
 	OCIError  *errhp; /* !!! */
-/* columns */
+	col_info  *cols;
 } cur_data;
 
 
@@ -61,7 +70,7 @@ int checkerr (lua_State *L, sword status, OCIError *errhp);
 #define ASSERT(L,exp,err) {sword s = exp; if (s) return checkerr (L, s, err);}
 
 
-LUASQL_API int luasql_libopen_oracle (lua_State *L) { 
+LUASQL_API int luasql_libopen_oracle (lua_State *L);
 
 
 /*
@@ -142,12 +151,13 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 /*
 ** Get another row of the given cursor.
 */
+/*
 static int cur_fetch (lua_State *L) {
 	cur_data *cur = getcursor (L);
 	int tuple = cur->curr_tuple;
 
 	if (tuple >= PQntuples(cur->pg_res)) {
-		lua_pushnil(L);  /* no more results */
+		lua_pushnil(L);  *//* no more results *//*
 		return 1;
 	}
 
@@ -156,28 +166,29 @@ static int cur_fetch (lua_State *L) {
 		int i;
 		const char *opts = luaL_optstring (L, 3, "n");
 		if (strchr (opts, 'n') != NULL)
-			/* Copy values to numerical indices */
+			*//* Copy values to numerical indices *//*
 			for (i = 1; i <= cur->numcols; i++) {
 				pushvalue (L, res, tuple, i);
 				lua_rawseti (L, 2, i);
 			}
 		if (strchr (opts, 'a') != NULL)
-			/* Copy values to alphanumerical indices */
+			*//* Copy values to alphanumerical indices *//*
 			for (i = 1; i <= cur->numcols; i++) {
 				lua_pushstring (L, PQfname (res, i-1));
 				pushvalue (L, res, tuple, i);
 				lua_rawset (L, 2);
 			}
 		lua_pushvalue(L, 2);
-		return 1; /* return table */
+		return 1; *//* return table *//*
 	}
 	else {
 		int i;
 		for (i = 1; i <= cur->numcols; i++)
 			pushvalue (L, res, tuple, i);
-		return cur->numcols; /* return #numcols values */
+		return cur->numcols; *//* return #numcols values *//*
 	}
 }
+*/
 
 
 /*
@@ -196,6 +207,7 @@ static int cur_close (lua_State *L) {
 		OCIHandleFree ((dvoid *)cur->stmthp, OCI_HTYPE_STMT);
 	if (cur->errhp)
 		OCIHandleFree ((dvoid *)cur->errhp, OCI_HTYPE_ERROR);
+	free (cur->cols);
 	/* Decrement cursor counter on connection object */
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	conn = lua_touserdata (L, -1);
@@ -332,10 +344,79 @@ static int conn_close (lua_State *L) {
 	}
 */
 
+
+/*
+static char *oracle2luatypa (ub2 data_type) {
+	switch (data_type) {
+		case SQLT_CHR:
+			return "string";
+		case SQLT_INT:
+			return "number";
+	}
+}
+*/
+
+
+/*
+** Obtain column information.
+*/
+static int prepare_buffers (lua_State *L, cur_data *cur, int i) {
+	OCIParam *param;
+
+	ASSERT (L, OCIParamGet (cur->stmthp, OCI_HTYPE_STMT, cur->errhp,
+		(dvoid **)&param, i), cur->errhp);
+	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+		(dvoid *)&(cur->cols[i].type), (ub4 *)0, OCI_ATTR_DATA_TYPE,
+		cur->errhp), cur->errhp);
+	switch (cur->cols[i].type) {
+		case SQLT_CHR:
+			ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+				(dvoid *)&(cur->cols[i].max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
+				cur->errhp), cur->errhp);
+			cur->cols[i].buffer = calloc (cur->cols[i].max + 1, sizeof(char));
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(cur->cols[i].define),
+				cur->errhp, (ub4)i, cur->cols[i].buffer, cur->cols[i].max,
+				SQLT_STR, (dvoid *)&(cur->cols[i].null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		case SQLT_NUM:
+			cur->cols[i].buffer = malloc (sizeof(int));
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(cur->cols[i].define),
+				cur->errhp, (ub4)i, cur->cols[i].buffer, (sb4)sizeof(int),
+				SQLT_INT, (dvoid *)&(cur->cols[i].null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		case SQLT_CLOB: {
+			env_data *env;
+			conn_data *conn;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = (conn_data *)lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = (env_data *)lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCIDescriptorAlloc (env->envhp,
+				&(cur->cols[i].buffer), OCI_DTYPE_LOB, (size_t)0,
+				(dvoid **)0), cur->errhp);
+			ASSERT (L, OCIDefineByPos (cur->stmthp,
+				&(cur->cols[i].define), cur->errhp, (ub4)i,
+				&(cur->cols[i].buffer), (sb4)sizeof(dvoid *),
+				SQLT_CLOB, (dvoid *)&(cur->cols[i].null),
+				(ub2 *)0, (ub2 *)0, OCI_DEFAULT),
+				cur->errhp);
+			break;
+		}
+		default:
+			break;
+	}
+	return 0;
+}
+
+
 /*
 ** Create a new Cursor object and push it on top of the stack.
 */
 static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
+	int i;
 	env_data *env;
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_OCI8);
@@ -362,21 +443,12 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
 	ASSERT (L, OCIAttrGet ((dvoid *)stmt, (ub4)OCI_HTYPE_STMT,
 		(dvoid *)&cur->numcols, (ub4 *)0, (ub4)OCI_ATTR_PARAM_COUNT,
 		cur->errhp), cur->errhp);
-	/* define output variables and create col_types table */
-	lua_newtable (L);
-	col_types = lua_gettop (L);
+	cur->cols = (col_info *)malloc (sizeof(col_info) * cur->numcols);
+	/* define output variables */
 	for (i = 1; i <= cur->numcols; i++) {
-		OCIParam *param;
-		ub2 data_type;
-
-		ASSERT (L, OCIParamGet (stmt, OCI_HTYPE_STMT, cur->errhp,
-			&param, i), cur->errhp);
-		ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
-			(dvoid *)&data_type, (ub4 *)0, OCI_ATTR_DATA_TYPE,
-			cur->errhp), cur->errhp);
-		lua_pushstring (L, data_type);
-		lua_rawseti (L, col_types, i);
-/* !!!!!!!!!!!!!!!!!!!!!!!! */
+		int ret = prepare_buffers (L, cur, i);
+		if (ret)
+			return ret;
 	}
 
 	return 1;
@@ -493,6 +565,8 @@ static int env_connect (lua_State *L) {
 	conn->loggedon = 0;
 	conn->svchp = NULL;
 	conn->errhp = NULL;
+	lua_pushvalue (L, 1);
+	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	/* error handler */
 	ASSERT (L, OCIHandleAlloc((dvoid *) env->envhp,
@@ -539,7 +613,6 @@ static int env_close (lua_State *L) {
 */
 static int create_environment (lua_State *L) {
 	env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
-
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_OCI8);
 	/* fill in structure */
 	env->closed = 0;
@@ -583,7 +656,7 @@ static void create_metatables (lua_State *L) {
 		{"close", cur_close},
 		{"getcolnames", cur_getcolnames},
 		{"getcoltypes", cur_getcoltypes},
-		{"fetch", cur_fetch},
+		/*{"fetch", cur_fetch},*/
 		{"numrows", cur_numrows},
 		{NULL, NULL},
 	};
