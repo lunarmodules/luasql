@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.4 2003/05/30 10:04:59 tomas Exp $
+** $Id: ls_oci8.c,v 1.5 2003/05/30 15:18:08 tomas Exp $
 */
 
 #include <assert.h>
@@ -46,11 +46,11 @@ typedef struct {
 
 
 typedef struct {
-	ub2        type;
-	ub4        max;
-	sb2        null;
-	OCIDefine *define;
-	void      *buffer;
+	ub2        type;    /* database type */
+	ub2        max;     /* maximum size */
+	sb2        null;    /* is null? */
+	OCIDefine *define;  /* define handle */
+	void      *buffer;  /* data buffer */
 } col_info;
 
 
@@ -60,9 +60,10 @@ typedef struct {
 	int        numcols;            /* number of columns */
 	int        colnames, coltypes; /* reference to column information tables */
 	int        curr_tuple;         /* next tuple to be read */
-	OCIStmt   *stmthp;
+	char      *text;               /* text of SQL statement */
+	OCIStmt   *stmthp;             /* statement handle */
 	OCIError  *errhp; /* !!! */
-	col_info  *cols;
+	col_info  *cols;               /* array of columns */
 } cur_data;
 
 
@@ -149,6 +150,97 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 
 
 /*
+** Alloc buffers for column values.
+*/
+static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
+	/* column index ranges from 1 to numcols */
+	/* C array index ranges from 0 to numcols-1 */
+	col_info *col = &(cur->cols[i-1]);
+	OCIParam *param;
+
+	ASSERT (L, OCIParamGet (cur->stmthp, OCI_HTYPE_STMT, cur->errhp,
+		(dvoid **)&param, i), cur->errhp);
+	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+		(dvoid *)&(col->type), (ub4 *)0, OCI_ATTR_DATA_TYPE,
+		cur->errhp), cur->errhp);
+	switch (col->type) {
+	case SQLT_CHR:
+	case SQLT_STR:
+	case SQLT_VCS:
+	case SQLT_AFC:
+	case SQLT_AVC:
+		ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+			(dvoid *)&(col->max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
+			cur->errhp), cur->errhp);
+		col->buffer = calloc (col->max + 1, sizeof(char));
+		ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+			cur->errhp, (ub4)i, col->buffer, col->max,
+			SQLT_STR, (dvoid *)&(col->null), (ub2 *)0,
+			(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+		break;
+	case SQLT_NUM:
+		col->buffer = malloc (sizeof(int));
+		ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+			cur->errhp, (ub4)i, col->buffer, (sb4)sizeof(int),
+			SQLT_INT, (dvoid *)&(col->null), (ub2 *)0,
+			(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+		break;
+	case SQLT_CLOB: {
+		env_data *env;
+		conn_data *conn;
+		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+		conn = (conn_data *)lua_touserdata (L, -1);
+		lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+		env = (env_data *)lua_touserdata (L, -1);
+		lua_pop (L, 2);
+		ASSERT (L, OCIDescriptorAlloc (env->envhp,
+			&(col->buffer), OCI_DTYPE_LOB, (size_t)0,
+			(dvoid **)0), cur->errhp);
+		ASSERT (L, OCIDefineByPos (cur->stmthp,
+			&(col->define), cur->errhp, (ub4)i,
+			&(col->buffer), (sb4)sizeof(dvoid *),
+			SQLT_CLOB, (dvoid *)&(col->null),
+			(ub2 *)0, (ub2 *)0, OCI_DEFAULT),
+			cur->errhp);
+		break;
+	}
+	default:
+		luaL_error (L, LUASQL_PREFIX"invalid type %d #%d", col->type, i);
+		break;
+	}
+	return 0;
+}
+
+
+/*
+** Deallocate column buffers.
+*/
+static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
+	col_info *col = &(cur->cols[i-1]);
+	switch (col->type) {
+	case SQLT_NUM:
+    /* case SQLT_FLT: */
+	case SQLT_CHR:
+	case SQLT_STR:
+	case SQLT_VCS:
+	case SQLT_AFC:
+	case SQLT_AVC:
+		free(col->buffer);
+		break;
+	case SQLT_CLOB:
+		ASSERT (L, OCIDescriptorFree (col->buffer, OCI_DTYPE_LOB),
+			cur->errhp);
+		break;
+	default:
+		luaL_error (L, LUASQL_PREFIX"unknown type");
+		/*printf("free_buffers(): Unknow Type: %d count: %d\n",cols.item[count].type, count );*/
+		break;
+	}
+    return 0;
+}
+
+
+/*
 ** Get another row of the given cursor.
 */
 /*
@@ -196,11 +288,21 @@ static int cur_fetch (lua_State *L) {
 ** Return 1
 */
 static int cur_close (lua_State *L) {
+	int i;
 	conn_data *conn;
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_OCI8);
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed)
 		return 0;
+
+	/* Deallocate buffers. */
+	for (i = 1; i <= cur->numcols; i++) {
+		int ret = free_column_buffers (L, cur, i);
+		if (ret)
+			return ret;
+	}
+	free (cur->cols);
+	free (cur->text);
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
@@ -208,7 +310,6 @@ static int cur_close (lua_State *L) {
 		OCIHandleFree ((dvoid *)cur->stmthp, OCI_HTYPE_STMT);
 	if (cur->errhp)
 		OCIHandleFree ((dvoid *)cur->errhp, OCI_HTYPE_ERROR);
-	free (cur->cols);
 	/* Decrement cursor counter on connection object */
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	conn = lua_touserdata (L, -1);
@@ -247,6 +348,7 @@ static int cur_colinfo (lua_State *L) {
 	return 1;
 }
 
+
 static int cur_getcolnames (lua_State *L) {
 	cur_data *cur = getcursor (L);
 	if (cur->colnames != LUA_NOREF)
@@ -262,6 +364,7 @@ static int cur_getcolnames (lua_State *L) {
 	}
 	return 1;
 }
+
 
 static int cur_getcoltypes (lua_State *L) {
 	cur_data *cur = getcursor (L);
@@ -360,64 +463,9 @@ static char *oracle2luatypa (ub2 data_type) {
 
 
 /*
-** Obtain column information.
-*/
-static int prepare_buffers (lua_State *L, cur_data *cur, int i) {
-	OCIParam *param;
-
-	ASSERT (L, OCIParamGet (cur->stmthp, OCI_HTYPE_STMT, cur->errhp,
-		(dvoid **)&param, i), cur->errhp);
-	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
-		(dvoid *)&(cur->cols[i].type), (ub4 *)0, OCI_ATTR_DATA_TYPE,
-		cur->errhp), cur->errhp);
-	switch (cur->cols[i].type) {
-		case SQLT_CHR:
-			ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
-				(dvoid *)&(cur->cols[i].max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
-				cur->errhp), cur->errhp);
-			cur->cols[i].buffer = calloc (cur->cols[i].max + 1, sizeof(char));
-			ASSERT (L, OCIDefineByPos (cur->stmthp, &(cur->cols[i].define),
-				cur->errhp, (ub4)i, cur->cols[i].buffer, cur->cols[i].max,
-				SQLT_STR, (dvoid *)&(cur->cols[i].null), (ub2 *)0,
-				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
-			break;
-		case SQLT_NUM:
-			cur->cols[i].buffer = malloc (sizeof(int));
-			ASSERT (L, OCIDefineByPos (cur->stmthp, &(cur->cols[i].define),
-				cur->errhp, (ub4)i, cur->cols[i].buffer, (sb4)sizeof(int),
-				SQLT_INT, (dvoid *)&(cur->cols[i].null), (ub2 *)0,
-				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
-			break;
-		case SQLT_CLOB: {
-			env_data *env;
-			conn_data *conn;
-			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-			conn = (conn_data *)lua_touserdata (L, -1);
-			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-			env = (env_data *)lua_touserdata (L, -1);
-			lua_pop (L, 2);
-			ASSERT (L, OCIDescriptorAlloc (env->envhp,
-				&(cur->cols[i].buffer), OCI_DTYPE_LOB, (size_t)0,
-				(dvoid **)0), cur->errhp);
-			ASSERT (L, OCIDefineByPos (cur->stmthp,
-				&(cur->cols[i].define), cur->errhp, (ub4)i,
-				&(cur->cols[i].buffer), (sb4)sizeof(dvoid *),
-				SQLT_CLOB, (dvoid *)&(cur->cols[i].null),
-				(ub2 *)0, (ub2 *)0, OCI_DEFAULT),
-				cur->errhp);
-			break;
-		}
-		default:
-			break;
-	}
-	return 0;
-}
-
-
-/*
 ** Create a new Cursor object and push it on top of the stack.
 */
-static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
+static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt, const char *text) {
 	int i;
 	env_data *env;
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
@@ -432,6 +480,8 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
 	cur->curr_tuple = 0;
 	cur->stmthp = stmt;
 	cur->errhp = NULL;
+	cur->cols = NULL;
+	cur->text = strdup (text);
 	lua_pushvalue (L, o);
 	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -449,7 +499,7 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
 	cur->cols = (col_info *)malloc (sizeof(col_info) * cur->numcols);
 	/* define output variables */
 	for (i = 1; i <= cur->numcols; i++) {
-		int ret = prepare_buffers (L, cur, i);
+		int ret = alloc_column_buffer (L, cur, i);
 		if (ret)
 			return ret;
 	}
@@ -503,17 +553,20 @@ static int conn_execute (lua_State *L) {
 	/* execute statement */
 	status = OCIStmtExecute (conn->svchp, stmthp, conn->errhp, iters,
 		(ub4)0, (CONST OCISnapshot *)NULL, (OCISnapshot *)NULL, mode);
-	if (status && (status != OCI_NO_DATA))
+	if (status && (status != OCI_NO_DATA)) {
+		OCIHandleFree ((dvoid *)stmthp, OCI_HTYPE_STMT);
 		return checkerr (L, status, conn->errhp);
+	}
 	if (type == OCI_STMT_SELECT) {
 		/* create cursor */
-		return create_cursor (L, 1, conn, stmthp);
+		return create_cursor (L, 1, conn, stmthp, statement);
 	} else {
 		/* return number of rows */
 		int rows_affected;
 		ASSERT (L, OCIAttrGet ((dvoid *)stmthp, (ub4)OCI_HTYPE_STMT,
 			(dvoid *)&rows_affected, (ub4 *)0,
 			(ub4)OCI_ATTR_ROW_COUNT, conn->errhp), conn->errhp);
+		OCIHandleFree ((dvoid *)stmthp, OCI_HTYPE_STMT);
 		lua_pushnumber (L, rows_affected);
 		return 1;
 	}
