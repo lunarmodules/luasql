@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.6 2003/05/30 15:44:34 tomas Exp $
+** $Id: ls_oci8.c,v 1.7 2003/06/02 18:05:20 tomas Exp $
 */
 
 #include <assert.h>
@@ -44,12 +44,19 @@ typedef struct {
 } conn_data;
 
 
+typedef union {
+	int     i;
+	char   *s;
+	double  d;
+} column_value;
+
+
 typedef struct {
 	ub2           type;    /* database type */
 	ub2           max;     /* maximum size */
 	sb2           null;    /* is null? */
 	OCIDefine    *define;  /* define handle */
-	void         *buffer;  /* data buffer */
+	column_value  val;
 } column_data;
 
 
@@ -170,22 +177,21 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 		case SQLT_AFC:
 		case SQLT_AVC:
 			ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
-				(dvoid *)&(col->max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
+				(dvoid *)&(col->max), 0, OCI_ATTR_DATA_SIZE,
 				cur->errhp), cur->errhp);
-			col->buffer = calloc (col->max + 1, sizeof(char));
+			col->val.s = calloc (col->max + 1, sizeof(col->val.s));
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-				cur->errhp, (ub4)i, col->buffer, col->max,
-				SQLT_STR, (dvoid *)&(col->null), (ub2 *)0,
+				cur->errhp, (ub4)i, col->val.s, col->max,
+				col->type, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
 		case SQLT_NUM:
+		case SQLT_FLT:
 		case SQLT_INT:
-		/* case SQLT_FLT: */
 		/* case SQLT_UIN: */
-			col->buffer = malloc (sizeof(int));
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-				cur->errhp, (ub4)i, col->buffer, (sb4)sizeof(int),
-				SQLT_INT, (dvoid *)&(col->null), (ub2 *)0,
+				cur->errhp, (ub4)i, &(col->val.d), sizeof(col->val.d),
+				SQLT_FLT, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
 		case SQLT_CLOB: {
@@ -196,10 +202,10 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
 			env = (env_data *)lua_touserdata (L, -1);
 			lua_pop (L, 2);
-			ASSERT (L, OCIDescriptorAlloc (env->envhp, &(col->buffer),
+			ASSERT (L, OCIDescriptorAlloc (env->envhp, (dvoid *)&(col->val.s),
 				OCI_DTYPE_LOB, (size_t)0, (dvoid **)0), cur->errhp);
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-				cur->errhp, (ub4)i, &(col->buffer), (sb4)sizeof(dvoid *),
+				cur->errhp, (ub4)i, &(col->val.s), (sb4)sizeof(dvoid *),
 				SQLT_CLOB, (dvoid *)&(col->null), (ub2 *)0, (ub2 *)0,
 				OCI_DEFAULT), cur->errhp);
 			break;
@@ -220,51 +226,107 @@ static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
 	/* C array index ranges from 0 to numcols-1 */
 	column_data *col = &(cur->cols[i-1]);
 	switch (col->type) {
-	case SQLT_NUM:
-    /* case SQLT_FLT: */
-	case SQLT_CHR:
-	case SQLT_STR:
-	case SQLT_VCS:
-	case SQLT_AFC:
-	case SQLT_AVC:
-		free(col->buffer);
-		break;
-	case SQLT_CLOB:
-		ASSERT (L, OCIDescriptorFree (col->buffer, OCI_DTYPE_LOB),
-			cur->errhp);
-		break;
-	default:
-		luaL_error (L, LUASQL_PREFIX"unknown type");
-		/*printf("free_buffers(): Unknow Type: %d count: %d\n",cols.item[count].type, count );*/
-		break;
+		case SQLT_INT:
+		case SQLT_FLT:
+			break;
+		case SQLT_NUM: /* NUM is an array of char */
+		case SQLT_CHR:
+		case SQLT_STR:
+		case SQLT_VCS:
+		case SQLT_AFC:
+		case SQLT_AVC:
+			free(col->val.s);
+			break;
+		case SQLT_CLOB:
+			ASSERT (L, OCIDescriptorFree (col->val.s,
+				OCI_DTYPE_LOB), cur->errhp);
+			break;
+		default:
+			luaL_error (L, LUASQL_PREFIX"unknown type");
+			/*printf("free_buffers(): Unknow Type: %d count: %d\n",cols.item[count].type, count );*/
+			break;
 	}
     return 0;
 }
 
 
 /*
-** Get another row of the given cursor.
+** Push a value on top of the stack.
 */
-/*
-static int cur_fetch (lua_State *L) {
-	cur_data *cur = getcursor (L);
-	int tuple = cur->curr_tuple;
-
-	if (tuple >= PQntuples(cur->pg_res)) {
-		lua_pushnil(L);  *//* no more results *//*
+static int pushvalue (lua_State *L, cur_data *cur, int i) {
+	/* column index ranges from 1 to numcols */
+	/* C array index ranges from 0 to numcols-1 */
+	column_data *col = &(cur->cols[i-1]);
+	if (col->null) {
+		/* Oracle NULL => Lua nil */
+		lua_pushnil (L);
 		return 1;
 	}
+	switch (col->type) {
+		case SQLT_NUM:
+		case SQLT_INT:
+		case SQLT_FLT:
+			lua_pushnumber (L, col->val.d);
+			break;
+		case SQLT_CHR:
+		case SQLT_STR:
+		case SQLT_VCS:
+		case SQLT_AFC:
+		case SQLT_AVC:
+			lua_pushstring (L, (char *)(col->val.s));
+			break;
+		case SQLT_CLOB: {
+			ub4 lob_len;
+			conn_data *conn;
+			env_data *env;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCILobGetLength (conn->svchp, cur->errhp,
+				(OCILobLocator *)col->val.s, &lob_len), cur->errhp);
+			if (lob_len > 0) {
+			} else {
+			}
+		}
+		default:
+			luaL_error (L, LUASQL_PREFIX"unexpected error");
+	}
+	return 1;
+}
 
-	cur->curr_tuple++;
+
+/*
+** Get another row of the given cursor.
+*/
+static int cur_fetch (lua_State *L) {
+	cur_data *cur = getcursor (L);
+	sword status = OCIStmtFetch (cur->stmthp, cur->errhp, 1,
+		OCI_FETCH_NEXT, OCI_DEFAULT);
+
+	if (status == OCI_NO_DATA) {
+		/* No more rows */
+		lua_pushnil (L);
+		return 1;
+	} else if (status != OCI_SUCCESS) {
+		/* Error */
+printf("(%d)!!\n",status);
+		return checkerr (L, status, cur->errhp);
+	}
+
 	if (lua_istable (L, 2)) {
 		int i;
 		const char *opts = luaL_optstring (L, 3, "n");
 		if (strchr (opts, 'n') != NULL)
-			*//* Copy values to numerical indices *//*
+			/* Copy values to numerical indices */
 			for (i = 1; i <= cur->numcols; i++) {
-				pushvalue (L, res, tuple, i);
+				int ret = pushvalue (L, cur, i);
+				if (ret != 1)
+					return ret;
 				lua_rawseti (L, 2, i);
 			}
+/*
 		if (strchr (opts, 'a') != NULL)
 			*//* Copy values to alphanumerical indices *//*
 			for (i = 1; i <= cur->numcols; i++) {
@@ -272,17 +334,20 @@ static int cur_fetch (lua_State *L) {
 				pushvalue (L, res, tuple, i);
 				lua_rawset (L, 2);
 			}
+*/
 		lua_pushvalue(L, 2);
-		return 1; *//* return table *//*
+		return 1; /* return table */
 	}
 	else {
 		int i;
-		for (i = 1; i <= cur->numcols; i++)
-			pushvalue (L, res, tuple, i);
-		return cur->numcols; *//* return #numcols values *//*
+		for (i = 1; i <= cur->numcols; i++) {
+			int ret = pushvalue (L, cur, i);
+			if (ret != 1)
+				return ret;
+		}
+		return cur->numcols; /* return #numcols values */
 	}
 }
-*/
 
 
 /*
@@ -447,7 +512,7 @@ static int conn_close (lua_State *L) {
 			&parmdpp, (ub4)i), cur->errhp);
 		ASSERT (L, OCIAttrGet (parmdpp, (ub4)OCI_DTYPE_PARAM,
 			(dvoid **)&name, name_len, OCI_ATTR_NAME, cur->errhp), cur->errhp);
-		ASSERT (L, OCIAttrGet (kk
+		ASSERT (L, OCIAttrGet (kk));
 	}
 */
 
@@ -719,7 +784,7 @@ static void create_metatables (lua_State *L) {
 		{"close", cur_close},
 		{"getcolnames", cur_getcolnames},
 		{"getcoltypes", cur_getcoltypes},
-		/*{"fetch", cur_fetch},*/
+		{"fetch", cur_fetch},
 		{"numrows", cur_numrows},
 		{NULL, NULL},
 	};
