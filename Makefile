@@ -41,7 +41,7 @@ SRCS= README Makefile \
 	ls_oci8.c \
 	ls_mysql.c \
 	test.lua performance.lua \
-	index.html manual.html license.html authors.html lua.png 
+	index.html manual.html license.html authors.html luasql.png 
 
 AR= ar rcu
 RANLIB= ranlib
