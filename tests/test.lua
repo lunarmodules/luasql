@@ -343,7 +343,7 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
-	if string.sub(luasql._MYSQLVERSION, 1, 3) == "4.0" then
+	if luasql._MYSQLVERSION and string.sub(luasql._MYSQLVERSION, 1, 3) == "4.0" then
 		io.write("skipping rollback test (mysql version 4.0.x)")
 		return
 	end
@@ -427,7 +427,7 @@ function column_info ()
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
 		local type_i = string.gsub(types[i], "%s+", "")
-		assert (type_i == "adWVarChar" or type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
+		assert (type_i == "adVarWChar" or type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
