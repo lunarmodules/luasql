@@ -14,6 +14,6 @@
 LUASQL_API int luasql_faildirect (lua_State *L, const char *err);
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
-LUASQL_API int lua_sqllibopen (lua_State *L);
+LUASQL_API void luasql_getlibtable (lua_State *L);
 
 #endif
