@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
-** $Id: ls_mysql.c,v 1.5 2003/08/14 14:32:06 eduquintao Exp $
+** $Id: ls_mysql.c,v 1.6 2003/08/21 18:20:01 eduquintao Exp $
 */
 
 #include <assert.h>
@@ -163,10 +163,8 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 static int cur_fetch (lua_State *L) {
 	cur_data *cur = getcursor (L);
 	MYSQL_RES *res = cur->my_res;
-	MYSQL_ROW row;
 	unsigned long *lengths;
-
-	row = mysql_fetch_row(res);
+	MYSQL_ROW row = mysql_fetch_row(res);
 	if (row == NULL) {
 		lua_pushnil(L);  /* no more results */
 		return 1;
@@ -174,15 +172,17 @@ static int cur_fetch (lua_State *L) {
 	lengths = mysql_fetch_lengths(res);
 
 	if (lua_istable (L, 2)) {
-		int i;
 		const char *opts = luaL_optstring (L, 3, "n");
-		if (strchr (opts, 'n') != NULL)
+		if (strchr (opts, 'n') != NULL) {
 			/* Copy values to numerical indices */
+			int i;
 			for (i = 0; i < cur->numcols; i++) {
 				pushvalue (L, row[i], lengths[i]);
 				lua_rawseti (L, 2, i+1);
 			}
+		}
 		if (strchr (opts, 'a') != NULL) {
+			int i;
 			/* Check if colnames exists */
 			if (cur->colnames == LUA_NOREF)
 		        create_colinfo(L, cur);
@@ -193,13 +193,10 @@ static int cur_fetch (lua_State *L) {
 				lua_rawgeti(L, -1, i+1); /* push the field name */
 
 				/* Actually push the value */
-				lua_pushstring (L, lua_tostring(L, -1) );
 				pushvalue (L, row[i], lengths[i]);
 				lua_rawset (L, 2);
-
-				lua_pop(L, 1); /* pop the field name */
 			}
-			lua_pop(L, 1); /* Pops colnames table */
+			/* lua_pop(L, 1);  Pops colnames table. Not needed */
 		}
 		lua_pushvalue(L, 2);
 		return 1; /* return table */
@@ -319,12 +316,13 @@ static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
 	unsigned long st_len = strlen(statement);
-	if (!mysql_real_query(conn->my_conn, statement, st_len)) {
-		unsigned int num_cols;
-		MYSQL_RES *res;
-		/*-- res = mysql_use_result(conn->my_conn);*/
-		res = mysql_store_result(conn->my_conn);
-		num_cols = mysql_field_count(conn->my_conn);
+	if (mysql_real_query(conn->my_conn, statement, st_len)) 
+		/* error executing query */
+		return luasql_failmessage(L, "Error executing query. MySQL: ", mysql_error(conn->my_conn));
+	else
+	{
+		MYSQL_RES *res = mysql_store_result(conn->my_conn);
+		unsigned int num_cols = mysql_field_count(conn->my_conn);
 
 		if (res) { /* tuples returned */
 			return create_cursor (L, 1, res, num_cols);
@@ -339,8 +337,6 @@ static int conn_execute (lua_State *L) {
 				return luasql_failmessage(L, "Error retrieving result. MySQL: ", mysql_error(conn->my_conn));
 		}
 	}
-	else  /* error executing query */
-		return luasql_failmessage(L, "Error executing query. MySQL: ", mysql_error(conn->my_conn));
 }
 
 
@@ -402,14 +398,13 @@ static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
-	MYSQL *conn;
-	env_data *env = getenvironment(L);
-
 	const char *sourcename = luaL_checkstring(L, 2);
 	const char *username = luaL_optstring(L, 3, NULL);
 	const char *password = luaL_optstring(L, 4, NULL);
 	const char *host = luaL_optstring(L, 5, NULL);
 	const int port = luaL_optint(L, 6, 0);
+	MYSQL *conn;
+	getenvironment(L); /* validade environment */
 
 	/* Try to init the connection object. */
 	conn = mysql_init(NULL);
