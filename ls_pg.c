@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_pg.c,v 1.16 2003/12/01 16:08:38 tomas Exp $
+** $Id: ls_pg.c,v 1.17 2004/01/02 12:30:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -131,6 +131,7 @@ static int cur_fetch (lua_State *L) {
 	}
 	else {
 		int i;
+		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 1; i <= cur->numcols; i++)
 			pushvalue (L, res, tuple, i);
 		return cur->numcols; /* return #numcols values */
@@ -155,7 +156,7 @@ static int cur_close (lua_State *L) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -317,8 +318,8 @@ static int conn_close (lua_State *L) {
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	PQfinish(conn->pg_conn);
-	lua_pushnumber(L, 1);
+	PQfinish (conn->pg_conn);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -454,7 +455,7 @@ static int env_close (lua_State *L) {
 		return 0;
 
 	env->closed = 1;
-	lua_pushnumber (L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 

@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.8 2003/12/01 16:08:38 tomas Exp $
+** $Id: ls_mysql.c,v 1.9 2004/01/02 12:30:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -203,6 +203,7 @@ static int cur_fetch (lua_State *L) {
 	}
 	else {
 		int i;
+		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 0; i < cur->numcols; i++)
 			pushvalue (L, row[i], lengths[i]);
 		return cur->numcols; /* return #numcols values */
@@ -227,7 +228,7 @@ static int cur_close (lua_State *L) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -302,7 +303,7 @@ static int conn_close (lua_State *L) {
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
 	mysql_close(conn->my_conn);
-	lua_pushnumber(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -433,7 +434,7 @@ static int env_close (lua_State *L) {
 		return 0;
 
 	env->closed = 1;
-	lua_pushnumber (L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 

@@ -1,7 +1,7 @@
 #!/usr/local/bin/lua
 -- See Copyright Notice in license.html
 
-TOTAL_FIELDS = 1600
+TOTAL_FIELDS = 800
 TOTAL_ROWS = 40
 
 ---------------------------------------------------------------------
@@ -54,7 +54,7 @@ end
 function basic_test ()
 	-- Check environment object.
 	ENV = ENV_OK (luasql[driver] ())
-	assert2 (1, ENV:close(), "couldn't close environment")
+	assert2 (true, ENV:close(), "couldn't close environment")
 	-- trying to connect with a closed environment.
 	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
 		"error connecting with a closed environment")
@@ -66,7 +66,7 @@ function basic_test ()
 	local conn, err = ENV:connect (datasource, username, password)
 	assert (conn, (err or '').." ("..datasource..")")
 	CONN_OK (conn)
-	assert2 (1, conn:close(), "couldn't close connection")
+	assert2 (true, conn:close(), "couldn't close connection")
 	-- trying to execute a statement with a closed connection.
 	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
 		"error connecting with a closed environment")
@@ -101,7 +101,7 @@ function create_table ()
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
-	-- Postgres retorna 0, enquanto ODBC retorna -1.
+	-- Postgres returns 0, while ODBC returns -1.
 	assert (CONN:execute (cmd))
 end
 
@@ -119,7 +119,7 @@ function fetch2 ()
 	assert2 ('c', f2)
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	-- insert a second record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('d', 'e')"))
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3 from t order by f1"))
@@ -132,7 +132,7 @@ function fetch2 ()
 	assert2 ('e', f2)
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
 end
@@ -168,7 +168,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch())
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
@@ -194,7 +194,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch{})
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
@@ -220,7 +220,7 @@ function fetch_new_table ()
 	assert2 ('h', row.f3)
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "a"))
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
@@ -246,9 +246,35 @@ function fetch_new_table ()
 	assert2 ('h', row.f3)
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "an"))
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	-- clean the table.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
+end
+
+---------------------------------------------------------------------
+-- Fetch many values
+---------------------------------------------------------------------
+function fetch_many ()
+	-- insert values.
+	local fields, values = "f1", "'v1'"
+	for i = 2, TOTAL_FIELDS do
+		fields = string.format ("%s,f%d", fields, i)
+		values = string.format ("%s,'v%d'", values, i)
+	end
+	local cmd = string.format ("insert into t (%s) values (%s)",
+		fields, values)
+	assert2 (1, CONN:execute (cmd))
+	-- fetch values.
+	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
+	local row = { cur:fetch () }
+	assert2 ("string", type(row[1]), "error while trying to fetch many values")
+	for i = 1, TOTAL_FIELDS do
+		assert2 ('v'..i, row[i])
+	end
+	assert2 (nil, cur:fetch (row))
+	assert2 (true, cur:close(), "couldn't close cursor")
+	-- clean the table.
+	assert2 (1, CONN:execute ("delete from t where f1 = 'v1'"))
 end
 
 ---------------------------------------------------------------------
@@ -259,28 +285,28 @@ function rollback ()
 	assert2 (1, CONN:execute ("insert into t (f1) values ('a')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber (cur:fetch ()), "Insert failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	CONN:commit ()
 	-- insert a record and roll back the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	CONN:rollback ()
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	-- delete a record and roll back the operation.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber(cur:fetch()))
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	CONN:rollback ()
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 --[[
 	-- insert a second record and turn on the auto-commit mode.
 	-- this will produce a rollback on PostgreSQL and a commit on ODBC.
@@ -288,21 +314,25 @@ function rollback ()
 	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	CONN:setautocommit (true)
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 --]]
 	-- clean the table.
-	assert2 (1, CONN:execute ("delete from t"))
+	if driver == "sqllite" then
+		assert2 (1, CONN:execute ("delete from t where 1"))
+	else
+		assert2 (1, CONN:execute ("delete from t"))
+	end
 	CONN:commit ()
 	CONN:setautocommit (true)
 	-- check resulting table with no records.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 end
 
 ---------------------------------------------------------------------
@@ -327,7 +357,7 @@ function column_info ()
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
 	assert2 (names, n2, "getcolnames is rebuilding the table")
 	assert2 (types, t2, "getcoltypes is rebuilding the table")
-	assert2 (1, cur:close(), "couldn't close cursor")
+	assert2 (true, cur:close(), "couldn't close cursor")
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
 end
@@ -342,8 +372,8 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function close_conn ()
-	assert (1, CONN:close())
-	assert (1, ENV:close())
+	assert (true, CONN:close())
+	assert (true, ENV:close())
 end
 
 
@@ -353,6 +383,7 @@ tests = {
 	{ "create table", create_table },
 	{ "fetch two values", fetch2 },
 	{ "fetch new table", fetch_new_table },
+	{ "fetch many", fetch_many },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
 	{ "drop table", drop_table },

@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.14 2003/12/01 16:08:38 tomas Exp $
+** $Id: ls_oci8.c,v 1.15 2004/01/02 12:30:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -373,6 +373,7 @@ static int cur_fetch (lua_State *L) {
 	}
 	else {
 		int i;
+		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 1; i <= cur->numcols; i++) {
 			int ret = pushvalue (L, cur, i);
 			if (ret != 1)
@@ -418,7 +419,7 @@ static int cur_close (lua_State *L) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -533,7 +534,7 @@ static int conn_close (lua_State *L) {
 	env->conn_counter--;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -768,7 +769,7 @@ static int env_close (lua_State *L) {
 		OCIHandleFree ((dvoid *)env->envhp, OCI_HTYPE_ENV);
 	if (env->errhp)
 		OCIHandleFree ((dvoid *)env->errhp, OCI_HTYPE_ERROR);
-	lua_pushnumber (L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 

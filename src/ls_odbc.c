@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.15 2003/12/01 16:08:38 tomas Exp $
+** $Id: ls_odbc.c,v 1.16 2004/01/02 12:30:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -95,10 +95,10 @@ static cur_data *getcursor (lua_State *L) {
 
 
 /*
-** Pushes 1 and returns 1
+** Pushes true and returns 1
 */
 static int pass(lua_State *L) {
-    lua_pushnumber(L, 1);
+    lua_pushboolean (L, 1);
     return 1;
 }
 
@@ -284,6 +284,7 @@ static int cur_fetch (lua_State *L) {
 	}
 	else {
 		SQLUSMALLINT i;
+		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 1; i <= cur->numcols; i++) {
 			ret = push_column (L, cur->coltypes, hstmt, i);
 			if (ret)
