@@ -151,6 +151,8 @@ static int cur_close (lua_State *L) {
 	PQclear(cur->pg_res);
 	cur->pg_res = NULL;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 	cur->conn = LUA_NOREF;
 	lua_pushnumber(L, 1);
 	return 1;
@@ -186,32 +188,9 @@ static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
 
 
 /*
-** Create a table with the names and the types of the fields.
-** The names are stored at the position they appear in the result;
-** the types are stored in entries named by the corresponding field.
+** Return the list of field names.
+** The list is built when needed.
 */
-static int cur_colinfo (lua_State *L) {
-	cur_data *cur = (cur_data *)getcursor (L);
-	PGresult *result = cur->pg_res;
-	conn_data *conn;
-	char typename[100];
-	int i;
-
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-	if (!lua_isuserdata (L, -1))
-		luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
-	conn = (conn_data *)lua_touserdata (L, -1);
-	lua_newtable (L);
-	for (i = 1; i <= cur->numcols; i++) {
-		lua_pushstring(L, PQfname(result, i-1));
-		lua_pushvalue(L, -1);
-		lua_rawseti(L, -3, i);
-		lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
-		lua_rawset(L, -3);
-	}
-	return 1;
-}
-
 static int cur_getcolnames (lua_State *L) {
 	cur_data *cur = (cur_data *)getcursor (L);
 	if (cur->colnames != LUA_NOREF)
@@ -224,6 +203,8 @@ static int cur_getcolnames (lua_State *L) {
 			lua_pushstring (L, PQfname (result, i-1));
 			lua_rawseti (L, -2, i);
 		}
+		lua_pushvalue (L, -1);
+		cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
 	return 1;
 }
@@ -246,6 +227,8 @@ static int cur_getcoltypes (lua_State *L) {
 			lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
 			lua_rawseti (L, -2, i);
 		}
+		lua_pushvalue (L, -1);
+		cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
 	return 1;
 }
@@ -306,7 +289,7 @@ static int conn_close (lua_State *L) {
 	if (conn->closed)
 		return 0;
 	if (conn->cur_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
+		luaL_error (L, LUASQL_PREFIX"there are open cursors");
 
 	/* Decrement parent's connection counter. */
 	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
@@ -478,7 +461,7 @@ static int env_close (lua_State *L) {
 	if (env->closed)
 		return 0;
 	if (env->conn_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"unexpected error (EnvClose)");
+		luaL_error (L, LUASQL_PREFIX"there are open connections");
 
 	env->closed = 1;
 	lua_pushnumber (L, 1);
