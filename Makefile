@@ -11,8 +11,10 @@ LS_OBJ= luasql.o
 LS_DIR= luasql-2.0/
 SRCS= $(LS_DIR)README $(LS_DIR)Makefile \
 	$(LS_DIR)luasql.h $(LS_DIR)luasql.c \
-	$(LS_DIR)ls_pg.h $(LS_DIR)ls_pg.c $(LS_DIR)postgres.tmpl \
-	$(LS_DIR)ls_odbc.h $(LS_DIR)ls_odbc.c $(LS_DIR)odbc.tmpl \
+	$(LS_DIR)ls_pg.h $(LS_DIR)ls_pg.c \
+	$(LS_DIR)ls_pg.def $(LS_DIR)postgres.tmpl \
+	$(LS_DIR)ls_odbc.h $(LS_DIR)ls_odbc.c \
+	$(LS_DIR)ls_odbc.def $(LS_DIR)odbc.tmpl \
 	$(LS_DIR)test.lua $(LS_DIR)performance.lua \
 	$(LS_DIR)manual.html $(LS_DIR)lua.png 
 
