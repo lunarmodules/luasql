@@ -4,12 +4,15 @@ T= postgres
 #T= odbc
 #T= sqlite
 
-LUA_LIB_DIR= /usr/local/lib/lua/5.0
+# Installation directory
+LUA_LIBDIR= /usr/local/lib/lua/5.0
+# Lua includes directory
+LUA_INC= /usr/local/include/lua5
+COMPAT_DIR= ../compat
 #LIB_EXT= .so
 LIB_EXT= .dylib
 #LIB_OPTION= -shared
 LIB_OPTION= -dynamiclib
-COMPAT_DIR= ../compat
 
 VERSION= 2.0b3
 
@@ -35,7 +38,7 @@ DRIVER_INCS= -I/usr/local/pgsql/include
 #DRIVER_INCS= -I/usr/local/mysql/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
-INCS= -I/usr/local/include/lua5
+INCS= -I$(LUA_INC)
 LIBS= -llua-5.0 -llualib-5.0 -lm -ldl
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
@@ -82,9 +85,9 @@ dist_dir:
 	cp jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
 
 install:
-	mkdir -p $(LUA_LIB_DIR)/luasql
-	cp $(LIBNAME) $(LUA_LIB_DIR)/luasql
-	cd $(LUA_LIB_DIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
+	mkdir -p $(LUA_LIBDIR)/luasql
+	cp $(LIBNAME) $(LUA_LIBDIR)/luasql
+	cd $(LUA_LIBDIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
 
 jdbc_driver:
 	cd jdbc; make $@
