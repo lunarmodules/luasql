@@ -101,7 +101,8 @@ For example,
 env = luasql.odbc()
 </pre>
 will try to create an environment object using the ODBC driver.
-JDBC must know which driver to use, therefore when creating an environment, 
+The only exception is the JDBC driver which should know which 
+internal driver to use. Therefore when creating an environment, 
 the driver class name must be passed as the first parameter to the function 
 <code>luasql.jdbc</code>.
 For example:
@@ -423,7 +424,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-$Id: manual.html,v 1.25 2004/11/18 10:56:00 tuler Exp $
+$Id: manual.html,v 1.26 2004/11/18 17:15:39 tuler Exp $
 </small>
 
 </body>
