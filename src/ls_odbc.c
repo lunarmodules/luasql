@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.30 2005/02/02 15:22:06 tuler Exp $
+** $Id: ls_odbc.c,v 1.31 2005/02/02 15:32:49 tuler Exp $
 */
 
 #include <assert.h>
@@ -443,13 +443,22 @@ static int conn_execute (lua_State *L) {
 	ret = SQLAllocHandle(hSTMT, hdbc, &hstmt);
 	if (error(ret))
 		return fail(L, hDBC, hdbc);
+
 	ret = SQLPrepare(hstmt, (char *) statement, SQL_NTS);
-	if (error(ret))
-		return fail(L, hSTMT, hstmt);
+	if (error(ret)) {
+		ret = fail(L, hSTMT, hstmt);
+		SQLFreeHandle(hSTMT, hstmt);
+		return ret;
+	}
+
 	/* execute the statement */
 	ret = SQLExecute (hstmt);
-	if (error(ret))
-		return fail(L, hSTMT, hstmt);
+	if (error(ret)) {
+		ret = fail(L, hSTMT, hstmt);
+		SQLFreeHandle(hSTMT, hstmt);
+		return ret;
+	}
+
 	/* determine the number of results */
 	ret = SQLNumResultCols (hstmt, &numcols);
 	if (error(ret)) {
@@ -457,6 +466,7 @@ static int conn_execute (lua_State *L) {
 		SQLFreeHandle(hSTMT, hstmt);
 		return ret;
 	}
+
 	if (numcols > 0)
     	/* if there is a results table (e.g., SELECT) */
 		return create_cursor (L, 1, hstmt, numcols);
@@ -558,10 +568,12 @@ static int env_connect (lua_State *L) {
 	const char *password = luaL_optstring (L, 4, NULL);
 	SQLHDBC hdbc;
 	SQLRETURN ret;
+
 	/* tries to allocate connection handle */
 	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
 	if (error(ret))
 		return luasql_faildirect (L, LUASQL_PREFIX"connection allocation error.");
+
 	/* tries to connect handle */
 	ret = SQLConnect (hdbc, (char *) sourcename, SQL_NTS, 
 		(char *) username, SQL_NTS, (char *) password, SQL_NTS);
@@ -570,6 +582,7 @@ static int env_connect (lua_State *L) {
 		SQLFreeHandle(hDBC, hdbc);
 		return ret;
 	}
+
 	/* success, return connection object */
 	return create_connection (L, 1, hdbc);
 }
@@ -639,8 +652,11 @@ static int create_environment (lua_State *L) {
 
 	ret = SQLSetEnvAttr (henv, SQL_ATTR_ODBC_VERSION, 
 		(void*)SQL_OV_ODBC3, 0);
-	if (error(ret))
-		return luasql_faildirect (L, LUASQL_PREFIX"error setting SQL version.");
+	if (error(ret)) {
+		ret = luasql_faildirect (L, LUASQL_PREFIX"error setting SQL version.");
+		SQLFreeHandle (hENV, henv);
+		return ret;
+  }
 
 	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
