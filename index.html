@@ -56,6 +56,7 @@ programming language
 	<li> <a href="manual.html#postgres_extensions">PostgreSQL extensions</a>
 	<li> <a href="manual.html#mysql_extensions">MySQL extensions</a>
 	<li> <a href="manual.html#oracle_extensions">Oracle extensions</a>
+	<li> <a href="manual.html#jdbc_extensions">JDBC extensions</a>
 	<li> <a href="manual.html#examples">Examples</a>
 	</ul>
 <li> <a href="license.html">Copyright & License</a>
@@ -71,7 +72,7 @@ programming language
 LuaSQL is a simple interface from Lua to a DBMS.
 It enables a Lua program to:
 <ul>
-<li> Connect to ODBC, Oracle, MySQL, SQLite and PostgreSQL databases;
+<li> Connect to ODBC, Oracle, MySQL, SQLite, JDBC and PostgreSQL databases;
 <li> Execute arbitrary SQL statements;
 <li> Retrieve results in a row-by-row cursor fashion.
 </ul>
@@ -85,7 +86,7 @@ as Lua 5.0.
 <h2>Current version</h2>
 <p>
 LuaSQL version 2.0 beta 2 (for Lua 5.0) is now available for
-<a href="#download">download</a>!
+<a href="#download">download</a>.
 The PostgreSQL driver
 has been tested on Linux and MacOS X
 and is compatible with PostgreSQL 7.x.
@@ -97,6 +98,8 @@ The Oracle driver has been tested on Windows
 and is compatible with OCI 8 API.
 The SQLite driver had been tested on Linux
 and are compatible with versions 2.x.
+The JDBC driver has been tested with LuaJava 
+Beta 3 and JDK 1.4 (MySQL driver).
 </p>
 
 
@@ -115,11 +118,11 @@ LuaSQL can be downloaded in source code from the following links: <p>
 <h2>What's new</h2>
 <p>
 <ul>
-  <li>[?/?/2004] Version 2.0 beta 2 released
+  <li>[19/dec/2004] Version 2.0 beta 2 released
   <li>[10/dec/2003] Version 2.0 beta released
 </ul>
 <p>
-Version 2.0 beta 2 has some bug fixes and the new SQLite drivers.
+Version 2.0 beta 2 has some bug fixes and the new SQLite and JDBC drivers.
 Also, it follows the
 <a href="http://www.keplerproject.org/compat">package proposal</a>
 for Lua 5.1
@@ -215,7 +218,7 @@ Comments are welcome!
 
 <hr>
 <small>
-$Id: index.html,v 1.27 2004/11/16 18:01:41 tomas Exp $
+$Id: index.html,v 1.28 2004/11/17 16:58:40 tuler Exp $
 </small>
 
 </body>
