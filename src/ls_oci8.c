@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.2 2003/05/26 17:23:25 tomas Exp $
+** $Id: ls_oci8.c,v 1.3 2003/05/30 09:51:54 tomas Exp $
 */
 
 #include <assert.h>
@@ -421,6 +421,7 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt) {
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_OCI8);
 
+	conn->cur_counter++;
 	/* fill in structure */
 	cur->closed = 0;
 	cur->numcols = 0;
@@ -565,6 +566,7 @@ static int env_connect (lua_State *L) {
 	conn->loggedon = 0;
 	conn->svchp = NULL;
 	conn->errhp = NULL;
+	env->conn_counter++;
 	lua_pushvalue (L, 1);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -573,9 +575,10 @@ static int env_connect (lua_State *L) {
 		(dvoid **) &(conn->errhp), /* !!! */
 		(ub4) OCI_HTYPE_ERROR, (size_t) 0, (dvoid **) 0), env->errhp);
 	/* service handler */
-	ASSERT (L, OCIHandleAlloc((dvoid *) env->envhp,
+	/*ASSERT (L, OCIHandleAlloc((dvoid *) env->envhp,
 		(dvoid **) &(conn->svchp),
 		(ub4) OCI_HTYPE_SVCCTX, (size_t) 0, (dvoid **) 0), conn->errhp);
+*/
 	/* login */
 	ASSERT (L, OCILogon(env->envhp, conn->errhp, &(conn->svchp),
 		(CONST text*)username, strlen(username),
