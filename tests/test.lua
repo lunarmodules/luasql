@@ -79,18 +79,18 @@ end
 -- Build SQL command to create the test table.
 ---------------------------------------------------------------------
 function define_table (n)
-	local s = "create table t ("
-	for i = 1, n do
-		s = s.."f"..i.." varchar(30), "
+    local s = "create table t ("
+    for i = 1, n do
+        s = s.."f"..i.." varchar(30), "
+    end
+	s = string.sub (s, 1, -3)
+	if driver == "mysql" then 
+	    return s..") TYPE = InnoDB;"
+	else
+		return s
 	end
-	s = string.sub(s, 1, -3)..")"
-
-	if driver == "mysql" then
-		s = s.." TYPE = InnoDB;" -- mysql issue
-	end
-	
-	return s
 end
+
 
 ---------------------------------------------------------------------
 -- Create a table with TOTAL_FIELDS character fields.
@@ -171,7 +171,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
-	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch{}
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
@@ -197,7 +197,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
-	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch ({}, "a")
 	assert (type(row), "table", err)
 	assert2 (nil, row[1])
@@ -223,7 +223,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
-	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch ({}, "an")
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
