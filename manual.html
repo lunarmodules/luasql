@@ -1,0 +1,330 @@
+<html>
+<!$Id: manual.html,v 1.1 2003/03/26 15:06:30 tomas Exp $>
+
+<head>
+<style type="text/css">
+ul { list-style-type: disc };
+</style>
+</head>
+
+<body bgcolor="#FFFFFF">
+
+<hr>
+
+<center>
+<table border=0 cellspacing=2 cellpadding=2>
+<tr><td align=center><a href="http://www.lua.org">
+<img border=0 alt="The Lua language" src="lua.png"></a>
+<tr><td align=center><big><b>LuaSQL</b></big>
+<tr><td align=center valign=top>Database connectivity for the Lua language
+</table>
+</center>
+<p>
+
+<center>
+<a href=#over>overview</a> &middot;
+<a href=#current>current version</a> &middot;
+<a href=#new>what's new</a> &middot;
+<a href=#down>download</a> &middot;
+<a href=#manual>manual</a> &middot;
+<a href=#hist>history</a>
+</center>
+<p>
+
+<hr>
+
+<h2> Contents </h2><p>
+
+<ul>
+<li> <a href=#over>Overview</a>
+<li> <a href=#current>Current Version</a>
+<li> <a href=#new>What's new</a>
+<li> <a href=#down>Download</a>
+<li> <a href=#manual>User's manual</a>
+	<ul>
+	<li> <a href=#env>Environment class</a>
+	<li> <a href=#con>Connection class</a>
+	<li> <a href=#cur>Cursor class</a>
+	<li> <a href=#ex>Examples</a>
+	</ul>
+<li> <a href=#hist>History</a>
+</ul>
+
+<h2><a name=over>Overview</h2>
+
+LuaSQL was  developed to ease  the usage  of data sources  from end-user
+applications. It provides  a simple API that enables access  to the most
+important  functionality  available  in  any database  manager.  In  its
+current version, LuaSQL enables users to, through Lua:
+
+<ul>
+<li> Connect to ODBC and PostgreSQL databases;
+<!--<li> List tables available in said database;-->
+<li> Execute arbitrary SQL statements;
+<li> Retrieve results in a row-by-row cursor fashion.
+</ul>
+
+!!!!!! Rever o texto abaixo !!!!!!
+To have the LuaSQL functionality available to Lua scripts, the user must
+link  an   executable  with   the  <tt>luasql</tt>  library,   and  call
+<tt>lua_sqllibopen</tt> on the appropriate Lua state.
+
+<h2><a name=current>Current version</h2>
+
+LuaSQL version 2.0 is now available for download!
+The PostgreSQL driver
+has been tested on Linux, and the ODBC driver has been tested on Windows
+(SQLServer and Microsoft Access drivers) and on Linux (Informix driver).
+
+<h2><a name=new>What's new</h2>
+
+<p>
+Version 2.0 has some design modifications and implementation improvements
+<ul>
+  <li>New <tt>Fetch</tt> method: more eficient and more flexible
+  <li>New <tt>SetAutoCommit</tt> method
+</ul>
+</p>
+
+Version 1.0 has been released because there have been some compatibility
+improvements in the ODBC driver.
+
+<ul>
+<li> Error message retrieval has been rewritten and is more stable;
+<li> Long value retrieval has been rewritten to support the informix
+	driver;
+<li> Bug-fix: TableList statement handle was not being closed;
+<li> Bug-fix: Connection handle was being released before error message 
+	retrieved.
+</ul>
+
+<h2><a name=down>Download</h2>
+
+LuaSQL can be downloaded in source code from the following links: <p>
+
+<blockquote>
+<a href="luasql-1.0.tar.gz">luasql-1.0.tar.gz</a><br>
+<a href="luasql-1.0.zip">luasql-1.0.zip</a>
+</blockquote><p>
+
+<h2><a name=manual>User's manual</h2>
+
+Below is a description of all functions present in the LuaSQL API. Some
+usage examples can be found at the end of the documentation.
+
+<h3><a name=init>Initialization</h3>
+
+There is only one global table in the LuaSQL Lua interface
+called <tt>sql</tt>.
+This table has a method responsible for the initialization of
+the drivers:
+
+<ul>
+<li> <tt>Open(drivername)</tt> <br>
+Creates and returns a new Environment object using the given driver.
+<br>
+Returns: a reference to said Environment object.
+</ul>
+
+<h3><a name=errors>Error checking</h3>
+
+In case of  error, all methods return <tt>nil</tt> followed  by an error
+message, unless  the documentation  says otherwise.
+
+<p>
+
+<h3><a name=env>Environment class</h3>
+
+An Environment object is created by calling <tt>sql.Open(drivername)</tt>,
+where <tt>drivername</tt> is a string with the name of the driver.
+
+<h4>Fields</h4>
+
+==&gt; So' para o ODBC &lt;==
+<ul>
+<li> <tt>Version</tt><br>
+(ODBC  only) The number  of the  version one
+requires the ODBC source to be compatible  with. Should be set to either
+2 or 3. 
+</ul>
+
+<h4>Methods</h4>
+
+<ul>
+<li> <tt>Connect(sourcename [, username [, password]])</tt> <br>
+Connects to a data source specified in <tt>sourcename</tt> using 
+<tt>username</tt> and <tt>password</tt> if they are supplied. <br>
+Returns: a Connection object.
+<li> <tt>Close()</tt> <br>
+Closes this environment. Only successful if all connections pertaining to
+it were closed first.
+</ul>
+
+<h3><a name=con>Connection class</h3>
+
+A Connection object contains specific attributes and parameters of a single
+data source connection. One can create a Connection object by using the <tt>Environment:Connect</tt> method.
+
+<h4>Methods</h4>
+
+<ul>
+<li> <tt>Execute(statement)</tt> <br>
+Executes the given SQL  <tt>statement</tt>.
+Returns: a  Cursor object if  there are results,  or the number  of rows
+affected by the command otherwise.
+
+<br>==&gt; So' no ODBC &lt;==
+<li> <tt>TableList()</tt> <br>
+Retrieves a list of all the tables in the data source. <br>
+Returns: a list of the table names.
+
+<li> <tt>Commit()</tt> <br>
+Commits the current transaction.
+
+<li> <tt>Rollback()</tt> <br>
+Rolls back the current transaction.
+
+<li> <tt>Close()</tt> <br>
+Closes this connection. 
+</ul>
+
+<h3><a name=cur>Cursor class</h3>
+
+A Cursor object contains methods permitting the retrieval of 
+data resulting from an executed statement.
+One can create a Cursor object 
+by using <tt>Connection:Execute</tt>.
+
+<h4>Methods</h4>
+
+<ul>
+<li> <tt>Fetch([mode [, table]])</tt> <br>
+Retrieves the next row of results.<br>
+The optional <tt>mode</tt> parameter is a string indicating how the
+result table should be made.
+The mode string can be any of the following:
+<ul>
+  <li> <b>"n"</b> the resulting table will have numerical indices
+  <li> <b>"s"</b> the resulting table will have string indices
+  <li> <b>"sn" or "ns"</b> the resulting table will have both numerical and string indices (default)
+</ul>
+The optional <tt>table</tt> parameter is a table that should be
+used to store the next row.
+This should improve the performance when retrieving many rows with many fields.<br>
+Returns: data, as above, or <tt>nil</tt> if there aren't any rows left
+followed by an error message if any.
+
+<li> <tt>Close()</tt> <br>
+Closes this cursor. 
+</ul>
+
+<h3><a name=ex>Examples</h3>
+
+Below is a small sample code displaying the basic use of the library.
+
+<blockquote>
+<pre>
+-- create environment object
+ENV, err = SQLOpen()
+assert(ENV, err)
+-- connect to ODBC data source
+CON, err = ENV:Connect("LuaSQLTest")
+assert(CON, err)
+-- reset our table
+res, err = CON:Execute"DROP TABLE friends"
+res, err = CON:Execute[[
+  CREATE TABLE friends(
+    friendid Number,
+    friendname  String, 
+    friendage Number);
+]]
+assert(res, err)
+-- add a few elements
+friends = {
+  {ID = 1, Name = "John", Age = 24}, 
+  {ID = 2, Name = "Mary", Age = 21}, 
+  {ID = 5, Name = "Anaconda", Age = 70},
+  {ID = 3, Name = "Rita", Age = 28}, 
+  {ID = 4, Name = "Stephan", Age = 23}
+}
+for i, f in friends do
+  res, err = CON:Execute(format([[
+    INSERT INTO friends(friendid, friendname, friendage)
+    VALUES(%d, '%s', %d)]], f.ID, f.Name, f.Age)
+  )
+  assert(res, err)
+end
+-- retrieve a cursor for all friends, sorted by age
+CUR, err = CON:Execute[[
+	SELECT friendname, friendage FROM friends ORDER BY friendage
+]]
+assert(CUR, err)
+-- rows will be indexed by column name
+res, err = CUR:SetOptions{name_columns = "true"}
+assert(res, err)
+-- print all rows of the result
+while 1 do
+	row = CUR:Fetch()
+	if not row then break end
+	print(format("Name: %s, Age: %d", row.friendname, row.friendage))
+end
+-- close everything
+CUR:Close()
+CON:Close()
+ENV:Close()
+</pre>
+</blockquote>
+
+And the output of this script should be:
+
+<blockquote>
+<pre>
+Name: Mary, Age: 21
+Name: Stephan, Age: 23
+Name: John, Age: 24
+Name: Rita, Age: 28
+Name: Anaconda, Age: 70
+</pre>
+</blockquote>
+
+Notes: 
+<ul>
+<li> The above sample is adjusted to work with the ODBC driver. In case
+you want to test it with the PostgreSQL driver, you must change the DDL
+entries from '<tt>Number</tt>' to '<tt>int</tt>' and '<tt>String</tt>' to
+'<tt>varchar(64)</tt>'.
+<li> Also, tables and columns names have all been written in lowercase,
+because some drivers are case-insensitive whereas others are
+case-sensitive.
+</ul>
+
+<h2><a name=hist>History</h2>
+
+LuaSQL   was  designed   by   Pedro  Miller   Rabinovitch  and   Roberto
+Ierusalimschy, sponsored by <a href="http://www.fabricadigital.com.br">
+Fábrica Digital</a>. The  first  implementation was  compatible with  Lua
+4.0a. The current ODBC driver has been adapted from the original version
+by Diego Nehab, and the PostgreSQL driver has been adapted by Roberto
+Ierusalimschy and Carlos Cassino.
+Version 1.1 was made by Diego Nehab, Eduardo Quint&atilde;o and
+Tom&aacute;s Guisasola.
+
+<p>
+<center>
+<a href=#over>overview</a> &middot;
+<a href=#current>current version</a> &middot;
+<a href=#new>what's new</a> &middot;
+<a href=#down>download</a> &middot;
+<a href=#manual>manual</a> &middot;
+<a href=#hist>history</a>
+</center>
+<p>
+
+<hr>
+<small>
+Last modified by Tom&aacute;s Guisasola on<br>
+Wed Feb 19 13:52:33 BRT 2003
+</small>
+
+</body>
+</html> 

@@ -1,0 +1,16 @@
+LuaSQL is a Lua library that provides access to the most important
+functionality available in any database manager.
+
+Here goes a small description of the files in the distribution
+
+    ls_odbc.c        -- ODBC driver (source)
+    ls_odbc.h        -- ODBC driver (header)
+    ls_pg.c          -- PostGreSQL driver (source)
+    ls_pg.h          -- PostGreSQL driver (header)
+    luasql.c         -- Common functions
+    luasql.h         -- Common definitions
+    luasql.lua       -- Dynamic loading stuf
+	manual.html      -- API manual
+	performance.lua  -- Performance test script
+	test.lua         -- API test script
+
