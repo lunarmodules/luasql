@@ -1,6 +1,6 @@
 <! See Copyright Notice in license.html>
 <html>
-<!$Id: manual.html,v 1.14 2003/12/01 16:08:38 tomas Exp $>
+<!$Id: manual.html,v 1.15 2003/12/03 14:41:21 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -192,7 +192,7 @@ This allows the use of a unique table for many fetches which
 can improve the overall performance.<br>
 There is no guarantee about the types of the results
 -- they can be converted to adequate Lua types by the driver or not.
-<i>In the current implementation (2.0a),
+<i>In the current implementation (2.0b),
 the PostgreSQL and MySQL drivers returns all values as strings
 while the ODBC and Oracle drivers converts them to Lua types</i>.<br>
 Returns: data, as above, or <tt>nil</tt> if there are no more rows.

@@ -1,4 +1,4 @@
-VERSION= 2.0a
+VERSION= 2.0b
 
 ODBC_OBJ= ls_odbc.o
 ODBC_LIB= libluasqlodbc.$(VERSION).a

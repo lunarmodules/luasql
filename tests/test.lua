@@ -1,7 +1,7 @@
 #!/usr/local/bin/lua
 -- See Copyright Notice in license.html
 
-TOTAL_FIELDS = 400
+TOTAL_FIELDS = 1600
 TOTAL_ROWS = 40
 
 ---------------------------------------------------------------------
@@ -80,15 +80,15 @@ end
 -- Build SQL command to create the test table.
 ---------------------------------------------------------------------
 function define_table (n)
-    local s = "create table t ("
-    for i = 1, n do
-        s = s.."f"..i.." varchar(30), "
-    end
+	local s = "create table t ("
+	for i = 1, n do
+		s = s.."f"..i.." varchar(30), "
+	end
 	s = string.sub (s, 1, -3)
 	if driver == "mysql" then 
 	    return s..") TYPE = InnoDB;"
 	else
-		return s
+		return s..")"
 	end
 end
 
