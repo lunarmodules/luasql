@@ -83,6 +83,7 @@ dist_dir:
 	mkdir -p $(DIST_DIR)/doc/us
 	cp $(SRCS) $(DIST_DIR)
 	cp doc/us/*.html $(DIST_DIR)/doc/us
+	cp doc/us/*.png $(DIST_DIR)/doc/us
 	cp jdbc/Makefile $(DIST_DIR)/jdbc
 	cp jdbc/build.xml $(DIST_DIR)/jdbc
 	cp jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
