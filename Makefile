@@ -1,8 +1,8 @@
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations
-INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include
-LIBS_DIR= -L/usr/local/pgsql/lib
-LIBS= -llua.5.0 -llualib.5.0 -lm -lpq -lz -ldl
-CFLAGS= -O2 $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
+INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
+LIBS_DIR= -L/usr/local/pgsql/lib -L../lua-5.0/lib -L/home/oracle/OraHome1/lib
+LIBS= -llua.5.0 -llualib.5.0 -lm -lz -ldl
+CFLAGS= -g $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
 
 ODBC_OBJ= ls_odbc.o
 PG_OBJ= ls_pg.o
@@ -32,7 +32,7 @@ PG_LIB= libluasqlpostgres.$(VERSION).a
 PG_SO= libluasqlpostgres.$(VERSION).so
 PG_DYLIB= libluasqlpostgres.$(VERSION).dylib
 OCI_LIB= libluasqloci8.$(VERSION).a
-OCI_SO= libluasqloci8.$(VERSIOIN).so
+OCI_SO= libluasqloci8.$(VERSION).so
 OCI_DLL= luasqloracle.$(VERSION).dll
 MYSQL_LIB= libluasqlmysql.$(VERSION).a
 MYSQL_SO= libluasqlmysql.$(VERSIOIN).so
@@ -75,17 +75,17 @@ $(PG_LIB): $(LS_OBJ) $(PG_OBJ)
 	$(RANLIB) $@
 
 $(PG_SO): $(LS_OBJ) $(PG_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(LIBS)
+	gcc -o $@ -shared $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) -lpq $(LIBS)
 
 $(PG_DYLIB): $(LS_OBJ) $(PG_OBJ)
-	gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(LIBS)
+	gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) -lpq $(LIBS)
 
 $(OCI_LIB): $(LS_OBJ) $(OCI_OBJ)
 	$(AR) $@ $(LS_OBJ) $(OCI_OBJ)
 	$(RANLIB) $@
 
 $(OCI_SO): $(LS_OBJ) $(OCI_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(OCI_OBJ) $(LIBS_DIR) $(LIBS)
+	gcc -o $@ -shared $(LS_OBJ) $(OCI_OBJ) $(LIBS_DIR) -lclntsh $(LIBS)
 
 $(MYSQL_LIB): $(LS_OBJ) $(MYSQL_OBJ)
 	$(AR) $@ $(LS_OBJ) $(MYSQL_OBJ)
