@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.5 2003/05/30 15:18:08 tomas Exp $
+** $Id: ls_oci8.c,v 1.6 2003/05/30 15:44:34 tomas Exp $
 */
 
 #include <assert.h>
@@ -26,44 +26,43 @@
 
 
 typedef struct {
-	short      closed;
-	int        conn_counter;
-	OCIEnv    *envhp;
-	OCIError  *errhp; /* !!! */
+	short         closed;
+	int           conn_counter;
+	OCIEnv       *envhp;
+	OCIError     *errhp; /* !!! */
 } env_data;
 
 
 typedef struct {
-	short      closed;
-	short      loggedon;
-	short      auto_commit;        /* 0 for manual commit */
-	int        cur_counter;
-	int        env;                /* reference to environment */
-	int        numcols;
-	OCISvcCtx *svchp;
-	OCIError  *errhp; /* !!! */
+	short         closed;
+	short         loggedon;
+	short         auto_commit;        /* 0 for manual commit */
+	int           cur_counter;
+	int           env;                /* reference to environment */
+	OCISvcCtx    *svchp;              /* service handle */
+	OCIError     *errhp; /* !!! */
 } conn_data;
 
 
 typedef struct {
-	ub2        type;    /* database type */
-	ub2        max;     /* maximum size */
-	sb2        null;    /* is null? */
-	OCIDefine *define;  /* define handle */
-	void      *buffer;  /* data buffer */
-} col_info;
+	ub2           type;    /* database type */
+	ub2           max;     /* maximum size */
+	sb2           null;    /* is null? */
+	OCIDefine    *define;  /* define handle */
+	void         *buffer;  /* data buffer */
+} column_data;
 
 
 typedef struct {
-	short      closed;
-	int        conn;               /* reference to connection */
-	int        numcols;            /* number of columns */
-	int        colnames, coltypes; /* reference to column information tables */
-	int        curr_tuple;         /* next tuple to be read */
-	char      *text;               /* text of SQL statement */
-	OCIStmt   *stmthp;             /* statement handle */
-	OCIError  *errhp; /* !!! */
-	col_info  *cols;               /* array of columns */
+	short         closed;
+	int           conn;               /* reference to connection */
+	int           numcols;            /* number of columns */
+	int           colnames, coltypes; /* reference to column info tables */
+	int           curr_tuple;         /* next tuple to be read */
+	char         *text;               /* text of SQL statement */
+	OCIStmt      *stmthp;             /* statement handle */
+	OCIError     *errhp; /* !!! */
+	column_data  *cols;               /* array of columns */
 } cur_data;
 
 
@@ -155,7 +154,7 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 	/* column index ranges from 1 to numcols */
 	/* C array index ranges from 0 to numcols-1 */
-	col_info *col = &(cur->cols[i-1]);
+	column_data *col = &(cur->cols[i-1]);
 	OCIParam *param;
 
 	ASSERT (L, OCIParamGet (cur->stmthp, OCI_HTYPE_STMT, cur->errhp,
@@ -163,50 +162,51 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
 		(dvoid *)&(col->type), (ub4 *)0, OCI_ATTR_DATA_TYPE,
 		cur->errhp), cur->errhp);
+
 	switch (col->type) {
-	case SQLT_CHR:
-	case SQLT_STR:
-	case SQLT_VCS:
-	case SQLT_AFC:
-	case SQLT_AVC:
-		ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
-			(dvoid *)&(col->max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
-			cur->errhp), cur->errhp);
-		col->buffer = calloc (col->max + 1, sizeof(char));
-		ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-			cur->errhp, (ub4)i, col->buffer, col->max,
-			SQLT_STR, (dvoid *)&(col->null), (ub2 *)0,
-			(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
-		break;
-	case SQLT_NUM:
-		col->buffer = malloc (sizeof(int));
-		ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
-			cur->errhp, (ub4)i, col->buffer, (sb4)sizeof(int),
-			SQLT_INT, (dvoid *)&(col->null), (ub2 *)0,
-			(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
-		break;
-	case SQLT_CLOB: {
-		env_data *env;
-		conn_data *conn;
-		lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-		conn = (conn_data *)lua_touserdata (L, -1);
-		lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-		env = (env_data *)lua_touserdata (L, -1);
-		lua_pop (L, 2);
-		ASSERT (L, OCIDescriptorAlloc (env->envhp,
-			&(col->buffer), OCI_DTYPE_LOB, (size_t)0,
-			(dvoid **)0), cur->errhp);
-		ASSERT (L, OCIDefineByPos (cur->stmthp,
-			&(col->define), cur->errhp, (ub4)i,
-			&(col->buffer), (sb4)sizeof(dvoid *),
-			SQLT_CLOB, (dvoid *)&(col->null),
-			(ub2 *)0, (ub2 *)0, OCI_DEFAULT),
-			cur->errhp);
-		break;
-	}
-	default:
-		luaL_error (L, LUASQL_PREFIX"invalid type %d #%d", col->type, i);
-		break;
+		case SQLT_CHR:
+		case SQLT_STR:
+		case SQLT_VCS:
+		case SQLT_AFC:
+		case SQLT_AVC:
+			ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+				(dvoid *)&(col->max), (ub4 *)0, OCI_ATTR_DATA_SIZE,
+				cur->errhp), cur->errhp);
+			col->buffer = calloc (col->max + 1, sizeof(char));
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+				cur->errhp, (ub4)i, col->buffer, col->max,
+				SQLT_STR, (dvoid *)&(col->null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		case SQLT_NUM:
+		case SQLT_INT:
+		/* case SQLT_FLT: */
+		/* case SQLT_UIN: */
+			col->buffer = malloc (sizeof(int));
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+				cur->errhp, (ub4)i, col->buffer, (sb4)sizeof(int),
+				SQLT_INT, (dvoid *)&(col->null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		case SQLT_CLOB: {
+			env_data *env;
+			conn_data *conn;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = (conn_data *)lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = (env_data *)lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCIDescriptorAlloc (env->envhp, &(col->buffer),
+				OCI_DTYPE_LOB, (size_t)0, (dvoid **)0), cur->errhp);
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+				cur->errhp, (ub4)i, &(col->buffer), (sb4)sizeof(dvoid *),
+				SQLT_CLOB, (dvoid *)&(col->null), (ub2 *)0, (ub2 *)0,
+				OCI_DEFAULT), cur->errhp);
+			break;
+		}
+		default:
+			luaL_error (L, LUASQL_PREFIX"invalid type %d #%d", col->type, i);
+			break;
 	}
 	return 0;
 }
@@ -216,7 +216,9 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 ** Deallocate column buffers.
 */
 static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
-	col_info *col = &(cur->cols[i-1]);
+	/* column index ranges from 1 to numcols */
+	/* C array index ranges from 0 to numcols-1 */
+	column_data *col = &(cur->cols[i-1]);
 	switch (col->type) {
 	case SQLT_NUM:
     /* case SQLT_FLT: */
@@ -496,8 +498,10 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt, c
 	ASSERT (L, OCIAttrGet ((dvoid *)stmt, (ub4)OCI_HTYPE_STMT,
 		(dvoid *)&cur->numcols, (ub4 *)0, (ub4)OCI_ATTR_PARAM_COUNT,
 		cur->errhp), cur->errhp);
-	cur->cols = (col_info *)malloc (sizeof(col_info) * cur->numcols);
+	cur->cols = (column_data *)malloc (sizeof(column_data) * cur->numcols);
 	/* define output variables */
+	/* Oracle and Lua column indices ranges from 1 to numcols */
+	/* C array indices ranges from 0 to numcols-1 */
 	for (i = 1; i <= cur->numcols; i++) {
 		int ret = alloc_column_buffer (L, cur, i);
 		if (ret)
