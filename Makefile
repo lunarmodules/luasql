@@ -27,6 +27,9 @@ PG_SO= libluasqlpostgres.2.0.so
 PG_DYLIB= libluasqlpostgres.2.0.dylib
 ODBC_DLL= luasqlodbc.2.0.dll
 
+dist:
+	cd ..; tar -czf luasql-2.0.tar.gz $(SRCS)
+
 pglinux: $(PG_LIB) $(PG_SO)
 	sed "s/LIB_NAME/$(PG_SO)/" postgres.tmpl > postgres.lua
 
@@ -35,9 +38,6 @@ pgmac: $(PG_LIB) $(PG_DYLIB)
 
 odbcwin:
 	sed "s/LIB_NAME/$(ODBC_DLL)/" odbc.tmpl > odbc.lua
-
-dist:
-	cd ..; tar -czf luasql-2.0.tar.gz $(SRCS)
 
 $(PG_LIB): $(LS_OBJ) $(PG_OBJ)
 	$(AR) $@ $(LS_OBJ) $(PG_OBJ)
@@ -50,4 +50,4 @@ $(PG_DYLIB): $(LS_OBJ) $(PG_OBJ)
 	gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(LIBS)
 
 clean:
-	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(PG_LIB) $(ODBC_LIB) $(PG_DYLIB)
+	rm -f $(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(PG_LIB) $(ODBC_LIB) $(PG_DYLIB) postgres.lua odbc.lua
