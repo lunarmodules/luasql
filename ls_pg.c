@@ -257,6 +257,32 @@ static void sql_rollback(conn_data *conn) {
 
 
 /*
+** Close a Connection object.
+*/
+static int conn_close (lua_State *L) {
+	env_data *env;
+	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
+	if (conn->closed)
+		return 0;
+	if (conn->cur_counter > 0)
+		luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
+
+	/* Decrement parent's connection counter. */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+	env = (env_data *)lua_touserdata (L, -1);
+	env->conn_counter--;
+	/* Nullify structure fields. */
+	conn->closed = 1;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	conn->env = LUA_NOREF;
+	PQfinish(conn->pg_conn);
+	conn->pg_conn = NULL;
+	lua_pushnumber(L, 1);
+	return 1;
+}
+
+
+/*
 ** Execute an SQL statement.
 ** Return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
@@ -304,25 +330,6 @@ static int sqlConnTableList (lua_State *L) {
 
 
 /*
-** Set "auto commit" property of the connection.
-** If 'true', then rollback current transaction.
-** If 'false', then start a new transaction.
-*/
-static int conn_setautocommit (lua_State *L) {
-	conn_data *conn = (conn_data *)getconnection (L);
-	if (lua_toboolean (L, 2)) {
-		conn->auto_commit = 1;
-		sql_rollback(conn); /* Undo active transaction. */
-	}
-	else {
-		conn->auto_commit = 0;
-		sql_begin(conn);
-	}
-	return 0;
-}
-
-
-/*
 ** Commit the current transaction.
 */
 static int conn_commit (lua_State *L) {
@@ -347,28 +354,21 @@ static int conn_rollback (lua_State *L) {
 
 
 /*
-** Close a Connection object.
+** Set "auto commit" property of the connection.
+** If 'true', then rollback current transaction.
+** If 'false', then start a new transaction.
 */
-static int conn_close (lua_State *L) {
-	env_data *env;
-	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
-	if (conn->closed)
-		return 0;
-	if (conn->cur_counter > 0)
-		luaL_error (L, LUASQL_PREFIX"unexpected error (ConnClose)");
-
-	/* Decrement parent's connection counter. */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = (env_data *)lua_touserdata (L, -1);
-	env->conn_counter--;
-	/* Nullify structure fields. */
-	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	conn->env = LUA_NOREF;
-	PQfinish(conn->pg_conn);
-	conn->pg_conn = NULL;
-	lua_pushnumber(L, 1);
-	return 1;
+static int conn_setautocommit (lua_State *L) {
+	conn_data *conn = (conn_data *)getconnection (L);
+	if (lua_toboolean (L, 2)) {
+		conn->auto_commit = 1;
+		sql_rollback(conn); /* Undo active transaction. */
+	}
+	else {
+		conn->auto_commit = 0;
+		sql_begin(conn);
+	}
+	return 0;
 }
 
 
@@ -453,23 +453,23 @@ static void create_metatables (lua_State *L) {
     struct luaL_reg environment_methods[] = {
         {"close", env_close},
         {"connect", env_connect},
-		{NULL, NULL}
+		{NULL, NULL},
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
         /*{"TableList", sqlConnTableList},*/
+        {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
-        {"execute", conn_execute},
         {"setautocommit", conn_setautocommit},
-		{NULL, NULL}
+		{NULL, NULL},
     };
     struct luaL_reg cursor_methods[] = {
         {"close", cur_close},
         {"fetch", cur_fetch},
         {"colinfo", cur_colinfo},
 		{"numrows", cur_numrows},
-		{NULL, NULL}
+		{NULL, NULL},
     };
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_PG, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_PG, connection_methods);

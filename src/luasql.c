@@ -6,8 +6,7 @@
 /*
 ** Typical database error situation
 */
-LUASQL_API int luasql_faildirect(lua_State *L, const char *err) 
-{
+LUASQL_API int luasql_faildirect(lua_State *L, const char *err) {
     lua_pushnil(L);
     lua_pushstring(L, err);
     return 2;
