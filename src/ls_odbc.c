@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.21 2004/07/09 11:37:03 tomas Exp $
+** $Id: ls_odbc.c,v 1.22 2004/09/15 15:58:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -671,6 +671,7 @@ static void create_metatables (lua_State *L) {
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_ODBC, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_ODBC, connection_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_ODBC, cursor_methods);
+	lua_pop (L, 3);
 }
 
 

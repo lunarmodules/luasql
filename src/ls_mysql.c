@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.11 2004/06/08 13:00:21 tomas Exp $
+** $Id: ls_mysql.c,v 1.12 2004/09/15 15:58:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -472,6 +472,7 @@ static void create_metatables (lua_State *L) {
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_MYSQL, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_MYSQL, connection_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_MYSQL, cursor_methods);
+	lua_pop (L, 3);
 }
 
 
