@@ -49,6 +49,20 @@ LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 
 
 /*
+** Push the library table onto the stack.
+** If it does not exist, create one.
+*/
+LUASQL_API void luasql_getlibtable (lua_State *L) {
+	lua_getglobal(L, LUASQL_TABLENAME);
+	if (lua_isnil (L, -1)) {
+		lua_newtable (L);
+		lua_pushvalue (L, -1);
+		lua_setglobal (L, LUASQL_TABLENAME);
+	}
+}
+
+
+/*
 ** Check the type (metatable) of #1 arg
 ** Do NOT pop the argument
 */

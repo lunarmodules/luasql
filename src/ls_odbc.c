@@ -29,27 +29,27 @@
 
 
 typedef struct {
-	short closed;
-	unsigned conn_counter;    /* active connections counter */
-    SQLHENV henv;             /* environment handle */
+	short      closed;
+	unsigned   conn_counter;       /* active connections counter */
+	SQLHENV    henv;               /* environment handle */
 } env_data;
 
 
 typedef struct {
-	short closed;
-	unsigned cur_counter;     /* active cursors counter */
-    int env;                  /* reference to environment */
-    int auto_commit;          /* 0 for manual commit */
-    SQLHDBC hdbc;             /* database connection handle */
+	short      closed;
+	unsigned   cur_counter;        /* active cursors counter */
+	int        env;                /* reference to environment */
+	int        auto_commit;        /* 0 for manual commit */
+	SQLHDBC    hdbc;               /* database connection handle */
 } conn_data;
 
 
 typedef struct {
-	short closed;
-    int conn;                 /* reference to connection */
-    int numcols;              /* number of columns */
-	int coltypes, colnames;   /* reference to column information tables */
-    SQLHSTMT hstmt;           /* statement handle */
+	short      closed;
+	int        conn;               /* reference to connection */
+	int        numcols;            /* number of columns */
+	int        coltypes, colnames; /* reference to column information tables */
+	SQLHSTMT   hstmt;              /* statement handle */
 } cur_data;
 
 
@@ -700,13 +700,13 @@ static void create_metatables (lua_State *L) {
 ** Creates an Environment and returns it.
 */
 static int create_environment (lua_State *L) {
-	SQLRETURN ret;
-	env_data *env = (env_data *)lua_newuserdata (L, sizeof (env_data));
-	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
-	ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &env->henv);
+	env_data *env;
+	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &env->henv);
 	if (error(ret))
-		return luasql_faildirect (L, LUASQL_PREFIX"error creating environment.");
+		return luasql_faildirect(L,LUASQL_PREFIX"error creating environment.");
 
+	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
+	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
 	/* fill in structure */
 	env->closed = 0;
 	env->conn_counter = 0;
@@ -719,12 +719,7 @@ static int create_environment (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luasql_libopen_odbc(lua_State *L) {
-	lua_getglobal(L, LUASQL_TABLENAME); 
-	if (lua_isnil (L, -1)) {
-		lua_newtable (L);
-		lua_pushvalue (L, -1);
-		lua_setglobal (L, LUASQL_TABLENAME);
-	}
+	luasql_getlibtable (L);
 	lua_pushstring(L, "odbc"); 
 	lua_pushcfunction(L, create_environment); 
 	lua_settable(L, -3); 

@@ -22,27 +22,27 @@
 #define LUASQL_CURSOR_PG "PostgreSQL cursor"
 
 typedef struct {
-	short closed;
-	unsigned conn_counter;  /* active connections counter */
+	short      closed;
+	unsigned   conn_counter;       /* active connections counter */
 } env_data;
 
 
 typedef struct {
-	short closed;
-	unsigned cur_counter;   /* active cursors counter */
-	int env;                /* reference to environment */
-	int auto_commit;        /* 0 for manual commit */
-	PGconn *pg_conn;
+	short      closed;
+	unsigned   cur_counter;        /* active cursors counter */
+	int        env;                /* reference to environment */
+	int        auto_commit;        /* 0 for manual commit */
+	PGconn    *pg_conn;
 } conn_data;
 
 
 typedef struct {
-	short closed;
-	int conn;               /* reference to connection */
-	int numcols;            /* number of columns */
-	int colnames, coltypes; /* reference to column information tables */
-	int curr_tuple;         /* next tuple to be read */
-	PGresult *pg_res;
+	short      closed;
+	int        conn;               /* reference to connection */
+	int        numcols;            /* number of columns */
+	int        colnames, coltypes; /* reference to column information tables */
+	int        curr_tuple;         /* next tuple to be read */
+	PGresult  *pg_res;
 } cur_data;
 
 
@@ -537,12 +537,7 @@ static int create_environment (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luasql_libopen_postgres (lua_State *L) { 
-	lua_getglobal(L, LUASQL_TABLENAME);
-	if (lua_isnil (L, -1)) {
-		lua_newtable (L);
-		lua_pushvalue (L, -1);
-		lua_setglobal (L, LUASQL_TABLENAME);
-	}
+	luasql_getlibtable (L);
 	lua_pushstring(L, "postgres");
 	lua_pushcfunction(L, create_environment);
 	lua_settable(L, -3);
