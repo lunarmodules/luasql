@@ -9,10 +9,12 @@ LUA_LIBDIR= /usr/local/lib/lua/5.0
 # Lua includes directory
 LUA_INC= /usr/local/include/lua5
 COMPAT_DIR= ../compat
-#LIB_EXT= .so
-LIB_EXT= .dylib
-#LIB_OPTION= -shared
-LIB_OPTION= -dynamiclib
+LIB_EXT= .so
+#LIB_EXT= .dylib
+LIB_OPTION= -shared
+#LIB_OPTION= -dynamiclib
+LUA_LIBS= -llua-5.0 -llualib-5.0 -lm
+DLLIB= -ldl
 
 VERSION= 2.0b3
 
@@ -39,7 +41,7 @@ DRIVER_INCS= -I/usr/local/pgsql/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
 INCS= -I$(LUA_INC)
-LIBS= -llua-5.0 -llualib-5.0 -lm -ldl
+LIBS= $(LUA_LIBS) $(DLLIB)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
