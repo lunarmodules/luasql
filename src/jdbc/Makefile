@@ -1,5 +1,5 @@
 # JDBC
-
+JDK= $(JAVA_HOME)
 #source dir
 JDBC_SRC= src/java
 #lib dir
@@ -7,8 +7,8 @@ JDBC_LIB= lib
 #build dir
 JDBC_BUILD= bin
 #java compiler
-JAVAC= javac
-JAR= jar
+JAVAC= $(JAVA_HOME)/bin/javac
+JAR= $(JAVA_HOME)/bin/jar
 #luajava jar name
 LUAJAVA_JAR= luajava-1.0b4.jar
 #compilation options
@@ -32,3 +32,4 @@ jdbc:
 clean:
 	rm -rf $(JDBC_BUILD)
 	rm -f $(JARSDIR)/$(PACKAGENAME).jar
+
