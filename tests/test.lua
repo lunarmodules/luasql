@@ -270,12 +270,58 @@ function fetch_many ()
 	local cmd = string.format ("insert into t (%s) values (%s)",
 		fields, values)
 	assert2 (1, CONN:execute (cmd))
-	-- fetch values.
+	-- fetch values (without a table).
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
 	local row = { cur:fetch () }
-	assert2 ("string", type(row[1]), "error while trying to fetch many values")
+	assert2 ("string", type(row[1]), "error while trying to fetch many values (without a table)")
 	for i = 1, TOTAL_FIELDS do
 		assert2 ('v'..i, row[i])
+	end
+	assert2 (nil, cur:fetch (row))
+	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
+	-- fetch values (with a table and default indexing).
+	io.write ("with a table...")
+	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
+	local row = cur:fetch {}
+	assert2 ("string", type(row[1]), "error while trying to fetch many values (default indexing)")
+	for i = 1, TOTAL_FIELDS do
+		assert2 ('v'..i, row[i])
+	end
+	assert2 (nil, cur:fetch (row))
+	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
+	-- fetch values (with numbered indexes on a table).
+	io.write ("with numbered keys...")
+	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
+	local row = cur:fetch ({}, "n")
+	assert2 ("string", type(row[1]), "error while trying to fetch many values (numbered indexes)")
+	for i = 1, TOTAL_FIELDS do
+		assert2 ('v'..i, row[i])
+	end
+	assert2 (nil, cur:fetch (row))
+	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
+	-- fetch values (with alphanumeric indexes on a table).
+	io.write ("with alpha keys...")
+	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
+	local row = cur:fetch ({}, "a")
+	assert2 ("string", type(row.f1), "error while trying to fetch many values (alphanumeric indexes)")
+	for i = 1, TOTAL_FIELDS do
+		assert2 ('v'..i, row['f'..i])
+	end
+	assert2 (nil, cur:fetch (row))
+	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
+	-- fetch values (with both indexes on a table).
+	io.write ("with both keys...")
+	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
+	local row = cur:fetch ({}, "na")
+	assert2 ("string", type(row[1]), "error while trying to fetch many values (both indexes)")
+	assert2 ("string", type(row.f1), "error while trying to fetch many values (both indexes)")
+	for i = 1, TOTAL_FIELDS do
+		assert2 ('v'..i, row[i])
+		assert2 ('v'..i, row['f'..i])
 	end
 	assert2 (nil, cur:fetch (row))
 	assert2 (true, cur:close(), "couldn't close cursor")

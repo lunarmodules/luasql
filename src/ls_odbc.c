@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.18 2004/01/09 12:10:27 tomas Exp $
+** $Id: ls_odbc.c,v 1.19 2004/02/12 10:44:04 tomas Exp $
 */
 
 #include <assert.h>
@@ -277,13 +277,15 @@ static int cur_fetch (lua_State *L) {
 				return ret;
 			if (alpha) {
 				lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
-				lua_rawgeti (L, -1, i);
-				lua_pushvalue (L, -3);
-				lua_rawset (L, 2);
+				lua_rawgeti (L, -1, i); /* gets column name */
+				lua_pushvalue (L, -3); /* duplicates column value */
+				lua_rawset (L, 2); /* table[name] = value */
 				lua_pop (L, 1);	/* pops colnames table */
 			}
 			if (num)
 				lua_rawseti (L, 2, i);
+			else
+				lua_pop (L, 1); /* pops value */
 		}
 		lua_pushvalue (L, 2);
 		return 1;	/* return table */
