@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.8 2003/05/08 21:45:40 tomas Exp $
+** $Id: luasql.c,v 1.9 2003/05/26 10:33:13 tomas Exp $
 */
 
 #include <lua.h>
@@ -17,7 +17,7 @@ LUASQL_API int luasql_faildirect(lua_State *L, const char *err) {
 }
 
 /*
-** Create a metatable
+** Create a metatable and leave it on top of the stack.
 */
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods) {
 	if (!luaL_newmetatable (L, name))
