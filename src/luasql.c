@@ -1,6 +1,8 @@
 /*
-** $Id: luasql.c,v 1.9 2003/05/26 10:33:13 tomas Exp $
+** $Id: luasql.c,v 1.10 2003/11/24 10:42:41 tomas Exp $
 */
+
+#include <string.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -15,6 +17,23 @@ LUASQL_API int luasql_faildirect(lua_State *L, const char *err) {
     lua_pushstring(L, err);
     return 2;
 }
+
+
+/*
+** Return the name of the object's metatable.
+** This function is used by `tostring'.
+*/
+static int luasql_tostring (lua_State *L) {
+	char buff[100];
+	pseudo_data *obj = (pseudo_data *)lua_touserdata (L, 1);
+	if (obj->closed)
+		strcpy (buff, "closed");
+	else
+		sprintf (buff, "%p", obj);
+	lua_pushfstring (L, "%s (%s)", lua_tostring(L,lua_upvalueindex(1)), buff);
+	return 1;
+}
+
 
 /*
 ** Create a metatable and leave it on top of the stack.
@@ -33,6 +52,11 @@ LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg
 
 	lua_pushliteral (L, "__index");
 	lua_pushvalue (L, -2);
+	lua_settable (L, -3);
+
+	lua_pushliteral (L, "__tostring");
+	lua_pushstring (L, name);
+	lua_pushcclosure (L, luasql_tostring, 1);
 	lua_settable (L, -3);
 
 	lua_pushliteral (L, "__metatable");
