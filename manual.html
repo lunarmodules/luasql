@@ -2,6 +2,7 @@
 <html>
 
 <head>
+<title>LuaSQL: Database connectivity for the Lua programming language</title>
 <style type="text/css">
 ul { list-style-type: disc };
 </style>
@@ -92,6 +93,8 @@ object using the ODBC driver.
 <li> <b><tt>env:close()</tt></b> <br>
 Closes the environment <tt>env</tt>.
 Only successful if all connections pertaining to it were closed first.
+Returns <code>true</code> in case of success and <code>nil</code> when
+the object is already closed.
 
 <a name="env_connect"></a>
 <li> <b><tt>env:connect(sourcename[,username[,password]])</tt></b> <br>
@@ -119,6 +122,8 @@ method.
 <li> <b><tt>conn:close()</tt></b> <br>
 Closes the connection <tt>conn</tt>.
 Only successful if all cursors pertaining to it were closed first.
+Returns <code>true</code> in case of success and <code>nil</code> when
+the object is already closed.
 
 <a name="conn_commit"></a>
 <li> <b><tt>conn:commit()</tt></b> <br>
@@ -171,6 +176,8 @@ and <a href="#oracle_extensions">Oracle</a> extensions.
 <a name="cur_close"></a>
 <li> <b><tt>cur:close()</tt></b> <br>
 Closes this cursor. 
+Returns <code>true</code> in case of success and <code>nil</code> when
+the object is already closed.
 
 <a name="cur_fetch"></a>
 <li> <b><tt>cur:fetch([table[,modestring]])</tt></b> <br>
@@ -380,7 +387,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-$Id: manual.html,v 1.17 2003/12/29 15:27:23 tomas Exp $
+$Id: manual.html,v 1.18 2004/01/12 10:43:26 tomas Exp $
 </small>
 
 </body>
