@@ -2,7 +2,7 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
-** $Id: ls_odbc.c,v 1.11 2003/05/26 10:58:15 tomas Exp $
+** $Id: ls_odbc.c,v 1.12 2003/05/30 10:04:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -65,8 +65,8 @@ LUASQL_API int luasql_libopen_odbc(lua_State *L);
 */
 static env_data *getenvironment (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_ODBC);
-	luaL_argcheck (L, env != NULL, 1, "environment expected");
-	luaL_argcheck (L, !env->closed, 1, "environment is closed");
+	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
+	luaL_argcheck (L, !env->closed, 1, LUASQL_PREFIX"environment is closed");
 	return env;
 }
 
@@ -76,8 +76,8 @@ static env_data *getenvironment (lua_State *L) {
 */
 static conn_data *getconnection (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
-	luaL_argcheck (L, conn != NULL, 1, "connection expected");
-	luaL_argcheck (L, !conn->closed, 1, "connection is closed");
+	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
+	luaL_argcheck (L, !conn->closed, 1, LUASQL_PREFIX"connection is closed");
 	return conn;
 }
 
@@ -87,8 +87,8 @@ static conn_data *getconnection (lua_State *L) {
 */
 static cur_data *getcursor (lua_State *L) {
 	cur_data *cursor = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
-	luaL_argcheck (L, cursor != NULL, 1, "cursor expected");
-	luaL_argcheck (L, !cursor->closed, 1, "cursor is closed");
+	luaL_argcheck (L, cursor != NULL, 1, LUASQL_PREFIX"cursor expected");
+	luaL_argcheck (L, !cursor->closed, 1, LUASQL_PREFIX"cursor is closed");
 	return cursor;
 }
 
@@ -297,6 +297,7 @@ static int cur_fetch (lua_State *L) {
 */
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
+	luaL_argcheck (L, cursor != NULL, 1, LUASQL_PREFIX"cursor expected");
 	SQLHSTMT hstmt = cur->hstmt;
 	SQLRETURN ret;
 	if (cur->closed)
@@ -395,6 +396,7 @@ static int create_cursor (lua_State *L, conn_data *conn,
 static int conn_close (lua_State *L) {            
 	SQLRETURN ret;
     conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
+	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed)
 		return 0;
 
@@ -613,6 +615,7 @@ static int env_connect (lua_State *L) {
 static int env_close (lua_State *L) {
 	SQLRETURN ret;
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_ODBC);
+	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed)
 		return 0;
 

@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.3 2003/05/30 09:51:54 tomas Exp $
+** $Id: ls_oci8.c,v 1.4 2003/05/30 10:04:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -78,8 +78,8 @@ LUASQL_API int luasql_libopen_oracle (lua_State *L);
 */
 static env_data *getenvironment (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_OCI8);
-	luaL_argcheck (L, env != NULL, 1, "environment expected");
-	luaL_argcheck (L, !env->closed, 1, "environment is closed");
+	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
+	luaL_argcheck (L, !env->closed, 1, LUASQL_PREFIX"environment is closed");
 	return env;
 }
 
@@ -89,8 +89,8 @@ static env_data *getenvironment (lua_State *L) {
 */
 static conn_data *getconnection (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_OCI8);
-	luaL_argcheck (L, conn != NULL, 1, "connection expected");
-	luaL_argcheck (L, !conn->closed, 1, "connection is closed");
+	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
+	luaL_argcheck (L, !conn->closed, 1, LUASQL_PREFIX"connection is closed");
 	return conn;
 }
 
@@ -100,8 +100,8 @@ static conn_data *getconnection (lua_State *L) {
 */
 static cur_data *getcursor (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_OCI8);
-	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
-	luaL_argcheck (L, !cur->closed, 1, "cursor is closed");
+	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
+	luaL_argcheck (L, !cur->closed, 1, LUASQL_PREFIX"cursor is closed");
 	return cur;
 }
 
@@ -198,6 +198,7 @@ static int cur_fetch (lua_State *L) {
 static int cur_close (lua_State *L) {
 	conn_data *conn;
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_OCI8);
+	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed)
 		return 0;
 
@@ -304,6 +305,7 @@ static int cur_numrows (lua_State *L) {
 static int conn_close (lua_State *L) {
 	env_data *env;
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_OCI8);
+	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed)
 		return 0;
 	if (conn->cur_counter > 0)
@@ -595,6 +597,7 @@ static int env_connect (lua_State *L) {
 */
 static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_OCI8);
+	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed)
 		return 0;
 	if (env->conn_counter > 0)

@@ -30,8 +30,9 @@ function test_object (obj, objmethods)
 	assert2 (false, pcall (setmetatable, ENV, {}))
 	-- checking existence of object's methods.
 	for i = 1, table.getn (objmethods) do
-		local method = objmethods[i]
-		assert2 ("function", type(obj[method]))
+		local method = obj[objmethods[i]]
+		assert2 ("function", type(method))
+		assert2 (false, pcall (method), "no 'self' parameter accepted")
 	end
 	return obj
 end

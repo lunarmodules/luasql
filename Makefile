@@ -2,7 +2,7 @@ WARN= -Wall -Wmissing-prototypes -Wmissing-declarations
 INCS= -I/usr/local/include/lua5 -I/usr/local/pgsql/include -Itomas/dblua_oci8/linux/include
 LIBS_DIR= -L/usr/local/pgsql/lib
 LIBS= -llua.5.0 -llualib.5.0 -lm -lpq -lz -ldl
-CFLAGS= $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
+CFLAGS= -O2 $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
 
 ODBC_OBJ= ls_odbc.o
 PG_OBJ= ls_pg.o
