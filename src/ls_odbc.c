@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.27 2004/11/17 14:16:52 tomas Exp $
+** $Id: ls_odbc.c,v 1.28 2005/02/02 00:06:35 tuler Exp $
 */
 
 #include <assert.h>
@@ -470,6 +470,7 @@ static int conn_execute (lua_State *L) {
 			return ret;
 		}
 		lua_pushnumber(L, numrows);
+		SQLFreeHandle(hSTMT, hstmt);
 		return 1;
 	}
 }
@@ -603,10 +604,7 @@ static int env_connect (lua_State *L) {
 	const char *username = luaL_optstring (L, 3, NULL);
 	const char *password = luaL_optstring (L, 4, NULL);
 	SQLHDBC hdbc;
-	SQLRETURN ret = SQLSetEnvAttr (env->henv, SQL_ATTR_ODBC_VERSION, 
-		(void*)SQL_OV_ODBC3, 0);
-	if (error(ret))
-		return luasql_faildirect (L, LUASQL_PREFIX"error setting SQL version.");
+	SQLRETURN ret;
 	/* tries to allocate connection handle */
 	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
 	if (error(ret))
@@ -685,6 +683,11 @@ static int create_environment (lua_State *L) {
 	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &henv);
 	if (error(ret))
 		return luasql_faildirect(L,LUASQL_PREFIX"error creating environment.");
+
+	ret = SQLSetEnvAttr (henv, SQL_ATTR_ODBC_VERSION, 
+		(void*)SQL_OV_ODBC3, 0);
+	if (error(ret))
+		return luasql_faildirect (L, LUASQL_PREFIX"error setting SQL version.");
 
 	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
