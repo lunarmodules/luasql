@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.9 2003/05/07 06:20:50 tomas Exp $>
+<!$Id: manual.html,v 1.10 2003/05/08 22:49:45 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -174,13 +174,18 @@ The mode string can contain:
   <li> <b>"n"</b> the resulting table will have numerical indices (default)
   <li> <b>"a"</b> the resulting table will have alphanumerical indices
 </ul>
-The <i>numerical indexes</i> are the positions of the fields in the select
+The <i>numerical indices</i> are the positions of the fields in the select
 statement;
-the <i>alphanumerical indexes</i> are the names of the fields.
+the <i>alphanumerical indices</i> are the names of the fields.<br>
 The optional <tt>table</tt> parameter is a table that should be
 used to store the next row.
 This allows the use of a unique table for many fetches which
 can improve the overall performance.<br>
+There is no guarantee about the types of the results
+-- they can be converted to adequate Lua types by the driver or not.
+<i>In the current implementation (2.0a),
+the PostgreSQL driver returns all values as strings
+while the ODBC driver converts them to Lua types</i>.<br>
 Returns: data, as above, or <tt>nil</tt> if there are no more rows.
 
 <a name="cur_colnames"></a>
@@ -318,8 +323,8 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <hr>
 <small>
-Last modified by Tom&aacute;s Guisasola on<br>
-Wed May  7 06:18:40 BRT 2003
+Last modified on
+Thu May  8 22:49:03 BRT 2003
 </small>
 
 </body>
