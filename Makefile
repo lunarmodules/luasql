@@ -1,46 +1,46 @@
+#T= mysql
+T= postgres
+#T= oci8
+#T= odbc
+#T= sqlite
+
+#LIB_EXT= .so
+LIB_EXT= .dylib
+#LIB_OPTION= -shared
+LIB_OPTION= -dynamiclib
+COMPAT_DIR= ../compat
+
 VERSION= 2.0b2
 
-COMPAT_DIR= .
+OBJS= compat-5.1.o luasql.o ls_$T.o
+LIBNAME= lib$T.$(VERSION)$(LIB_EXT)
+LOADLIB= $T$(LIB_EXT)
 
-ODBC_OBJ= ls_odbc.o
-ODBC_LIB= libodbc.$(VERSION).a
-ODBC_DLL= odbc.$(VERSION).dll
+# Driver specific
+# SQLite
+#DRIVER_LIBS= -lsqlite
+#DRIVER_INCS=
 
-SQLITE_OBJ= ls_sqlite.o
-SQLITE_LIB= libsqlite.$(VERSION).a
-SQLITE_SO= libsqlite.$(VERSION).so
-SQLITE_DYLIB= libsqlite.$(VERSION).dylib
-SQLITE_LIBS= -lsqlite
-SQLITE_INCS=
+# PostgreSQL
+DRIVER_LIBS= -L/usr/local/pgsql/lib -lpq
+DRIVER_INCS= -I/usr/local/pgsql/include
 
-PG_OBJ= ls_pg.o
-PG_LIB= libpostgres.$(VERSION).a
-PG_SO= libpostgres.$(VERSION).so
-PG_DYLIB= libpostgres.$(VERSION).dylib
-PG_LIBS= -L/usr/local/pgsql/lib -lpq
-PG_INCS= -I/usr/local/pgsql/include
+# Oracle OCI8
+#DRIVER_LIBS= -L/home/oracle/OraHome1/lib -lz -lclntsh
+#DRIVER_INCS= -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
 
-OCI_OBJ= ls_oci8.o
-OCI_LIB= liboci8.$(VERSION).a
-OCI_SO= liboci8.$(VERSION).so
-OCI_DLL= oci8.$(VERSION).dll
-OCI_LIBS= -L/home/oracle/OraHome1/lib -lz -lclntsh
-OCI_INCS= -Itomas/dblua_oci8/linux/include -I/home/oracle/OraHome1/rdbms/demo -I/home/oracle/OraHome1/rdbms/public
-
-MYSQL_OBJ= ls_mysql.o
-MYSQL_LIB= libmysql.$(VERSION).a
-MYSQL_SO= libmysql.$(VERSION).so
-MYSQL_DLL= mysql.$(VERSION).dll
-MYSQL_LIBS= -L/usr/local/mysql/lib -lmysqlclient
-MYSQL_INCS= -I/usr/local/mysql/include
+# MySQL
+#DRIVER_LIBS= -L/usr/local/mysql/lib -lmysqlclient
+#DRIVER_INCS= -I/usr/local/mysql/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
-INCS= -I/usr/local/include/lua5 -I$(COMPAT_DIR) $(PG_INCS) $(OCI_INCS) $(MYSQL_INCS)
-#LIBS_DIR= -L../lua-5.0/lib
-LIBS= -llua-5.0 -llualib-5.0 -lm -ldl
+INCS= -I/usr/local/include/lua5 -I$(COMPAT_DIR) $(DRIVER_INCS)
+LIBS= $(DRIVER_LIBS) -llua-5.0 -llualib-5.0 -lm -ldl
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)
+CC= gcc
 
 PKG= luasql-$(VERSION)
+DIST_DIR= $(PKG)
 TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
 SRCS= README Makefile \
@@ -56,70 +56,84 @@ SRCS= README Makefile \
 AR= ar rcu
 RANLIB= ranlib
 
-LS_OBJ= luasql.o compat-5.1.o
+
+lib: $(OBJS)
+	$(CC) $(CFLAGS) -o $(LIBNAME) $(LIB_OPTION) $(OBJS) $(LIBS)
 
 compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
 	$(CC) -c $(CFLAGS) -o $@ $(COMPAT_DIR)/compat-5.1.c
 
-dist:
-	mkdir $(PKG);
-	cp $(SRCS) $(PKG);
-	tar -czf $(TAR_FILE) $(PKG);
-	zip -lq $(ZIP_FILE) $(PKG)/*
-	rm -rf $(PKG)
+dist: dist_dir
+	tar -czf $(TAR_FILE) $(DIST_DIR)
+	zip -lq $(ZIP_FILE) $(DIST_DIR)/*
+	rm -rf $(DIST_DIR)
 
-sqlitelinux: $(SQLITE_LIB) $(SQLITE_SO)
+dist_dir:
+	mkdir $(DIST_DIR)
+	cp $(SRCS) $(DIST_DIR)
 
-pglinux: $(PG_LIB) $(PG_SO)
+#sqlitelinux: $(SQLITE_LIB) $(SQLITE_SO)
 
-pgmac: $(PG_LIB) $(PG_DYLIB)
+#pglinux: $(PG_LIB) $(PG_SO)
 
-odbcwin:
-	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/odbc/" def.tmpl > odbc.def
+#pgmac: $(PG_LIB) $(PG_DYLIB)
 
-ocilinux: $(OCI_LIB) $(OCI_SO)
+#odbcwin:
+	#sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/odbc/" def.tmpl > odbc.def
 
-ociwin:
-	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/oracle/" def.tmpl > oracle.def
+#ocilinux: $(OCI_LIB) $(OCI_SO)
 
-mysqllinux: $(MYSQL_LIB) $(MYSQL_SO)
+#ociwin:
+	#sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/oracle/" def.tmpl > oracle.def
 
-mysqlwin:
-	sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/mysql/" def.tmpl > mysql.def
+#mysqllinux: $(MYSQL_LIB) $(MYSQL_SO)
 
-$(SQLITE_LIB): $(LS_OBJ) $(SQLITE_OBJ)
-	$(AR) $@ $(LS_OBJ) $(SQLITE_OBJ)
-	$(RANLIB) $@
+#mysqlwin:
+	#sed -e "s/VERSION_NUMBER/$(VERSION)/" -e "s/DRIVER/mysql/" def.tmpl > mysql.def
 
-$(SQLITE_SO): $(LS_OBJ) $(SQLITE_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(SQLITE_OBJ) $(LIBS_DIR) $(SQLITE_LIBS) $(LIBS)
+#$(SQLITE_LIB): $(LS_OBJ) $(SQLITE_OBJ)
+	#$(AR) $@ $(LS_OBJ) $(SQLITE_OBJ)
+	#$(RANLIB) $@
 
-$(PG_LIB): $(LS_OBJ) $(PG_OBJ)
-	$(AR) $@ $(LS_OBJ) $(PG_OBJ)
-	$(RANLIB) $@
+#$(SQLITE_SO): $(LS_OBJ) $(SQLITE_OBJ)
+	#gcc -o $@ -shared $(LS_OBJ) $(SQLITE_OBJ) $(LIBS_DIR) $(SQLITE_LIBS) $(LIBS)
+	#ln -f -s $@ $(SQLITE_LOADLIB)
 
-$(PG_SO): $(LS_OBJ) $(PG_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(PG_LIBS) $(LIBS)
+#$(PG_LIB): $(LS_OBJ) $(PG_OBJ)
+	#$(AR) $@ $(LS_OBJ) $(PG_OBJ)
+	#$(RANLIB) $@
 
-$(PG_DYLIB): $(LS_OBJ) $(PG_OBJ)
-	gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(PG_LIBS) $(LIBS)
+#$(PG_SO): $(LS_OBJ) $(PG_OBJ)
+	#gcc -o $@ -shared $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(PG_LIBS) $(LIBS)
+	#ln -f -s $@ $(PG_LOADLIB)
 
-$(OCI_LIB): $(LS_OBJ) $(OCI_OBJ)
-	$(AR) $@ $(LS_OBJ) $(OCI_OBJ)
-	$(RANLIB) $@
+#$(PG_DYLIB): $(LS_OBJ) $(PG_OBJ)
+	#gcc -o $@ -dynamiclib $(LS_OBJ) $(PG_OBJ) $(LIBS_DIR) $(PG_LIBS) $(LIBS)
+	#ln -f -s $@ $(PG_LOADLIB)
 
-$(OCI_SO): $(LS_OBJ) $(OCI_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(OCI_OBJ) $(LIBS_DIR) $(OCI_LIBS) $(LIBS)
+#$(OCI_LIB): $(LS_OBJ) $(OCI_OBJ)
+	#$(AR) $@ $(LS_OBJ) $(OCI_OBJ)
+	#$(RANLIB) $@
 
-$(MYSQL_LIB): $(LS_OBJ) $(MYSQL_OBJ)
-	$(AR) $@ $(LS_OBJ) $(MYSQL_OBJ)
-	$(RANLIB) $@
+#$(OCI_SO): $(LS_OBJ) $(OCI_OBJ)
+	#gcc -o $@ -shared $(LS_OBJ) $(OCI_OBJ) $(LIBS_DIR) $(OCI_LIBS) $(LIBS)
+	#ln -f -s $@ $(OCI_LOADLIB)
 
-$(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
-	gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(MYSQL_LIBS) $(LIBS)
+#$(MYSQL_LIB): $(LS_OBJ) $(MYSQL_OBJ)
+	#$(AR) $@ $(LS_OBJ) $(MYSQL_OBJ)
+	#$(RANLIB) $@
+
+#$(MYSQL_SO): $(LS_OBJ) $(MYSQL_OBJ)
+	#gcc -o $@ -shared $(LS_OBJ) $(MYSQL_OBJ) $(LIBS_DIR) $(MYSQL_LIBS) $(LIBS)
+	#ln -f -s $@ $(MYSQL_LOADLIB)
+
+install:
+	mkdir -p $(LIB_DIR)
+	cp $(LIBNAME) $(LOADLIB) $(LIB_DIR)
 
 clean:
-	rm -f $(TAR_FILE) $(ZIP_FILE) \
+	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o *.lua
+	#rm -f $(TAR_FILE) $(ZIP_FILE) \
 		$(LS_OBJ) $(ODBC_OBJ) $(PG_OBJ) $(OCI_OBJ) $(MYSQL_OBJ) $(SQLITE_OBJ)\
 		$(ODBC_LIB) $(ODBC_DLL) $(SQLITE_LIB) $(SQLITE_SO) $(PG_LIB) $(PG_SO) $(PG_DYLIB) $(OCI_LIB) $(OCI_SO) $(MYSQL_LIB) $(MYSQL_SO) \
 		sqlite.lua postgres.lua odbc.lua oracle.lua mysql.lua sqlite.def postgres.def odbc.def oracle.def mysql.def
