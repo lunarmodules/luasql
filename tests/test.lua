@@ -18,17 +18,50 @@ function assert2 (expected, value, msg)
 end
 
 ---------------------------------------------------------------------
+-- object test.
+---------------------------------------------------------------------
+function test_object (obj, objmethods)
+	-- checking object type.
+	assert2 ("userdata", type(obj), "incorrect object type")
+	-- trying to get metatable.
+	assert2 ("LuaSQL: you're not allowed to get this metatable",
+		getmetatable(obj), "error permitting access to object's metatable")
+	-- trying to set metatable.
+	assert2 (false, pcall (setmetatable, ENV, {}))
+	-- checking existence of object's methods.
+	for i = 1, table.getn (objmethods) do
+		local method = objmethods[i]
+		assert2 ("function", type(obj[method]))
+	end
+	return obj
+end
+
+ENV_OK = function (obj)
+	return test_object (obj, { "close", "connect", })
+end
+CONN_OK = function (obj)
+	return test_object (obj, { "close", "commit", "execute", "rollback", "setautocommit", })
+end
+CUR_OK = function (obj)
+	return test_object (obj, { "close", "fetch", "getcolnames", "getcoltypes", })
+end
+
+---------------------------------------------------------------------
 -- basic checking test.
 ---------------------------------------------------------------------
 function basic_test ()
 	-- Check environment object.
-	ENV = assert (luasql[driver] ())
+	ENV = ENV_OK (luasql[driver] ())
 	assert2 (1, ENV:close(), "couldn't close environment")
+	-- trying to connect with a closed environment.
+	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
+		"error connecting with a closed environment")
 	-- Reopen the environment.
-	ENV = assert (luasql[driver] ())
+	ENV = ENV_OK (luasql[driver] ())
 	-- Check connection object.
 	local conn, err = ENV:connect (datasource, username, password)
 	assert (conn, (err or '').." ("..datasource..")")
+	CONN_OK (conn)
 	assert2 (1, conn:close(), "couldn't close connection")
 	-- Check error situation.
 	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
@@ -50,13 +83,10 @@ end
 ---------------------------------------------------------------------
 function create_table ()
 	-- Check SQL statements.
-	CONN = assert (ENV:connect (datasource, username, password))
-	-- Drop table (if it already exists).
-	--CONN:execute("drop table t")
+	CONN = CONN_OK (ENV:connect (datasource, username, password))
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
-	--assert (cur == 0, err)
 	assert (CONN:execute (cmd))
 end
 
@@ -67,10 +97,7 @@ function fetch2 ()
 	-- insert a record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
 	-- retrieve data.
-	local cur = assert (CONN:execute ("select f1, f2, f3 from t"))
-	assert2 ("userdata", type(cur), "not a cursor")
-	-- get cursor metatable.
-	CUR_TYPE = getmetatable (cur)
+	local cur = CUR_OK (CONN:execute ("select f1, f2, f3 from t"))
 	-- check data.
 	local f1, f2, f3 = cur:fetch()
 	assert2 ('b', f1)
@@ -78,9 +105,9 @@ function fetch2 ()
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
 	assert2 (1, cur:close(), "couldn't close cursor")
-	cur, err = CONN:execute ("insert into t (f1, f2) values ('d', 'e')")
-	assert2 (1, cur, err)
-	cur = assert (CONN:execute ("select f1, f2, f3 from t order by f1"))
+	-- insert a second record.
+	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('d', 'e')"))
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3 from t order by f1"))
 	local f1, f2, f3 = cur:fetch()
 	assert2 ('b', f1, f2)	-- f2 can be an error message
 	assert2 ('c', f2)
@@ -91,6 +118,7 @@ function fetch2 ()
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
 	assert2 (1, cur:close(), "couldn't close cursor")
+	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
 end
 
@@ -103,8 +131,7 @@ function fetch_new_table ()
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
 	-- retrieve data using a new table.
-	local cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
-	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	local cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
 	local row, err = cur:fetch{}
 	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
@@ -130,8 +157,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
-	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
-	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
 	local row, err = cur:fetch{}
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
@@ -157,8 +183,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
-	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
-	assert2 (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
 	local row, err = cur:fetch ({}, "a")
 	assert (type(row), "table", err)
 	assert2 (nil, row[1])
@@ -184,8 +209,7 @@ function fetch_new_table ()
 
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
-	cur = assert (CONN:execute ("select f1, f2, f3, f4 from t"))
-	assert (getmetatable (cur), CUR_TYPE, "incorrect metatable")
+	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
 	local row, err = cur:fetch ({}, "an")
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
@@ -215,16 +239,55 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
-	CONN:setautocommit (false) -- begin transaction
+	CONN:setautocommit (false) -- == begin transaction
+	-- insert a record and commit the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('a')"))
-	local cur = assert (CONN:execute ("select count(*) from t"))
+	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (1, cur:close(), "couldn't close cursor")
+	CONN:commit ()
+	-- insert a record and roll back the operation.
+	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
+	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
 	CONN:rollback ()
-	cur = assert (CONN:execute ("select count(*) from t"))
-	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
+	-- check resulting table with one record.
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
+	-- delete a record and roll back the operation.
+	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber(cur:fetch()))
+	assert2 (1, cur:close(), "couldn't close cursor")
+	CONN:rollback ()
+	-- check resulting table with one record.
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
+--[[
+	-- insert a second record and turn on the auto-commit mode.
+	-- this will produce a rollback on PostgreSQL and a commit on ODBC.
+	-- what to do?
+	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (1, cur:close(), "couldn't close cursor")
 	CONN:setautocommit (true)
+	-- check resulting table with one record.
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
+--]]
+	-- clean the table.
+	assert2 (1, CONN:execute ("delete from t"))
+	CONN:commit ()
+	CONN:setautocommit (true)
+	-- check resulting table with no records.
+	cur = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
+	assert2 (1, cur:close(), "couldn't close cursor")
 end
 
 ---------------------------------------------------------------------
@@ -233,8 +296,7 @@ end
 function column_info ()
 	-- insert elements.
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
-	local cur = assert (CONN:execute ("select f1,f2,f3,f4 from t"))
-	assert2 (CUR_TYPE, getmetatable(cur), "incorrect metatable")
+	local cur = CUR_OK (CONN:execute ("select f1,f2,f3,f4 from t"))
 	-- get column information.
 	local names, types = cur:getcolnames(), cur:getcoltypes()
 	assert2 ("table", type(names), "getcolnames failed")

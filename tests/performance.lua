@@ -1,6 +1,53 @@
 #!/usr/local/bin/lua
 
-TOTAL_ROWS = 8000
+TOTAL_ROWS = 200
+
+---------------------------------------------------------------------
+-- checks for a value and throw an error if it's not the expected.
+---------------------------------------------------------------------
+function assert2 (expected, value, msg)
+	if not msg then
+		msg = ''
+	else
+		msg = msg..'\n'
+	end
+	return assert (value == expected,
+		msg.."wrong value (["..tostring(value).."] instead of "..
+		tostring(expected)..")")
+end
+
+---------------------------------------------------------------------
+-- object test.
+---------------------------------------------------------------------
+function test_object (obj, objmethods)
+	-- checking object type.
+	assert2 ("userdata", type(obj), "incorrect object type")
+	-- trying to get metatable.
+	assert2 ("LuaSQL: you're not allowed to get this metatable",
+		getmetatable(obj), "error permitting access to object's metatable")
+	-- trying to set metatable.
+	assert2 (false, pcall (setmetatable, ENV, {}))
+	-- checking existence of object's methods.
+	for i = 1, table.getn (objmethods) do
+		local method = objmethods[i]
+		assert2 ("function", type(obj[method]))
+	end
+	return obj
+end
+
+ENV_OK = function (obj)
+	return test_object (obj, { "close", "connect", })
+end
+CONN_OK = function (obj)
+	return test_object (obj, { "close", "commit", "execute", "rollback", "setautocommit", })
+end
+CUR_OK = function (obj)
+	return test_object (obj, { "close", "fetch", "getcolnames", "getcoltypes", })
+end
+
+---------------------------------------------------------------------
+-- Main
+---------------------------------------------------------------------
 
 if type(arg[1]) ~= "string" then
 	print (string.format ("Usage %s <driver> [<data source> [, <user> [, <password>]]]", arg[0]))
@@ -8,7 +55,7 @@ if type(arg[1]) ~= "string" then
 end
 
 local driver = arg[1]
-local datasouce = arg[2] or "luasql-test"
+local datasource = arg[2] or "luasql-test"
 local username = arg[3] or nil
 local password = arg[4] or nil
 
