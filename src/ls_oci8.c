@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.9 2003/06/09 14:12:29 tomas Exp $
+** $Id: ls_oci8.c,v 1.10 2003/06/09 15:42:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -53,6 +53,8 @@ typedef union {
 
 typedef struct {
 	ub2           type;    /* database type */
+	text         *name;    /* column name */
+	ub4           namelen; /* column name length */
 	ub2           max;     /* maximum size */
 	sb2           null;    /* is null? */
 	OCIDefine    *define;  /* define handle */
@@ -156,6 +158,18 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 
 
 /*
+** Copy the column name to the column structure and convert it to lower case.
+*/
+static int copy_column_name (column_data *col, text *name) {
+	int i;
+	col->name = (text *)malloc (col->namelen);
+	memcpy (col->name, name, col->namelen);
+	for (i = 0; i < col->namelen; i++)
+		col->name[i] = tolower (col->name[i]);
+}
+
+
+/*
 ** Alloc buffers for column values.
 */
 static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
@@ -163,9 +177,14 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 	/* C array index ranges from 0 to numcols-1 */
 	column_data *col = &(cur->cols[i-1]);
 	OCIParam *param;
+	text *name;
 
 	ASSERT (L, OCIParamGet (cur->stmthp, OCI_HTYPE_STMT, cur->errhp,
 		(dvoid **)&param, i), cur->errhp);
+	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+		(dvoid *)&(name), (ub4 *)&(col->namelen),
+		OCI_ATTR_NAME, cur->errhp), cur->errhp);
+	copy_column_name (col, name);
 	ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
 		(dvoid *)&(col->type), (ub4 *)0, OCI_ATTR_DATA_TYPE,
 		cur->errhp), cur->errhp);
@@ -326,15 +345,16 @@ printf("(%d)!!\n",status);
 					return ret;
 				lua_rawseti (L, 2, i);
 			}
-/*
 		if (strchr (opts, 'a') != NULL)
-			*//* Copy values to alphanumerical indices *//*
+			/* Copy values to alphanumerical indices */
 			for (i = 1; i <= cur->numcols; i++) {
-				lua_pushstring (L, PQfname (res, i-1));
-				pushvalue (L, res, tuple, i);
+				column_data *col = &(cur->cols[i-1]);
+				int ret;
+				lua_pushlstring (L, col->name, col->namelen);
+				if ((ret = pushvalue (L, cur, i)) != 1)
+					return ret;
 				lua_rawset (L, 2);
 			}
-*/
 		lua_pushvalue(L, 2);
 		return 1; /* return table */
 	}
