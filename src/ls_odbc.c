@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.28 2005/02/02 00:06:35 tuler Exp $
+** $Id: ls_odbc.c,v 1.29 2005/02/02 15:21:28 tuler Exp $
 */
 
 #include <assert.h>
@@ -473,53 +473,6 @@ static int conn_execute (lua_State *L) {
 		SQLFreeHandle(hSTMT, hstmt);
 		return 1;
 	}
-}
-
-/*------------------------------------------------------------------*\
-* Returns a list with the names of the tables in the data source.
-\*------------------------------------------------------------------*/
-static int sqlConnTableList(lua_State *L) {
-    conn_data *conndata = (conn_data *) lua_touserdata(L, 1);
-    SQLHSTMT hstmt;
-    int got, index, list;
-    SQLUSMALLINT size;
-    char *buffer;
-    SQLRETURN ret = SQLAllocHandle(hSTMT, conndata->hdbc, &hstmt);
-    if (error(ret))
-		return fail(L, hDBC, conndata->hdbc);
-    ret = SQLTables(hstmt, NULL, 0, NULL, 0, NULL, 0, "TABLE", SQL_NTS );
-    if (error(ret))
-		return fail(L, hSTMT, hstmt);
-    ret = SQLGetInfo(conndata->hdbc, SQL_MAX_TABLE_NAME_LEN, 
-            (SQLPOINTER) &size, sizeof(size), NULL);
-    if (error(ret))
-		return fail(L, hSTMT, hstmt);
-    size = size > 0 ? size : 256;
-    buffer = (char *) malloc(size);
-    if (!buffer) luasql_faildirect(L, LUASQL_PREFIX"allocation error.");
-    /* create list */
-    lua_newtable(L); list = lua_gettop(L);
-    /* store fields */
-    index = 1;
-    while (1) {    
-        /* ask for next table name */
-        ret = SQLFetch(hstmt);
-        if (ret == SQL_NO_DATA) break;
-        if (error(ret)) {
-            SQLFreeHandle(hSTMT, hstmt);
-            return fail(L, hSTMT, hstmt);
-        }
-        lua_pushnumber(L, index);
-        ret = SQLGetData(hstmt, 3, SQL_C_CHAR, buffer, size, &got);
-        lua_pushlstring(L, buffer, got);
-        /* save result on table name list */
-        lua_settable(L, list);
-        index++;
-    }
-    free(buffer);
-    SQLFreeHandle(hSTMT, hstmt);
-    /* return the table, it is already on top of stack */
-    return 1;
 }
 
 /*
