@@ -37,7 +37,7 @@ MYSQL_INCS= -I/usr/local/mysql/include
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
 INCS= -I/usr/local/include/lua5 -I$(COMPAT_DIR) $(PG_INCS) $(OCI_INCS) $(MYSQL_INCS)
 #LIBS_DIR= -L../lua-5.0/lib
-LIBS= -llua.5.0 -llualib.5.0 -lm -ldl
+LIBS= -llua-5.0 -llualib-5.0 -lm -ldl
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)
 
 PKG= luasql-$(VERSION)
