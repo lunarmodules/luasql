@@ -12,7 +12,7 @@ local Private = {}
 
 luasql = (_G[libName] and type(_G[libName]) == "table") or {}
 
-Private.createJavaCursor = luajava.loadLib("luasql.LuaSQLCursor", "open")
+Private.createJavaCursor = luajava.loadLib("org.keplerproject.luasql.jdbc.LuaSQLCursor", "open")
 
 ---------------------------------------------------------------------
 -- function that returns a jdbc environment

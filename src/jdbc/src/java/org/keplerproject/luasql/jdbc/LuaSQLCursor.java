@@ -1,14 +1,14 @@
-package luasql;
+package org.keplerproject.luasql.jdbc;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 
-import luajava.JavaFunction;
-import luajava.LuaException;
-import luajava.LuaObject;
-import luajava.LuaState;
+import org.keplerproject.luajava.JavaFunction;
+import org.keplerproject.luajava.LuaException;
+import org.keplerproject.luajava.LuaObject;
+import org.keplerproject.luajava.LuaState;
 
 /**
  * LuaSQL JDBC cursor. Is implemented in Java because it's more efficient.
