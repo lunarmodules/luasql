@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.29 2005/02/02 15:21:28 tuler Exp $
+** $Id: ls_odbc.c,v 1.30 2005/02/02 15:22:06 tuler Exp $
 */
 
 #include <assert.h>
@@ -12,7 +12,7 @@
 #include <string.h>
 #include <time.h>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #include <sqlext.h>
 #elif defined(INFORMIX)
