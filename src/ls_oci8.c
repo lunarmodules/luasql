@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.8 2003/06/09 14:00:54 tomas Exp $
+** $Id: ls_oci8.c,v 1.9 2003/06/09 14:12:29 tomas Exp $
 */
 
 #include <assert.h>
@@ -182,7 +182,7 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 			col->val.s = calloc (col->max + 1, sizeof(col->val.s));
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
 				cur->errhp, (ub4)i, col->val.s, col->max,
-				col->type, (dvoid *)&(col->null), (ub2 *)0,
+				SQLT_STR /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
 		case SQLT_NUM:
