@@ -83,7 +83,7 @@ function luasql.ado()
         local ok, errmsg = pcall(conn.Open, conn, sourcestr, user, pass, opts)
                 
         if not ok then
-            nil, errmsg
+            return nil, errmsg
         end
         
         if conn.State == 0 then
