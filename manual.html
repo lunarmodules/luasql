@@ -1,5 +1,6 @@
+<! See Copyright Notice in license.html>
 <html>
-<!$Id: manual.html,v 1.13 2003/10/24 10:58:18 tomas Exp $>
+<!$Id: manual.html,v 1.14 2003/12/01 16:08:38 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -43,12 +44,13 @@ ready soon).
 LuaSQL defines a simple object-oriented API.
 All drivers should implement this common API,
 but each one is free to offer extensions.
+</p>
 <p>
 LuaSQL defines one single global variable,
 a table called <tt>luasql</tt>.
 This table is used to store the initialization methods of the
 loaded drivers.
-This method is used to create an
+These methods are used to create an
 <a href="#environment_object">environment object</a>
 which is used to create a
 <a href="#connection_object">connection object</a>.
@@ -56,6 +58,7 @@ A connection object can execute SQL statements and eventually
 create a
 <a href="#cursor_object">cursor object</a>
 which is used to retrieve data.
+</p>
 <p>
 Each LuaSQL driver is composed by two files:
 a C source file that implements the driver functions;
@@ -63,6 +66,9 @@ and a Lua script used to load the dynamic library.
 The host application can be statically linked with one or more drivers
 or they can be loaded dynamically by the corresponding Lua script (this
 requires the built-in <tt>loadlib</tt> function Lua 5 offers).
+</p>
+<p>
+LuaSQL is <a href="license.html">free software</a>.
 </p>
 
 

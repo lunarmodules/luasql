@@ -1,7 +1,8 @@
 /*
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
-** $Id: ls_oci8.c,v 1.13 2003/10/24 10:48:12 tomas Exp $
+** See Copyright Notice in license.html
+** $Id: ls_oci8.c,v 1.14 2003/12/01 16:08:38 tomas Exp $
 */
 
 #include <assert.h>

@@ -3,8 +3,10 @@ functionality available in any database manager.
 
 Here goes a small description of the files in the distribution
 
+    authors.html     -- List of authors
     def.tmpl         -- .DEF template
     index.html       -- Home page
+    licence.html     -- Copyright & License
     loader.tmpl      -- Lua loader template
     ls_mysql.c       -- MySQL driver
     ls_oci8.c        -- Oracle OCI 8 driver
@@ -19,4 +21,4 @@ Here goes a small description of the files in the distribution
     README           -- This file
     test.lua         -- Overall API test script
 
-$Id: README,v 1.4 2003/10/24 11:03:51 tomas Exp $
+$Id: README,v 1.5 2003/12/01 16:08:38 tomas Exp $

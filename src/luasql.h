@@ -1,5 +1,6 @@
 /*
-** $Id: luasql.h,v 1.7 2003/11/24 10:42:41 tomas Exp $
+** $Id: luasql.h,v 1.8 2003/12/01 16:08:38 tomas Exp $
+** See Copyright Notice in license.html
 */
 
 #ifndef _LUASQL_

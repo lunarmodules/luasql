@@ -1,3 +1,5 @@
+-- See Copyright Notice in license.html
+
 -- load driver
 require"postgres"
 -- create environment object

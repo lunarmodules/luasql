@@ -1,4 +1,5 @@
 #!/usr/local/bin/lua
+-- See Copyright Notice in license.html
 
 TOTAL_FIELDS = 400
 TOTAL_ROWS = 40

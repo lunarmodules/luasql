@@ -1,5 +1,6 @@
+<! See Copyright Notice in license.html>
 <html>
-<!$Id: index.html,v 1.13 2003/11/25 16:12:19 tomas Exp $>
+<!$Id: index.html,v 1.14 2003/12/01 16:08:38 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -28,6 +29,7 @@ ul { list-style-type: disc };
 <a href=#new>what's new</a> &middot;
 <a href=#installation>installation</a> &middot;
 <a href="manual.html">manual</a> &middot;
+<a href="license.html">license</a> &middot;
 <a href=#hist>history</a>
 </small></center>
 <p>
@@ -53,6 +55,7 @@ ul { list-style-type: disc };
 	<li> <a href="manual.html#oracle_extensions">Oracle extensions</a>
 	<li> <a href="manual.html#examples">Examples</a>
 	</ul>
+<li> <a href="license.html">Copyright & License</a>
 <li> <a href=#hist>History</a>
 </ul>
 </p>
@@ -78,11 +81,14 @@ LuaSQL is <a href="license.html">free software</a>.
 LuaSQL version 2.0 alpha (for Lua 5.0) is now available for
 <a href="#download">download</a>!
 The PostgreSQL driver
-has been tested on Linux and MacOS X,
-the ODBC driver has been tested on Windows
-(SQLServer and Microsoft Access drivers),
-the MySQL driver has been tested on Linux
-and the Oracle driver on Windows.
+has been tested on Linux and MacOS X
+and is compatible with PostgreSQL 7.x.
+The ODBC driver has been tested on Windows
+(SQLServer and Microsoft Access drivers).
+The MySQL driver has been tested on Linux
+and is compatible with version 4.1.
+The Oracle driver has been tested on Windows
+and is compatible with OCI 8 API.
 </p>
 
 
@@ -118,7 +124,7 @@ Version 2.0 has some design modifications and implementation improvements
 LuaSQL is distributed as a set of C source files and a Lua script that
 loads the dynamic library (if the library is not statically linked to
 the application).
-Each driver should be compiled within the luasql.c file (it's so small
+Each driver should be compiled together with luasql.c file (it's so small
 that we don't make another library of it) to generate a library.
 This library should be linked to the application (the initialization
 function is <tt>luasql_libopen_<i>drivername</i></tt> and it's a Lua
@@ -127,8 +133,7 @@ or dynamically loaded.
 In this case, LuaSQL provide a Lua script template that must be
 edited to suit the installation: the text <tt>LIB_NAME</tt> (in the line
 <tt>local&nbsp;libname&nbsp;=&nbsp;"LIB_NAME"</tt>) should be substituted by the
-complete path of the dynamic library (or relative to the current directory,
-but that's not safe).
+complete path of the dynamic library.
 The distribution contains a Makefile that has lines to do this job,
 using <tt>sed</tt>, according to each driver and platform.
 
@@ -141,7 +146,7 @@ using <tt>sed</tt>, according to each driver and platform.
 Version 2.0 was redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
 and Tom&aacute;s Guisasola behind the Kepler Project.
 The implementation is compatible with Lua 5.0 and was coded by
-Tom&aacute;s Guisasola and Eduardo Quint&atilde;o.
+Tom&aacute;s Guisasola, Eduardo Quint&atilde;o and Leonardo Godinho.
 
 <h4>LuaSQL 1.0</h4>
 <p>
@@ -162,6 +167,7 @@ LuaSQL development was sponsored by
 <a href=#new>what's new</a> &middot;
 <a href=#installation>installation</a> &middot;
 <a href="manual.html">manual</a> &middot;
+<a href="license.html">license</a> &middot;
 <a href=#hist>history</a>
 </small></center>
 <p>

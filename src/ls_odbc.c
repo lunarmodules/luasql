@@ -2,7 +2,8 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
-** $Id: ls_odbc.c,v 1.14 2003/10/24 10:45:01 tomas Exp $
+** See Copyright Notice in license.html
+** $Id: ls_odbc.c,v 1.15 2003/12/01 16:08:38 tomas Exp $
 */
 
 #include <assert.h>
