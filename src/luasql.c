@@ -60,36 +60,3 @@ LUASQL_API void luasql_getlibtable (lua_State *L) {
 		lua_setglobal (L, LUASQL_TABLENAME);
 	}
 }
-
-
-/*
-** Check the type (metatable) of #1 arg
-** Do NOT pop the argument
-*/
-/*
-LUASQL_API void *luasql_getuserdata (lua_State *L, const char *type) {
-	return luaL_checkudata (L, 1, type);
-}
-*/
-
-
-/*
-
-static int sqlOpen(lua_State *L) {
-    const char *driver = luaL_checkstring(L, 2);
-    lua_gettable(L, 1);
-    if (lua_isnil(L, -1))
-		luaL_error(L, "driver '%s' not loaded.", driver);
-    lua_call(L, 0, 2);
-    return 2;
-}
-
-LUASQL_API int lua_sqllibopen(lua_State *L) {
-    lua_newtable(L);
-    lua_pushstring(L, "Open");
-    lua_pushcfunction(L, sqlOpen);
-    lua_settable(L, -3);
-    lua_setglobal(L, "sql");
-	return 1;
-}
-*/
