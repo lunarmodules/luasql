@@ -1,0 +1,81 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "luasqlmysql_dll"=.\luasqlmysql_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    luasqlmysql_dll
+    ..
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "luasqlodbc_dll"=.\luasqlodbc_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    luasqlodbc_dll
+    ..
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "luasqloci8_dll"=.\luasqloci8_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    luasqloci8_dll
+    ..
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "luasqlpostgres_dll"=.\luasqlpostgres_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    luasqlpostgres_dll
+    ..
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+
