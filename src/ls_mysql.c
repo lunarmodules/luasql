@@ -1,7 +1,7 @@
 /*
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
-** $Id: ls_mysql.c,v 1.2 2003/05/30 10:04:59 tomas Exp $
+** $Id: ls_mysql.c,v 1.3 2003/07/23 18:32:38 eduquintao Exp $
 */
 
 #include <assert.h>
@@ -25,12 +25,11 @@ typedef struct {
 	short      closed;
 } env_data;
 
-
 typedef struct {
 	short      closed;
 	int        env;                /* reference to environment */
 	int        auto_commit;        /* 0 for manual commit */
-	PGconn    *pg_conn;
+	MYSQL     *my_conn;
 } conn_data;
 
 
@@ -38,9 +37,10 @@ typedef struct {
 	short      closed;
 	int        conn;               /* reference to connection */
 	int        numcols;            /* number of columns */
+	int        numrows;			   /* number of rows returned or affected */
 	int        colnames, coltypes; /* reference to column information tables */
-	int        curr_tuple;         /* next tuple to be read */
-	PGresult  *pg_res;
+	int        curr_tuple;         /* current tuple to be read by fetch */
+	MYSQL_RES *my_res;
 } cur_data;
 
 
@@ -55,8 +55,8 @@ LUASQL_API int luasql_libopen_mysql (lua_State *L);
 */
 static env_data *getenvironment (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
-	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
-	luaL_argcheck (L, !env->closed, 1, LUASQL_PREFIX"environment is closed");
+	luaL_argcheck (L, env != NULL, 1, "environment expected");
+	luaL_argcheck (L, !env->closed, 1, "environment is closed");
 	return env;
 }
 
@@ -66,8 +66,8 @@ static env_data *getenvironment (lua_State *L) {
 */
 static conn_data *getconnection (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_MYSQL);
-	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	luaL_argcheck (L, !conn->closed, 1, LUASQL_PREFIX"connection is closed");
+	luaL_argcheck (L, conn != NULL, 1, "connection expected");
+	luaL_argcheck (L, !conn->closed, 1, "connection is closed");
 	return conn;
 }
 
@@ -77,8 +77,8 @@ static conn_data *getconnection (lua_State *L) {
 */
 static cur_data *getcursor (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_MYSQL);
-	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
-	luaL_argcheck (L, !cur->closed, 1, LUASQL_PREFIX"cursor is closed");
+	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
+	luaL_argcheck (L, !cur->closed, 1, "cursor is closed");
 	return cur;
 }
 
@@ -86,11 +86,12 @@ static cur_data *getcursor (lua_State *L) {
 /*
 ** Push the value of #i field of #tuple row.
 */
-static void pushvalue (lua_State *L, PGresult *res, int tuple, int i) {
-	if (PQgetisnull (res, tuple, i-1))
+static void pushvalue (lua_State *L, void *row) {
+/* Levar em consideracao os tipos mais proximos a lua */
+	if (row == NULL)
 		lua_pushnil (L);
 	else
-		lua_pushstring (L, PQgetvalue (res, tuple, i-1));
+		lua_pushstring (L, row);
 }
 
 
@@ -99,29 +100,33 @@ static void pushvalue (lua_State *L, PGresult *res, int tuple, int i) {
 */
 static int cur_fetch (lua_State *L) {
 	cur_data *cur = getcursor (L);
-	PGresult *res = cur->pg_res;
+	MYSQL_RES *res = cur->my_res;
+	MYSQL_ROW row;
+	MYSQL_FIELD *fields;
 	int tuple = cur->curr_tuple;
+	fields = mysql_fetch_fields(res);
 
-	if (tuple >= PQntuples(cur->pg_res)) {
+	if (tuple >= cur->numrows) {
 		lua_pushnil(L);  /* no more results */
 		return 1;
 	}
 
 	cur->curr_tuple++;
+	row = mysql_fetch_row(res);
 	if (lua_istable (L, 2)) {
 		int i;
 		const char *opts = luaL_optstring (L, 3, "n");
 		if (strchr (opts, 'n') != NULL)
 			/* Copy values to numerical indices */
-			for (i = 1; i <= cur->numcols; i++) {
-				pushvalue (L, res, tuple, i);
-				lua_rawseti (L, 2, i);
+			for (i = 0; i < cur->numcols; i++) {
+				pushvalue (L, row[i]);
+				lua_rawseti (L, 2, i+1);
 			}
 		if (strchr (opts, 'a') != NULL)
 			/* Copy values to alphanumerical indices */
-			for (i = 1; i <= cur->numcols; i++) {
-				lua_pushstring (L, PQfname (res, i-1));
-				pushvalue (L, res, tuple, i);
+			for (i = 0; i < cur->numcols; i++) {
+				lua_pushstring (L, fields[i].name);
+				pushvalue (L, row[i]);
 				lua_rawset (L, 2);
 			}
 		lua_pushvalue(L, 2);
@@ -129,8 +134,8 @@ static int cur_fetch (lua_State *L) {
 	}
 	else {
 		int i;
-		for (i = 1; i <= cur->numcols; i++)
-			pushvalue (L, res, tuple, i);
+		for (i = 0; i < cur->numcols; i++)
+			pushvalue (L, row[i]);
 		return cur->numcols; /* return #numcols values */
 	}
 }
@@ -148,7 +153,8 @@ static int cur_close (lua_State *L) {
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
-	PQclear(cur->pg_res);
+/* Checar o my_res antes */
+	mysql_free_result(cur->my_res);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
@@ -161,28 +167,33 @@ static int cur_close (lua_State *L) {
 /*
 ** Get the internal database type of the given column.
 */
-static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
-	Oid codigo = PQftype (result, i);
-	char stmt[100];
-  	PGresult *res;
+static char *getcolumntype (enum enum_field_types type) {
 
- 	sprintf (stmt, "select typname from pg_type where oid = %d", codigo);
-  	res = PQexec(conn, stmt);
-	strcpy (buff, "undefined");
-
-	if (PQresultStatus (res) == PGRES_TUPLES_OK) {
-		if (PQntuples(res) > 0) {
-			char *name = PQgetvalue(res, 0, 0);
-			if (strcmp (name, "bpchar")==0 || strcmp (name, "varchar")==0) {
-				int modifier = PQfmod (result, i) - 4;
-				sprintf (buff, "%.20s (%d)", name, modifier);
-			}
-			else
-				strncpy (buff, name, 20);
-		}
+	switch (type) {
+		case MYSQL_TYPE_VAR_STRING: case MYSQL_TYPE_STRING:
+			return "string";
+		case MYSQL_TYPE_DECIMAL: case MYSQL_TYPE_SHORT: case MYSQL_TYPE_LONG:
+		case MYSQL_TYPE_FLOAT: case MYSQL_TYPE_DOUBLE: case MYSQL_TYPE_LONGLONG:
+		case MYSQL_TYPE_INT24: case MYSQL_TYPE_YEAR: case MYSQL_TYPE_TINY: 
+			return "number";
+		case MYSQL_TYPE_TINY_BLOB: case MYSQL_TYPE_MEDIUM_BLOB:
+		case MYSQL_TYPE_LONG_BLOB: case MYSQL_TYPE_BLOB:
+			return "binary";
+		case MYSQL_TYPE_DATE: case MYSQL_TYPE_NEWDATE:
+			return "date";
+		case MYSQL_TYPE_DATETIME:
+			return "datetime";
+		case MYSQL_TYPE_TIME:
+			return "time";
+		case MYSQL_TYPE_ENUM: case MYSQL_TYPE_SET:
+			return "set";
+		case MYSQL_TYPE_TIMESTAMP:
+			return "timestamp";
+		case MYSQL_TYPE_NULL:
+			return "null";
+		default:
+			return "undefined";
 	}
-	PQclear(res);
-	return buff;
 }
 
 
@@ -190,11 +201,14 @@ static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
 ** Creates the list of fields names and pushes it on top of the stack.
 */
 static void create_colnames (lua_State *L, cur_data *cur) {
-	PGresult *result = cur->pg_res;
+/* Posso usar o proprio cur->my_res ???? */
+	MYSQL_RES *result = cur->my_res;
+	MYSQL_FIELD *fields;
 	int i;
+	fields = mysql_fetch_fields(result);
 	lua_newtable (L);
 	for (i = 1; i <= cur->numcols; i++) {
-		lua_pushstring (L, PQfname (result, i-1));
+		lua_pushstring (L, fields[i-1].name);
 		lua_rawseti (L, -2, i);
 	}
 }
@@ -204,17 +218,20 @@ static void create_colnames (lua_State *L, cur_data *cur) {
 ** Creates the list of fields types and pushes it on top of the stack.
 */
 static void create_coltypes (lua_State *L, cur_data *cur) {
-	PGresult *result = cur->pg_res;
-	conn_data *conn;
+	/* conn_data *conn; */
 	char typename[100];
+	MYSQL_RES *result = cur->my_res;
+	MYSQL_FIELD *fields;
 	int i;
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+	fields = mysql_fetch_fields(result);
+/*	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	if (!lua_isuserdata (L, -1))
 		luaL_error (L, LUASQL_PREFIX"invalid connection");
-	conn = (conn_data *)lua_touserdata (L, -1);
+	conn = (conn_data *)lua_touserdata (L, -1);*/
 	lua_newtable (L);
 	for (i = 1; i <= cur->numcols; i++) {
-		lua_pushstring(L, getcolumntype (conn->pg_conn, result, i-1, typename));
+		sprintf (typename, "%.20s (%d)", getcolumntype (fields[i-1].type), fields[i-1].length);
+		lua_pushstring(L, typename);
 		lua_rawseti (L, -2, i);
 	}
 }
@@ -261,7 +278,7 @@ static int cur_getcoltypes (lua_State *L) {
 ** Push the number of rows.
 */
 static int cur_numrows (lua_State *L) {
-	lua_pushnumber (L, PQntuples (getcursor(L)->pg_res));
+	lua_pushnumber (L, getcursor(L)->numrows );
 	return 1;
 }
 
@@ -269,18 +286,19 @@ static int cur_numrows (lua_State *L) {
 /*
 ** Create a new Cursor object and push it on top of the stack.
 */
-static int create_cursor (lua_State *L, int conn, PGresult *result) {
+static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int rows, int cols) {
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_MYSQL);
 
 	/* fill in structure */
 	cur->closed = 0;
 	cur->conn = LUA_NOREF;
-	cur->numcols = PQnfields(result);
+	cur->numcols = cols;
+	cur->numrows = rows;
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
 	cur->curr_tuple = 0;
-	cur->pg_res = result;
+	cur->my_res = result;
 	lua_pushvalue (L, conn);
 	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -288,26 +306,11 @@ static int create_cursor (lua_State *L, int conn, PGresult *result) {
 }
 
 
-static void sql_commit(conn_data *conn) {
-	PQexec(conn->pg_conn, "COMMIT");
-}
-
-
-static void sql_begin(conn_data *conn) {
-	PQexec(conn->pg_conn, "BEGIN"); 
-}
-
-
-static void sql_rollback(conn_data *conn) {
-	PQexec(conn->pg_conn, "ROLLBACK");
-}
-
-
 /*
 ** Close a Connection object.
 */
 static int conn_close (lua_State *L) {
-	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_MYSQL);
+	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed)
 		return 0;
@@ -315,7 +318,8 @@ static int conn_close (lua_State *L) {
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	PQfinish(conn->pg_conn);
+/* Testar o my_conn ?????? */
+	mysql_close(conn->my_conn);
 	lua_pushnumber(L, 1);
 	return 1;
 }
@@ -329,19 +333,28 @@ static int conn_close (lua_State *L) {
 static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
-	PGresult *res;
-	res = PQexec(conn->pg_conn, statement);
-	if (res && PQresultStatus(res)==PGRES_COMMAND_OK) {
-		/* no tuples returned */
-		lua_pushnumber(L, atof(PQcmdTuples(res)));
-		return 1;
+	unsigned long st_len = strlen(statement);
+	if (!mysql_real_query(conn->my_conn, statement, st_len)) {
+		unsigned int num_rows, num_cols;
+		MYSQL_RES *res;
+		res = mysql_store_result(conn->my_conn);
+		num_rows = mysql_affected_rows(conn->my_conn);
+		num_cols = mysql_field_count(conn->my_conn);
+		if (res) { /* tuples returned */
+			return create_cursor (L, 1, res, num_rows, num_cols);
+		}
+		else { /* mysql_store_result() returned nothing; should it have? */
+			if(num_cols == 0) { /* no tuples returned */
+            	/* query does not return data (it was not a SELECT) */
+				lua_pushnumber(L, num_rows);
+				return 1;
+        	}
+			else /* mysql_store_result() should have returned data */
+				return luasql_faildirect(L, mysql_error(conn->my_conn));
+		}
 	}
-	else if (res && PQresultStatus(res)==PGRES_TUPLES_OK)
-		/* tuples returned */
-		return create_cursor (L, 1, res);
-	else
-		/* error */
-		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
+	else  /* error executing query */
+		return luasql_faildirect(L, mysql_error(conn->my_conn));
 }
 
 
@@ -350,9 +363,7 @@ static int conn_execute (lua_State *L) {
 */
 static int conn_commit (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	sql_commit(conn);
-	if (conn->auto_commit == 0) 
-		sql_begin(conn); 
+	mysql_commit(conn->my_conn);
 	return 0;
 }
 
@@ -362,27 +373,23 @@ static int conn_commit (lua_State *L) {
 */
 static int conn_rollback (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	sql_rollback(conn);
-	if (conn->auto_commit == 0) 
-		sql_begin(conn); 
+	mysql_rollback(conn->my_conn);
 	return 0;
 }
 
 
 /*
-** Set "auto commit" property of the connection.
-** If 'true', then rollback current transaction.
-** If 'false', then start a new transaction.
+** Set "auto commit" property of the connection. Modes ON/OFF
 */
 static int conn_setautocommit (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	if (lua_toboolean (L, 2)) {
 		conn->auto_commit = 1;
-		sql_rollback(conn); /* Undo active transaction. */
+		mysql_autocommit(conn->my_conn, 1); /* Set it ON */
 	}
 	else {
 		conn->auto_commit = 0;
-		sql_begin(conn);
+		mysql_autocommit(conn->my_conn, 0);
 	}
 	return 0;
 }
@@ -391,7 +398,7 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
+static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_MYSQL);
 
@@ -399,46 +406,40 @@ static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 	conn->closed = 0;
 	conn->env = LUA_NOREF;
 	conn->auto_commit = 1;
-	conn->pg_conn = pg_conn;
+	conn->my_conn = my_conn;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	return 1;
 }
 
 
-static void notice_processor (void *arg, const char *message) {
-  (void)arg; (void)message;
-  /* arg == NULL */
-}
-
-
 /*
 ** Connects to a data source.
-** This driver provides two ways to connect to a data source:
-** (1) giving the connection parameters as a set of pairs separated
-**     by whitespaces in a string (first method parameter)
-** (2) giving one string for each connection parameter, said
+**     param: one string for each connection parameter, said
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
+	MYSQL *conn;
+	env_data *env = getenvironment(L);
+
 	const char *sourcename = luaL_checkstring(L, 2);
-	PGconn *conn;
-	getenvironment (L);	/* validate environment */
-	if ((lua_gettop (L) == 2) && (strchr (sourcename, '=') != NULL))
-		conn = PQconnectdb (luaL_check_string(L, 2));
-	else {
-		const char *username = luaL_optstring(L, 3, NULL);
-		const char *password = luaL_optstring(L, 4, NULL);
-		const char *pghost = luaL_optstring(L, 5, NULL);
-		const char *pgport = luaL_optstring(L, 6, NULL);
+	const char *username = luaL_optstring(L, 3, NULL);
+	const char *password = luaL_optstring(L, 4, NULL);
+	const char *host = luaL_optstring(L, 5, NULL);
+	const char *port = luaL_optstring(L, 6, 0);
 
-		conn = PQsetdbLogin(pghost, pgport, NULL, NULL,
-			sourcename, username, password);
-	}
+	/* Inicializa o ponteiro da conexao e testa se conseguiu  */
+	conn = mysql_init(NULL);
+	if (conn == NULL)
+		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting: Out of memory.");
 
-	if (PQstatus(conn) == CONNECTION_BAD)
+	if (!mysql_real_connect(conn, host, username, password, 
+		sourcename, port, NULL, 0))
+	{
+		mysql_close(conn);
 		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting to database.");
-	PQsetNoticeProcessor(conn, notice_processor, NULL);
+	}
+		/*mysql_error(&conn));  */
 	return create_connection(L, 1, conn);
 }
 
@@ -447,7 +448,7 @@ static int env_connect (lua_State *L) {
 ** Close environment object.
 */
 static int env_close (lua_State *L) {
-	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
+	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed)
 		return 0;
