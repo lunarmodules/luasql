@@ -83,7 +83,13 @@ function define_table (n)
 	for i = 1, n do
 		s = s.."f"..i.." varchar(30), "
 	end
-	return string.sub (s, 1, -3)..")"
+	s = string.sub(s, 1, -3)..")"
+
+	if driver == "mysql" then
+		s = s.." TYPE = InnoDB;" -- mysql issue
+	end
+	
+	return s
 end
 
 ---------------------------------------------------------------------
@@ -139,7 +145,7 @@ function fetch_new_table ()
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
 	-- retrieve data using a new table.
-	local cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t"))
+	local cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch{}
 	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
@@ -314,7 +320,7 @@ function column_info ()
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
 		local type_i = types[i]
-		assert (type_i == "varchar (30)" or type_i == "string", "incorrect column types table")
+		assert (type_i == "varchar (30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
