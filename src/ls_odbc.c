@@ -324,31 +324,17 @@ static int cur_close (lua_State *L) {
 
 
 /*
-** Create a table with the names and the types of the fields.
-** The names are stored at the position they appear in the result;
-** the types are stored in entries named by the corresponding field.
+** Returns the table with column names.
 */
-/*
-static int sqlCurGetColInfo (lua_State *L) {
+static int cur_colnames (lua_State *L) {
 	cur_data *cur = (cur_data *) getcursor (L);
-	SQLCHAR buffer[256];
-	SQLSMALLINT namelen;
-	SQLSMALLINT datatype;
-	SQLRETURN ret;
-
-    lua_newtable(L);
-    for (i = 1; i <= cur->numcols; i++) {
-        ret = SQLDescribeCol(cur->hstmt, i, buffer, sizeof(buffer), 
-                &namelen, &datatype, NULL, NULL, NULL);
-        if (ret == SQL_ERROR) return fail(L, hSTMT, cur->hstmt);
-        lua_pushstring (L, buffer);
-		lua_pushvalue (L, -1);
-		lua_rawseti (L, -3, i);
-        lua_pushstring(L, sqltypetolua(datatype));
-		lua_rawset (L, -3);
-    }
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
 	return 1;
 }
+
+
+/*
+** Returns the table with column types.
 */
 static int cur_coltypes (lua_State *L) {
 	cur_data *cur = (cur_data *) getcursor (L);
@@ -356,11 +342,6 @@ static int cur_coltypes (lua_State *L) {
 	return 1;
 }
 
-static int cur_colnames (lua_State *L) {
-	cur_data *cur = (cur_data *) getcursor (L);
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
-	return 1;
-}
 
 /*
 ** Creates two tables with the names and the types of the columns.
@@ -701,7 +682,8 @@ static void create_metatables (lua_State *L) {
 */
 static int create_environment (lua_State *L) {
 	env_data *env;
-	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &env->henv);
+	SQLHENV henv;
+	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &henv);
 	if (error(ret))
 		return luasql_faildirect(L,LUASQL_PREFIX"error creating environment.");
 
@@ -710,6 +692,7 @@ static int create_environment (lua_State *L) {
 	/* fill in structure */
 	env->closed = 0;
 	env->conn_counter = 0;
+	env->henv = henv;
 	return 1;
 }
 
