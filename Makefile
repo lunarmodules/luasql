@@ -45,7 +45,7 @@ TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
 SRCS= README Makefile \
 	luasql.h luasql.c def.tmpl \
-	ls_pg.c \
+	ls_postgres.c \
 	ls_odbc.c \
 	ls_oci8.c \
 	ls_mysql.c \
