@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.1 2004/11/08 15:55:23 tomas Exp $
+** $Id: ls_postgres.c,v 1.2 2004/11/17 14:16:52 tomas Exp $
 */
 
 #include <assert.h>
@@ -12,11 +12,11 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <libpq-fe.h>
+#include "libpq-fe.h"
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <compat-5.1.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "compat-5.1.h"
 
 #include "luasql.h"
 

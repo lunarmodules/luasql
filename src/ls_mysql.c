@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.17 2004/11/03 10:46:06 tomas Exp $
+** $Id: ls_mysql.c,v 1.18 2004/11/17 14:16:52 tomas Exp $
 */
 
 #include <assert.h>
@@ -16,11 +16,11 @@
 #define NO_CLIENT_LONG_LONG
 #endif
 
-#include <mysql.h>
+#include "mysql.h"
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <compat-5.1.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "compat-5.1.h"
 
 #include "luasql.h"
 

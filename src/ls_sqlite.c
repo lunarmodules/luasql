@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.6 2004/11/03 10:46:06 tomas Exp $
+** $Id: ls_sqlite.c,v 1.7 2004/11/17 14:16:52 tomas Exp $
 */
 
 #include <stdio.h>
@@ -10,11 +10,11 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <sqlite.h>
+#include "sqlite.h"
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <compat-5.1.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "compat-5.1.h"
 
 #include "luasql.h"
 

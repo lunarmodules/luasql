@@ -1,13 +1,13 @@
 /*
-** $Id: luasql.c,v 1.13 2004/11/03 10:46:06 tomas Exp $
+** $Id: luasql.c,v 1.14 2004/11/17 14:16:52 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
 #include <string.h>
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <compat-5.1.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "compat-5.1.h"
 
 #include "luasql.h"
 

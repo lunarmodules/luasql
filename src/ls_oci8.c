@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.23 2004/11/03 10:46:06 tomas Exp $
+** $Id: ls_oci8.c,v 1.24 2004/11/17 14:16:52 tomas Exp $
 */
 
 #include <assert.h>
@@ -11,14 +11,14 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <oci.h>
-#include <oratypes.h>
-#include <ociapr.h>
-#include <ocidem.h>
+#include "oci.h"
+#include "oratypes.h"
+#include "ociapr.h"
+#include "ocidem.h"
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <compat-5.1.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "compat-5.1.h"
 
 #include "luasql.h"
 
