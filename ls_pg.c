@@ -139,7 +139,6 @@ static int cur_fetch (lua_State *L) {
 ** Return 1
 */
 static int cur_close (lua_State *L) {
-	conn_data *conn;
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
 	if (cur->closed)
 		return 0;
@@ -212,7 +211,7 @@ static void create_coltypes (lua_State *L, cur_data *cur) {
 	int i;
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	if (!lua_isuserdata (L, -1))
-		luaL_error (L, LUASQL_PREFIX"unexpected error (ColInfo)");
+		luaL_error (L, LUASQL_PREFIX"invalid connection");
 	conn = (conn_data *)lua_touserdata (L, -1);
 	lua_newtable (L);
 	for (i = 1; i <= cur->numcols; i++) {
@@ -233,6 +232,7 @@ static void pushtable (lua_State *L, cur_data *cur, size_t off, creator func) {
 		lua_rawgeti (L, LUA_REGISTRYINDEX, *ref);
 	else {
 		func (L, cur);
+		/* Stores a reference to it on the cursor structure */
 		lua_pushvalue (L, -1);
 		*ref = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
@@ -275,13 +275,14 @@ static int create_cursor (lua_State *L, int conn, PGresult *result) {
 
 	/* fill in structure */
 	cur->closed = 0;
-	lua_pushvalue (L, conn);
-	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->conn = LUA_NOREF;
 	cur->numcols = PQnfields(result);
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
 	cur->curr_tuple = 0;
 	cur->pg_res = result;
+	lua_pushvalue (L, conn);
+	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
@@ -306,7 +307,6 @@ static void sql_rollback(conn_data *conn) {
 ** Close a Connection object.
 */
 static int conn_close (lua_State *L) {
-	env_data *env;
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
 	if (conn->closed)
 		return 0;
@@ -398,10 +398,11 @@ static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 
 	/* fill in structure */
 	conn->closed = 0;
-	lua_pushvalue (L, env);
-	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
+	conn->env = LUA_NOREF;
 	conn->auto_commit = 1;
 	conn->pg_conn = pg_conn;
+	lua_pushvalue (L, env);
+	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	return 1;
 }
 
@@ -421,7 +422,7 @@ static void notice_processor (void *arg, const char *message) {
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
-	env_data *env = getenvironment (L);
+	/*env_data *env =*/ getenvironment (L);	/* validate environment */
 	const char *sourcename = luaL_checkstring(L, 2);
 	PGconn *conn;
 

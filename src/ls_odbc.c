@@ -37,7 +37,6 @@ typedef struct {
 typedef struct {
 	short      closed;
 	int        env;                /* reference to environment */
-	int        auto_commit;        /* 0 for manual commit */
 	SQLHDBC    hdbc;               /* database connection handle */
 } conn_data;
 
@@ -369,14 +368,16 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 */
 static int create_cursor (lua_State *L, conn_data *conn, 
         const SQLHSTMT hstmt, const SQLSMALLINT numcols) {
-    /* allocate cursor userdatum */
     cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
-    /* fill with inherited stuff */
+    /* fill in structure */
 	cur->closed = 0;
-    cur->hstmt = hstmt;
+	cur->conn = LUA_NOREF;
     cur->numcols = numcols;
+	cur->colnames = LUA_NOREF;
+	cur->coltypes = LUA_NOREF;
+    cur->hstmt = hstmt;
 	lua_pushvalue (L, 1);
     cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -565,6 +566,7 @@ static int create_connection (lua_State *L, env_data *env, SQLHDBC hdbc) {
 
 	/* fill in structure */
 	conn->closed = 0;
+	conn->env = LUA_NOREF;
 	conn->hdbc = hdbc;
 	lua_pushvalue (L, 1);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
@@ -637,7 +639,6 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_reg connection_methods[] = {
 		{"close", conn_close},
-		/*{"TableList", sqlConnTableList},*/
 		{"execute", conn_execute},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
@@ -647,10 +648,8 @@ static void create_metatables (lua_State *L) {
 	struct luaL_reg cursor_methods[] = {
 		{"close", cur_close},
 		{"fetch", cur_fetch},
-		/*{"colinfo", cur_colinfo},*/
 		{"getcoltypes", cur_coltypes},
 		{"getcolnames", cur_colnames},
-		/*{"numrows", sqlCurNumRows},*/
 		{NULL, NULL},
 	};
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_ODBC, environment_methods);
