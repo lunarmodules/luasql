@@ -5,7 +5,7 @@
 #define LUASQL_API
 #endif
 
-#define LUASQL_PREFIX "SQL: "
+#define LUASQL_PREFIX "LuaSQL: "
 #define LUASQL_TABLENAME "luasql"
 #define LUASQL_ENVIRONMENT "Each driver must have an environment metatable"
 #define LUASQL_CONNECTION "Each driver must have a connection metatable"
