@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 lua50d.lib lualib50d.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/mysqld.dll" /pdbtype:sept /libpath:"../../lua/lib/vc6" /libpath:"../mysql-4.0.23-win/lib/debug"
+# ADD LINK32 lua50d.lib lualib50d.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/mysql40d.dll" /pdbtype:sept /libpath:"../../lua/lib/vc6" /libpath:"../mysql-4.0.23-win/lib/debug"
 
 !ENDIF 
 
