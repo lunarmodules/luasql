@@ -1,240 +1,233 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2//EN">
 <html>
 <head>
-<meta name="generator" content="HTML Tidy, see www.w3.org">
-<title>LuaSQL: Database connectivity for the Lua programming
-language</title>
+<! See Copyright Notice in license.html>
+<title>LuaSQL: Database connectivity for the Lua programming language</title>
 <style type="text/css">
-ul { list-style-type: disc };
+ul { list-style-type: disc }
 </style>
 </head>
+
 <body bgcolor="#FFFFFF">
+
 <hr>
+
 <center>
-<table border="0" cellspacing="2" cellpadding="2">
-<tr>
-<td align="center"><a href=
-"http://www.keplerproject.org/luasql"><img border="0" alt=
-"LuaSQL logo" src="luasql.png"></a> </td>
-</tr>
-
-<tr>
-<td align="center"><big><b>LuaSQL</b></big> </td>
-</tr>
-
-<tr>
-<td align="center" valign="top">Database connectivity for the <a
-href="http://www.lua.org">Lua</a> programming language</td>
-</tr>
+<table border=0 cellspacing=2 cellpadding=2>
+	<tr>
+		<td align=center>
+			<a href="http://www.keplerproject.org/luasql">
+				<img border=0 alt="LuaSQL logo" src="luasql.png">
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td align=center>
+			<big><b>LuaSQL</b></big>
+		</td>
+	</tr>
+	<tr>
+		<td align=center valign=top>
+			Database connectivity for the
+			<a href="http://www.lua.org">Lua</a> programming language
+		</td>
+	</tr>
 </table>
 </center>
+<p />
 
-<center><small><a href="#over">overview</a> &middot; <a href=
-"#version">current version</a> &middot; <a href=
-"#download">download</a> &middot; <a href="#new">news</a> &middot;
-<a href="#installation">installation</a> &middot; <a href=
-"manual.html">manual</a> &middot; <a href=
-"license.html">license</a> &middot; <a href="#credits">credits</a>
-&middot; <a href="#contact">contact us</a></small></center>
+<center><small>
+<a href=#over>overview</a> &middot;
+<a href=#version>current version</a> &middot;
+<a href=#download>download</a> &middot;
+<a href=#new>news</a> &middot;
+<a href=#installation>installation</a> &middot;
+<a href="manual.html">manual</a> &middot;
+<a href="license.html">license</a> &middot;
+<a href="#credits">credits</a> &middot;
+<a href="#contact">contact us</a>
+</small></center>
+<p />
 
 <hr>
+
 <h2>Contents</h2>
-
 <ul>
-<li><a href="#over">Overview</a></li>
-
-<li><a href="#version">Current Version</a></li>
-
-<li><a href="#download">Download</a></li>
-
-<li><a href="#new">What's new</a></li>
-
-<li><a href="#installation">Installation</a></li>
-
-<li><a href="manual.html">User's manual</a> 
-
-<ul>
-<li><a href="manual.html#introduction">Introduction</a></li>
-
-<li><a href="manual.html#environment_object">Environment
-objects</a></li>
-
-<li><a href="manual.html#connection_object">Connection
-objects</a></li>
-
-<li><a href="manual.html#cursor_object">Cursor objects</a></li>
-
-<li><a href="manual.html#postgres_extensions">PostgreSQL
-extensions</a></li>
-
-<li><a href="manual.html#mysql_extensions">MySQL
-extensions</a></li>
-
-<li><a href="manual.html#oracle_extensions">Oracle
-extensions</a></li>
-
-<li><a href="manual.html#examples">Examples</a></li>
+	<li> <a href=#over>Overview</a></li>
+	<li> <a href=#version>Current Version</a></li>
+	<li> <a href=#download>Download</a></li>
+	<li> <a href=#new>What's new</a></li>
+	<li> <a href=#installation>Installation</a></li>
+	<li> <a href="manual.html">User's manual</a></li>
+	<ul>
+		<li> <a href="manual.html#introduction">Introduction</a></li>
+		<li> <a href="manual.html#environment_object">Environment objects</a></li>
+		<li> <a href="manual.html#connection_object">Connection objects</a></li>
+		<li> <a href="manual.html#cursor_object">Cursor objects</a></li>
+		<li> <a href="manual.html#postgres_extensions">PostgreSQL extensions</a></li>
+		<li> <a href="manual.html#mysql_extensions">MySQL extensions</a></li>
+		<li> <a href="manual.html#oracle_extensions">Oracle extensions</a></li>
+		<li> <a href="manual.html#examples">Examples</a></li>
+	</ul>
+	<li> <a href="license.html">Copyright & License</a></li>
+	<li> <a href="#credits">Credits</a></li>
+	<li> <a href="#contact">Contact us</a></li>
 </ul>
-</li>
+<p />
 
-<li><a href="license.html">Copyright &amp; License</a></li>
-
-<li><a href="#credits">Credits</a></li>
-
-<li><a href="#contact">Contact us</a></li>
-</ul>
-
-<br>
-<br>
- 
-<a name="over"></a>
+<a name=over></a>
 <h2>Overview</h2>
-
-<p>LuaSQL is a simple interface from Lua to a DBMS. It enables a
-Lua program to:</p>
-
+<p>
+LuaSQL is a simple interface from Lua to a DBMS. It enables a Lua program to:
 <ul>
-<li>Connect to ODBC, Oracle, MySQL, SQLite, JDBC and PostgreSQL
-databases;</li>
-
-<li>Execute arbitrary SQL statements;</li>
-
-<li>Retrieve results in a row-by-row cursor fashion.</li>
+	<li> Connect to ODBC, Oracle, MySQL, SQLite, JDBC and PostgreSQL databases;</li>
+	<li> Execute arbitrary SQL statements;</li>
+	<li> Retrieve results in a row-by-row cursor fashion.</li>
 </ul>
 
-LuaSQL is free software and uses the same <a href=
-"license.html">license</a> as Lua 5.0. 
+LuaSQL is free software and uses the same <a href="license.html">license</a>
+as Lua 5.0.
 
-<a name="version"></a>
-<h2>Current version</h2>
+<a name=version></a>
+<h2>Current Version</h2>
+<p>
+LuaSQL version 2.0 beta 2 (for Lua 5.0) is now available for
+<a href="#download">download</a>.<br />
+The PostgreSQL driver has been tested on Linux and MacOS X and is compatible
+with PostgreSQL 7.x.
+The ODBC driver has been tested on Windows (SQLServer and Microsoft Access
+drivers).
+The MySQL driver has been tested on Linux and is compatible with versions 4.0
+and 4.1.
+The Oracle driver has been tested on Windows and is compatible with OCI 8 API.
+The SQLite driver had been tested on Linux and are compatible with versions 2.x.
+The JDBC driver has been tested with LuaJava Beta 3 and JDK 1.4 (MySQL driver).
+</p>
 
-<p>LuaSQL version 2.0 beta 2 (for Lua 5.0) is now available for <a
-href="#download">download</a>. The PostgreSQL driver has been
-tested on Linux and MacOS X and is compatible with PostgreSQL 7.x.
-The ODBC driver has been tested on Windows (SQLServer and Microsoft
-Access drivers). The MySQL driver has been tested on Linux and is
-compatible with versions 4.0 and 4.1. The Oracle driver has been
-tested on Windows and is compatible with OCI 8 API. The SQLite
-driver had been tested on Linux and are compatible with versions
-2.x. The JDBC driver has been tested with LuaJava Beta 3 and JDK
-1.4 (MySQL driver).</p>
-
-<a name="download"></a>
+<a name=download></a>
 <h2>Download</h2>
+LuaSQL can be downloaded in source code from the following links:
+<p />
+<blockquote>
+<a href="luasql-2.0b2.tar.gz">luasql-2.0b2.tar.gz</a><br>
+<a href="luasql-2.0b2.zip">luasql-2.0b2.zip</a>
+</blockquote><p>
 
-LuaSQL can be downloaded in source code from the following links: 
-
-<blockquote><a href=
-"luasql-2.0b2.tar.gz">luasql-2.0b2.tar.gz</a><br>
-<a href="luasql-2.0b2.zip">luasql-2.0b2.zip</a></blockquote>
-
-<a name="new"></a>
-<h2>What's new</h2>
-
-<ul>
-<li>[19/dec/2004] Version 2.0 beta 2 released</li>
-
-<li>[10/dec/2003] Version 2.0 beta released</li>
-</ul>
-
-<p>Version 2.0 beta 2 has some bug fixes and the new SQLite and
-JDBC drivers. Also, it follows the <a href=
-"http://www.keplerproject.org/compat">package proposal</a> for Lua
-5.1 (see section <a href="#installation">Installation</a> for more
-details).</p>
-
-<p>Version 2.0 has some design modifications and implementation
-improvements</p>
+<a name=new></a>
+<h2>What's New</h2>
 
 <ul>
-<li>New <tt>fetch</tt> method: more eficient and more flexible</li>
-
-<li>New <tt>setautocommit</tt> method</li>
-
-<li>Lua 5.0 and 5.1 compatible</li>
-
-<li>Dynamically loadable or statically linked</li>
-
-<li>New drivers for Oracle and MySQL databases</li>
+  <li>[12/19/2004] Version 2.0 beta 2 released
+  <li>[12/10/2003] Version 2.0 beta released
 </ul>
 
-<br>
-<br>
- <a name="installation"></a> 
+<p>
+Version 2.0 beta 2 has some bug fixes and the new SQLite and JDBC drivers.
+Also, it follows the
+<a href="http://www.keplerproject.org/compat">package proposal</a>
+for Lua 5.1
+(see section <a href="#installation">Installation</a> for more details).
+</p>
+<p>
+Version 2.0 has some design modifications and implementation improvements
+</p>
+<ul>
+  <li>New <tt>fetch</tt> method: more eficient and more flexible 
+  <li>New <tt>setautocommit</tt> method
+  <li>Lua 5.0 and 5.1 compatible
+  <li>Dynamically loadable or statically linked
+  <li>New drivers for Oracle and MySQL databases
+</ul>
 
+<a name="installation"></a>
 <h2>Installation</h2>
 
-<p>LuaSQL is distributed as a set of C source files: a common
-source and header file (<tt>luasql.h</tt> and <tt>luasql.c</tt>);
-and one source file for each driver. Each driver should be compiled
-together with luasql.c file (it is so small that we don't make
-another library of it) to generate a library. This library could be
-linked to the application (the initialization function is
-<tt>luaopen_luasql<i>drivername</i></tt> and it is a Lua
-open-library compatible function) or dynamically loaded.</p>
+<p>
+LuaSQL is distributed as a set of C source files:
+a common source and header file (<tt>luasql.h</tt> and <tt>luasql.c</tt>);
+and one source file for each driver.
+Each driver should be compiled together with luasql.c file (it is so small
+that we don't make another library of it) to generate a library.
+This library could be linked to the application (the initialization
+function is <tt>luaopen_luasql<i>drivername</i></tt> and it is a Lua
+open-library compatible function)
+or dynamically loaded.
+</p>
+<p>
+All LuaSQL drivers follow the
+<a href="http://www.keplerproject.org/compat">package proposal</a>
+for Lua 5.1,
+therefore this package should be "installed".
+In other words,
+if you are using Lua 5.0,
+the files <tt>compat-5.1.c</tt> and <tt>compat-5.1.h</tt> must be used
+in the compilation and the file <tt>compat-5.1.lua</tt> must be installed
+in the <tt>LUA_PATH</tt>.
+If you are using Lua 5.1,
+nothing should be done.
+</p>
 
-<p>All LuaSQL drivers follow the <a href=
-"http://www.keplerproject.org/compat">package proposal</a> for Lua
-5.1, therefore this package should be "installed". In other words,
-if you are using Lua 5.0, the files <tt>compat-5.1.c</tt> and
-<tt>compat-5.1.h</tt> must be used in the compilation and the file
-<tt>compat-5.1.lua</tt> must be installed in the <tt>LUA_PATH</tt>.
-If you are using Lua 5.1, nothing should be done.</p>
-
-In order to use LuaSQL over JDBC, make sure that: 
-
+In order to use LuaSQL over JDBC, make sure that:
 <ul>
-<li>Lua is running with <a href=
-"http://www.keplerproject.org/luajava">LuaJava</a></li>
-
-<li>LuaSQL jar is in the Java's virtual machine classpath</li>
-
-<li>JDBC driver of the desired database is also in the virtual
-machine classpath</li>
+  <li> Lua is running with <a href="http://www.keplerproject.org/luajava">LuaJava</a>
+  <li> LuaSQL jar is in the Java's virtual machine classpath
+  <li> JDBC driver of the desired database is also in the virtual machine classpath
 </ul>
 
-<a name="credits"></a>
+
+<a name="credits"></a> 
+
 <h2>Credits</h2>
 
 <h4>LuaSQL 2.0</h4>
-
-<p>Version 2.0 was redesigned by Roberto Ierusalimschy,
-Andr&eacute; Carregal and Tom&aacute;s Guisasola as part of the <a
-href="http://www.keplerproject.org">Kepler Project</a>. The
-implementation is compatible with Lua 5.0 and was coded by
+<p>
+Version 2.0 was redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
+and Tom&aacute;s Guisasola as part of the
+<a href="http://www.keplerproject.org">Kepler Project</a>.
+The implementation is compatible with Lua 5.0 and was coded by
 Tom&aacute;s Guisasola, Eduardo Quint&atilde;o and Thiago Ponte,
 with many invaluable contributions by Michael Roth, Tiago Dionisio,
-Leonardo Godinho and Danilo Tuler.</p>
+Leonardo Godinho and Danilo Tuler.
 
 <h4>LuaSQL 1.0</h4>
+<p>
+LuaSQL was designed by Pedro Miller Rabinovitch and Roberto
+Ierusalimschy.
+The first implementation was compatible with Lua 4.0a.
+Many modifications were made but not distributed by Diego Nehab (ODBC),
+Carlos Cassino, Tom&aacute;s Guisasola and Eduardo Quint&atilde;o (PostgreSQL).
+<p>
+LuaSQL development was sponsored by 
+<a href="http://www.fabricadigital.com.br">F&aacute;brica Digital</a>.
 
-<p>LuaSQL was designed by Pedro Miller Rabinovitch and Roberto
-Ierusalimschy. The first implementation was compatible with Lua
-4.0a. Many modifications were made but not distributed by Diego
-Nehab (ODBC), Carlos Cassino, Tom&aacute;s Guisasola and Eduardo
-Quint&atilde;o (PostgreSQL).</p>
-
-<p>LuaSQL development was sponsored by <a href=
-"http://www.fabricadigital.com.br">F&aacute;brica Digital</a>.</p>
 
 <a name="contact"></a>
 <h2>Contact us</h2>
 
-<p>For more information please <a href=
-"mailto:info-NO-SPAM-THANKS@keplerproject.org">contact us</a>.
-Comments are welcome!</p>
+<p>
+For more information please
+<a href="mailto:info-NO-SPAM-THANKS@keplerproject.org">contact us</a>.
+Comments are welcome!
+</p>
 
-<center><small><a href="#over">overview</a> &middot; <a href=
-"#version">current version</a> &middot; <a href=
-"#download">download</a> &middot; <a href="#new">what's new</a>
-&middot; <a href="#installation">installation</a> &middot; <a href=
-"manual.html">manual</a> &middot; <a href=
-"license.html">license</a> &middot; <a href="#credits">credits</a>
-&middot; <a href="#contact">contact us</a></small></center>
+
+<p />
+<center><small>
+<a href=#over>overview</a> &middot;
+<a href=#version>current version</a> &middot;
+<a href=#download>download</a> &middot;
+<a href=#new>what's new</a> &middot;
+<a href=#installation>installation</a> &middot;
+<a href="manual.html">manual</a> &middot;
+<a href="license.html">license</a> &middot;
+<a href="#credits">credits</a> &middot;
+<a href="#contact">contact us</a>
+</small></center>
+<p />
 
 <hr>
-<small>$Id: index.html,v 1.29 2004/11/18 10:56:00 tuler Exp
-$</small>
-</body>
-</html>
+<small>
+$Id: index.html,v 1.31 2004/11/23 12:01:48 carregal Exp $
+</small>
 
+</body>
+</html> 
