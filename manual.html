@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.5 2003/04/30 16:12:06 tomas Exp $>
+<!$Id: manual.html,v 1.6 2003/05/02 10:51:33 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -77,22 +77,18 @@ object using the ODBC driver.
 <h4>Methods</h4>
 
 <ul>
-<a name="env_connect"></a>
-<li> <tt>connect (sourcename [, username [, password]])</tt> <br>
-Connects to a data source specified in <tt>sourcename</tt> using 
-<tt>username</tt> and <tt>password</tt> if they are supplied.<br>
-Returns: a <a href="connection_class">Connection object</a>.
-<ul> PostgreSQL extension:
-<li> Two more optional parameters (hostname and port)
-<li> The first parameter can be a string containing all connection info,
-	as described in the PostgreSQL manual
-	(e.g. <small><tt>environment:connect("host=&lt;<i>source&nbsp;name</i>&gt; port=&lt;<i>port&nbsp;number</i>&gt;")</tt></small>)
-</ul>
-
 <a name="env_close"></a>
-<li> <tt>close ()</tt> <br>
+<li> <tt>close()</tt> <br>
 Closes this environment. Only successful if all connections pertaining to
 it were closed first.
+
+<a name="env_connect"></a>
+<li> <tt>connect(sourcename[,username[,password]])</tt> <br>
+Connects to a data source specified in <tt>sourcename</tt> using 
+<tt>username</tt> and <tt>password</tt> if they are supplied.<br>
+See also: <a href="#postgres_extensions">PostgreSQL extensions</a><br>
+Returns: a <a href="connection_class">Connection object</a>.
+
 </ul>
 
 <a name="connection_class">
@@ -107,14 +103,27 @@ method.
 <h4>Methods</h4>
 
 <ul>
+<a name="conn_close"></a>
+<li> <tt>close()</tt> <br>
+Closes this connection.
+Only successful if all cursors pertaining to it were closed first.
+
+<a name="conn_commit"></a>
+<li> <tt>commit()</tt> <br>
+Commits the current transaction.
+
 <a name="conn_execute"></a>
-<li> <tt>execute (statement)</tt> <br>
+<li> <tt>execute(statement)</tt> <br>
 Executes the given SQL <tt>statement</tt>.<br>
 Returns: a <a href="cursor_class">Cursor object</a>
 if there are results, or the number of rows affected by the command otherwise.
 
+<a name="conn_rollback"></a>
+<li> <tt>rollback()</tt> <br>
+Rolls back the current transaction.
+
 <a name="conn_setautocommit"></a>
-<li> <tt>setautocommit (boolean)</tt> <br>
+<li> <tt>setautocommit(boolean)</tt> <br>
 Turns on or off the "auto commit" mode.
 This feature might not work on database systems that don't implement
 transactions.
@@ -128,18 +137,6 @@ Returns: a list of the table names.
 </p>
 -->
 
-<a name="conn_commit"></a>
-<li> <tt>commit()</tt> <br>
-Commits the current transaction.
-
-<a name="conn_rollback"></a>
-<li> <tt>rollback()</tt> <br>
-Rolls back the current transaction.
-
-<a name="conn_close"></a>
-<li> <tt>close()</tt> <br>
-Closes this connection.
-Only successful if all cursors pertaining to it were closed first.
 </ul>
 
 
@@ -151,12 +148,17 @@ data resulting from an executed statement.
 A Cursor object is created by using the
 <tt><a href="#conn_execute">Connection:execute</a></tt>
 function.
+See also <a href="#postgres_extensions">PostgreSQL extensions</a>.
 
 <h4>Methods</h4>
 
 <ul>
+<a name="cur_close"></a>
+<li> <tt>close()</tt> <br>
+Closes this cursor. 
+
 <a name="cur_fetch"></a>
-<li> <tt>fetch ([table[,modestring]])</tt> <br>
+<li> <tt>fetch([table[,modestring]])</tt> <br>
 Retrieves the next row of results.<br>
 If <tt>fetch</tt> is called without parameters,
 the results will be returned to the caller directly.
@@ -183,9 +185,26 @@ Returns: a table with the list of column names.
 <li> <tt>getcoltypes()</tt> <br>
 Returns: a table with the list of column types.
 
-<a name="cur_close"></a>
-<li> <tt>close()</tt> <br>
-Closes this cursor. 
+</ul>
+
+
+<a name="postgres_extensions"></a>
+<h2>PostgreSQL extensions</h2>
+
+Besides the basic functionality
+provided by all drivers (see manual), the Postgres driver also offers
+these extra features:
+
+<ul>
+  <li><tt>environment:connect(sourcename[,username[,password[,hostname[,port]]]])</tt><br>
+    In PostgreSQL driver, this method has two other optional parameters
+    that indicate the hostname and port to connect.
+    Also, the first parameter can contain all connection information,
+    as stated in the documentation for <tt>PQconnectdb</tt> function
+    in the PostgreSQL manual
+    (e.g. <small><tt>environment:connect("dbname=&lt;<i>name</i>&gt; user=&lt;<i>username</i>&gt;")</tt></small>)
+  <li><tt>cursor:numrows()</tt><br>
+    This additional method returns the number of rows in the query result.
 </ul>
 
 
@@ -196,45 +215,43 @@ Below is a small sample code displaying the basic use of the library.
 
 <blockquote>
 <pre>
+-- load driver
+require"postgres"
 -- create environment object
-env, err = luasql.odbc()
+env, err = luasql.postgres()
 assert(env, err)
--- connect to ODBC data source
+-- connect to data source
 con, err = env:connect("luasql-test")
 assert(con, err)
 -- reset our table
-res, err = con:execute"DROP TABLE friends"
+res, err = con:execute"DROP TABLE people"
 res, err = con:execute[[
-  CREATE TABLE friends(
-    friendid Number,
-    friendname  String, 
-    friendage Number);
+  CREATE TABLE people(
+    name  varchar(50),
+    email varchar(50)
+  )
 ]]
 assert(res, err)
 -- add a few elements
-friends = {
-  {ID = 1, Name = "John", Age = 24}, 
-  {ID = 2, Name = "Mary", Age = 21}, 
-  {ID = 5, Name = "Anaconda", Age = 70},
-  {ID = 3, Name = "Rita", Age = 28}, 
-  {ID = 4, Name = "Stephan", Age = 23}
+list = {
+    { name="Tomas Guisasola", email="tomas@kepler.org", },
+    { name="Roberto Ierusalimschy", email="roberto@kepler.org", },
+    { name="Andre Carregal", email="carregal@kepler.org", },
 }
-for i, f in pairs (friends) do
+for i, p in pairs (list) do
   res, err = con:execute(string.format([[
-    INSERT INTO friends(friendid, friendname, friendage)
-    VALUES(%d, '%s', %d)]], f.ID, f.Name, f.Age)
+    INSERT INTO people
+    VALUES ('%s', '%s')]], p.name, p.email)
   )
   assert(res, err)
 end
--- retrieve a cursor for all friends, sorted by age
-cur, err = con:execute[[
-	SELECT friendname, friendage FROM friends ORDER BY friendage
-]]
+-- retrieve a cursor
+cur, err = con:execute"SELECT name, email from people"
 assert(cur, err)
--- print all rows of the result
+-- print all rows
 row = cur:fetch ({}, "a")	-- the rows will be indexed by field names
 while row do
-	print(string.format("Name: %s, Age: %d", row.friendname, row.friendage))
+	print(string.format("Name: %s, E-mail: %s", row.name, row.email))
 	row = cur:fetch (row, "a")	-- reusing the table of results
 end
 -- close everything
@@ -248,25 +265,14 @@ And the output of this script should be:
 
 <blockquote>
 <pre>
-Name: Mary, Age: 21
-Name: Stephan, Age: 23
-Name: John, Age: 24
-Name: Rita, Age: 28
-Name: Anaconda, Age: 70
+Name: Tomas Guisasola, E-mail: tomas@kepler.org
+Name: Roberto Ierusalimschy, E-mail: roberto@kepler.org
+Name: Andre Carregal, E-mail: carregal@kepler.org
 </pre>
 </blockquote>
 
-Notes: 
-<ul>
-<li> The above sample is adjusted to work with the ODBC driver. In case
-you want to test it with the PostgreSQL driver, you must change the DDL
-entries from '<tt>Number</tt>' to '<tt>int</tt>' and '<tt>String</tt>' to
-'<tt>varchar(64)</tt>'.
-<li> Also, tables and columns names have all been written in lowercase,
-because some drivers are case-insensitive whereas others are
-case-sensitive.
-</ul>
 
+<a name="contents"></a>
 <h2>Contents</h2>
 <p>
 <ul>
@@ -279,8 +285,8 @@ case-sensitive.
 <li> <a href="#connection_class">Connection class</a>
   <ul>
     <li> <a href="#conn_close">close</a>
-    <li> <a href="#conn_execute">execute</a>
     <li> <a href="#conn_commit">commit</a>
+    <li> <a href="#conn_execute">execute</a>
     <li> <a href="#conn_rollback">rollback</a>
     <li> <a href="#conn_setautocommit">setautocommit</a>
   </ul>
@@ -288,9 +294,10 @@ case-sensitive.
   <ul>
     <li> <a href="#cur_close">close</a>
     <li> <a href="#cur_fetch">fetch</a>
-    <li> <a href="#cur_colinfo">colinfo</a>
-    <li> <a href="#cur_numrows">numrows</a>
+    <li> <a href="#cur_colnames">getcolnames</a>
+    <li> <a href="#cur_coltypes">getcoltypes</a>
   </ul>
+<li> <a href="postgres_extensions">PostgreSQL extensions</a>
 <li> <a href="#examples">Examples</a>
 </ul>
 </p>
@@ -310,7 +317,7 @@ case-sensitive.
 <hr>
 <small>
 Last modified by Tom&aacute;s Guisasola on<br>
-Wed Apr 30 16:08:09 BRT 2003
+Fri May  2 10:50:37 BRT 2003
 </small>
 
 </body>
