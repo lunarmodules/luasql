@@ -2,7 +2,7 @@
 ** LuaSQL, ODBC driver
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
-** $Id: ls_odbc.c,v 1.12 2003/05/30 10:04:59 tomas Exp $
+** $Id: ls_odbc.c,v 1.13 2003/08/29 14:21:28 tomas Exp $
 */
 
 #include <assert.h>
@@ -554,7 +554,7 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, env_data *env, SQLHDBC hdbc) {
+static int create_connection (lua_State *L, int env, SQLHDBC hdbc) {
 	conn_data *conn = (conn_data *) lua_newuserdata(L, sizeof(conn_data));
 	/* set auto commit mode */
 	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT, 
@@ -568,7 +568,7 @@ static int create_connection (lua_State *L, env_data *env, SQLHDBC hdbc) {
 	conn->closed = 0;
 	conn->env = LUA_NOREF;
 	conn->hdbc = hdbc;
-	lua_pushvalue (L, 1);
+	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	return 1;
 }
