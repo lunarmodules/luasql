@@ -90,4 +90,4 @@ jdbc_driver:
 	cd jdbc; make $@
 
 clean:
-	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o *.lua
+	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o

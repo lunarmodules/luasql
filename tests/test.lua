@@ -58,7 +58,7 @@ function basic_test ()
 	-- trying to connect with a closed environment.
 	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
 		"error connecting with a closed environment")
-	-- it is ok to close a closed object, but nil is returned instead of 1.
+	-- it is ok to close a closed object, but false is returned instead of true.
 	assert2 (false, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
@@ -70,7 +70,7 @@ function basic_test ()
 	-- trying to execute a statement with a closed connection.
 	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
 		"error connecting with a closed environment")
-	-- it is ok to close a closed object, but nil is returned instead of 1.
+	-- it is ok to close a closed object, but false is returned instead of true.
 	assert2 (false, conn:close())
 	-- Check error situation.
 	assert2 (nil, ENV:connect ("/unknown-data-base"), "this should be an error")
@@ -392,7 +392,7 @@ function rollback ()
 	assert2 (false, cur:close())
 --]]
 	-- clean the table.
-	if driver == "sqlite" then
+	if string.find (driver, "sqlite", 1, 1) then
 		assert2 (1, CONN:execute ("delete from t where 1"))
 	else
 		assert2 (1, CONN:execute ("delete from t"))
