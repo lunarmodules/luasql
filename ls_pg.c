@@ -226,7 +226,7 @@ static void create_coltypes (lua_State *L, cur_data *cur) {
 ** If the table isn't built yet, call the creator function and stores
 ** a reference to it on the cursor structure.
 */
-static void pushtable (lua_State *L, cur_data *cur, size_t off, creator func) {
+static void _pushtable (lua_State *L, cur_data *cur, size_t off, creator func) {
 	int *ref = (int *)((char *)cur + off);
 	if (*ref != LUA_NOREF)
 		lua_rawgeti (L, LUA_REGISTRYINDEX, *ref);
@@ -237,13 +237,14 @@ static void pushtable (lua_State *L, cur_data *cur, size_t off, creator func) {
 		*ref = luaL_ref (L, LUA_REGISTRYINDEX);
 	}
 }
+#define pushtable(L,c,m,f) (_pushtable(L,c,offsetof(cur_data,m),f))
 
 
 /*
 ** Return the list of field names.
 */
 static int cur_getcolnames (lua_State *L) {
-	pushtable (L, getcursor(L), offsetof(cur_data, colnames), create_colnames);
+	pushtable (L, getcursor(L), colnames, create_colnames);
 	return 1;
 }
 
@@ -252,7 +253,7 @@ static int cur_getcolnames (lua_State *L) {
 ** Return the list of field types.
 */
 static int cur_getcoltypes (lua_State *L) {
-	pushtable (L, getcursor(L), offsetof(cur_data, coltypes), create_coltypes);
+	pushtable (L, getcursor(L), coltypes, create_coltypes);
 	return 1;
 }
 
