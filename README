@@ -12,6 +12,8 @@ Here goes a small description of the files in the distribution
     ls_oci8.c        -- Oracle OCI 8 driver
     ls_odbc.c        -- ODBC driver
     ls_pg.c          -- PostgreSQL driver
+    jdbc/*           -- JDBC driver
+    ado/*            -- ADO driver
     luasql.png       -- LuaSQL Logo
     luasql.c         -- Common functions
     luasql.h         -- Common definitions
@@ -21,4 +23,4 @@ Here goes a small description of the files in the distribution
     README           -- This file
     test.lua         -- Overall API test script
 
-$Id: README,v 1.6 2003/12/29 15:27:23 tomas Exp $
+$Id: README,v 1.7 2005/03/01 15:03:57 tuler Exp $
