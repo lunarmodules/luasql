@@ -11,7 +11,7 @@ LIB_EXT= .dylib
 LIB_OPTION= -dynamiclib
 COMPAT_DIR= ../compat
 
-VERSION= 2.0b2
+VERSION= 2.0b3
 
 OBJS= compat-5.1.o luasql.o ls_$T.o
 LIBNAME= lib$T.$(VERSION)$(LIB_EXT)
