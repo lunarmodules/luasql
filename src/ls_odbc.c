@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.19 2004/02/12 10:44:04 tomas Exp $
+** $Id: ls_odbc.c,v 1.20 2004/06/08 13:00:21 tomas Exp $
 */
 
 #include <assert.h>
@@ -697,7 +697,7 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luasql_libopen_odbc(lua_State *L) {
+LUASQL_API int luaopen_luasql_odbc(lua_State *L) {
 	luasql_getlibtable (L);
 	lua_pushstring(L, "odbc"); 
 	lua_pushcfunction(L, create_environment); 

@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.16 2004/01/09 12:10:27 tomas Exp $
+** $Id: ls_oci8.c,v 1.17 2004/06/08 13:00:21 tomas Exp $
 */
 
 #include <assert.h>
@@ -842,7 +842,7 @@ static void create_metatables (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luasql_libopen_oracle (lua_State *L) {
+LUASQL_API int luaopen_luasql_oracle (lua_State *L) {
 	luasql_getlibtable (L);
 	lua_pushstring(L, "oracle");
 	lua_pushcfunction(L, create_environment);
