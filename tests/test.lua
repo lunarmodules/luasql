@@ -59,7 +59,7 @@ function basic_test ()
 	assert2 (false, pcall (ENV.connect, ENV, datasource, username, password),
 		"error connecting with a closed environment")
 	-- it's ok to close a closed object, but nil is returned instead of 1.
-	assert2 (nil, ENV:close())
+	assert2 (false, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
 	-- Check connection object.
@@ -71,7 +71,7 @@ function basic_test ()
 	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
 		"error connecting with a closed environment")
 	-- it's ok to close a closed object, but nil is returned instead of 1.
-	assert2 (nil, conn:close())
+	assert2 (false, conn:close())
 	-- Check error situation.
 	assert2 (nil, ENV:connect ("unknown-data-base"), "this should be an error")
 end
@@ -120,6 +120,7 @@ function fetch2 ()
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- insert a second record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('d', 'e')"))
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3 from t order by f1"))
@@ -133,6 +134,7 @@ function fetch2 ()
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
 end
@@ -169,6 +171,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch())
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
@@ -195,6 +198,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch{})
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
@@ -221,6 +225,7 @@ function fetch_new_table ()
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "a"))
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
@@ -247,6 +252,7 @@ function fetch_new_table ()
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "an"))
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
 end
@@ -273,6 +279,7 @@ function fetch_many ()
 	end
 	assert2 (nil, cur:fetch (row))
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'v1'"))
 end
@@ -286,27 +293,32 @@ function rollback ()
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	CONN:commit ()
 	-- insert a record and roll back the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	CONN:rollback ()
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- delete a record and roll back the operation.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber(cur:fetch()))
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	CONN:rollback ()
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 --[[
 	-- insert a second record and turn on the auto-commit mode.
 	-- this will produce a rollback on PostgreSQL and a commit on ODBC.
@@ -315,11 +327,13 @@ function rollback ()
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	CONN:setautocommit (true)
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 --]]
 	-- clean the table.
 	if driver == "sqllite" then
@@ -333,6 +347,7 @@ function rollback ()
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 end
 
 ---------------------------------------------------------------------
@@ -358,6 +373,7 @@ function column_info ()
 	assert2 (names, n2, "getcolnames is rebuilding the table")
 	assert2 (types, t2, "getcoltypes is rebuilding the table")
 	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
 end

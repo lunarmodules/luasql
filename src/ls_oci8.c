@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.15 2004/01/02 12:30:25 tomas Exp $
+** $Id: ls_oci8.c,v 1.16 2004/01/09 12:10:27 tomas Exp $
 */
 
 #include <assert.h>
@@ -393,8 +393,10 @@ static int cur_close (lua_State *L) {
 	conn_data *conn;
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_OCI8);
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
-	if (cur->closed)
-		return 0;
+	if (cur->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	/* Deallocate buffers. */
 	for (i = 1; i <= cur->numcols; i++) {
@@ -513,8 +515,10 @@ static int conn_close (lua_State *L) {
 	env_data *env;
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_OCI8);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	if (conn->closed)
-		return 0;
+	if (conn->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 	if (conn->cur_counter > 0)
 		return luaL_error (L, LUASQL_PREFIX"there are open cursors");
 
@@ -758,8 +762,10 @@ static int env_connect (lua_State *L) {
 static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_OCI8);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
-	if (env->closed)
-		return 0;
+	if (env->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 	if (env->conn_counter > 0)
 		return luaL_error (L, LUASQL_PREFIX"there are open connections");
 

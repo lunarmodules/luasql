@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_pg.c,v 1.17 2004/01/02 12:30:25 tomas Exp $
+** $Id: ls_pg.c,v 1.18 2004/01/09 12:10:27 tomas Exp $
 */
 
 #include <assert.h>
@@ -146,8 +146,10 @@ static int cur_fetch (lua_State *L) {
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
-	if (cur->closed)
-		return 0;
+	if (cur->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
@@ -312,8 +314,10 @@ static void sql_rollback(conn_data *conn) {
 static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	if (conn->closed)
-		return 0;
+	if (conn->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	/* Nullify structure fields. */
 	conn->closed = 1;
@@ -451,8 +455,10 @@ static int env_connect (lua_State *L) {
 static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
-	if (env->closed)
-		return 0;
+	if (env->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	env->closed = 1;
 	lua_pushboolean (L, 1);

@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.9 2004/01/02 12:30:25 tomas Exp $
+** $Id: ls_mysql.c,v 1.10 2004/01/09 12:10:27 tomas Exp $
 */
 
 #include <assert.h>
@@ -218,8 +218,10 @@ static int cur_fetch (lua_State *L) {
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_MYSQL);
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
-	if (cur->closed)
-		return 0;
+	if (cur->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
@@ -228,7 +230,7 @@ static int cur_close (lua_State *L) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 
-	lua_pushboolean(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -296,13 +298,15 @@ static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols) {
 static int conn_close (lua_State *L) {
 	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	if (conn->closed)
-		return 0;
+	if (conn->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	mysql_close(conn->my_conn);
+	mysql_close (conn->my_conn);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -416,9 +420,9 @@ static int env_connect (lua_State *L) {
 		sourcename, port, NULL, 0))
 	{
 		char error_msg[100];
-		strncpy(error_msg,  mysql_error(conn), 99);
-		mysql_close(conn); /* Close conn if connect failed */
-		return luasql_failmessage(L, "Error connecting to database. MySQL: ", error_msg);
+		strncpy (error_msg,  mysql_error(conn), 99);
+		mysql_close (conn); /* Close conn if connect failed */
+		return luasql_failmessage (L, "Error connecting to database. MySQL: ", error_msg);
 	}
 	return create_connection(L, 1, conn);
 }
@@ -430,8 +434,10 @@ static int env_connect (lua_State *L) {
 static int env_close (lua_State *L) {
 	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
-	if (env->closed)
-		return 0;
+	if (env->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
 
 	env->closed = 1;
 	lua_pushboolean (L, 1);
