@@ -1,5 +1,5 @@
 <html>
-<!$Id: manual.html,v 1.10 2003/05/08 22:49:45 tomas Exp $>
+<!$Id: manual.html,v 1.11 2003/07/23 18:26:26 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -26,6 +26,7 @@ ul { list-style-type: disc };
 <a href="#environment_object">environment</a> &middot;
 <a href="#connection_object">connection</a> &middot;
 <a href="#cursor_object">cursor</a> &middot;
+<a href="#postgres_extensions">extensions</a> &middot;
 <a href="#examples">example</a>
 </small></center>
 <p>
@@ -37,7 +38,7 @@ ul { list-style-type: disc };
 <p>
 LuaSQL is a simple interface from Lua to a DBMS.
 It has a collection of drivers to some popular databases
-(actually PostgreSQL and ODBC; Oracle, MySQL and ADO will be
+(actually PostgreSQL, ODBC, MySQL and Oracle; ADO will be
 ready soon).
 LuaSQL defines a simple object-oriented API.
 All drivers should implement this common API,
@@ -87,7 +88,8 @@ Only successful if all connections pertaining to it were closed first.
 <li> <b><tt>env:connect(sourcename[,username[,password]])</tt></b> <br>
 Connects to a data source specified in <tt>sourcename</tt> using 
 <tt>username</tt> and <tt>password</tt> if they are supplied.<br>
-See also: <a href="#postgres_extensions">PostgreSQL extensions</a><br>
+See also: <a href="#postgres_extensions">PostgreSQL</a>,
+	and <a href="#mysql_extensions">MySQL</a> extensions.<br>
 Returns: a <a href="#connection_object">connection object</a>.
 
 </ul>
@@ -151,7 +153,8 @@ data resulting from an executed statement.
 A cursor object is created by using the
 <tt><a href="#conn_execute">connection:execute</a></tt>
 function.
-See also <a href="#postgres_extensions">PostgreSQL extensions</a>.
+See also <a href="#postgres_extensions">PostgreSQL</a>
+and <a href="#mysql_extensions">MySQL</a> extensions.
 
 <h4>Methods</h4>
 
@@ -184,8 +187,8 @@ can improve the overall performance.<br>
 There is no guarantee about the types of the results
 -- they can be converted to adequate Lua types by the driver or not.
 <i>In the current implementation (2.0a),
-the PostgreSQL driver returns all values as strings
-while the ODBC driver converts them to Lua types</i>.<br>
+the PostgreSQL and MySQL drivers returns all values as strings
+while the ODBC and Oracle drivers converts them to Lua types</i>.<br>
 Returns: data, as above, or <tt>nil</tt> if there are no more rows.
 
 <a name="cur_colnames"></a>
@@ -219,6 +222,30 @@ these extra features:
     This additional method returns the number of rows in the query result.<br>
     See also: <a href="#cursor_object">cursor objects</a>
 </ul>
+
+
+<a name="mysql_extensions"></a>
+<h2>MySQL extensions</h2>
+
+Besides the basic functionality
+provided by all drivers (see manual),
+the MySQL driver also offers these extra features:
+
+<ul>
+  <li> <b><tt>env:connect(sourcename[,username[,password[,hostname[,port]]]])</tt></b> <br>
+    In the MySQL driver, this method has two other optional parameters
+    that indicate the hostname and port to connect.
+    See also: <a href="#environment_object">environment objects</a>
+  <li> <b><tt>cur:numrows()</tt></b> <br>
+    This additional method returns the number of rows in the query result.<br>
+    See also: <a href="#cursor_object">cursor objects</a>
+</ul>
+
+Note: This driver is compatible to version 4.1 of MySQL API,
+with support to BDB and INNODB tables.
+MySQL has types of tables that don't support transactions,
+so with these types, the methods <tt>setautocommit</tt>, <tt>commit</tt>
+and <tt>rollback</tt> don't work.
 
 
 <a name="examples"></a>
@@ -306,6 +333,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
     <li> <a href="#cur_coltypes">getcoltypes</a>
   </ul>
 <li> <a href="#postgres_extensions">PostgreSQL extensions</a>
+<li> <a href="#mysql_extensions">MySQL extensions</a>
 <li> <a href="#examples">Example</a>
 </ul>
 </p>
@@ -317,6 +345,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <a href="#environment_object">environment</a> &middot;
 <a href="#connection_object">connection</a> &middot;
 <a href="#cursor_object">cursor</a> &middot;
+<a href="#postgres_extensions">extensions</a> &middot;
 <a href="#examples">example</a>
 </small></center>
 <p>
@@ -324,7 +353,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 <hr>
 <small>
 Last modified on
-Thu May  8 22:49:03 BRT 2003
+Wed Jul 23 17:43:57 BRT 2003
 </small>
 
 </body>

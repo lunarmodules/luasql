@@ -1,5 +1,5 @@
 <html>
-<!$Id: index.html,v 1.8 2003/05/08 22:49:45 tomas Exp $>
+<!$Id: index.html,v 1.9 2003/07/23 18:26:26 tomas Exp $>
 
 <head>
 <style type="text/css">
@@ -49,6 +49,7 @@ ul { list-style-type: disc };
 	<li> <a href="manual.html#connection_object">Connection objects</a>
 	<li> <a href="manual.html#cursor_object">Cursor objects</a>
 	<li> <a href="manual.html#postgres_extensions">PostgreSQL extensions</a>
+	<li> <a href="manual.html#mysql_extensions">MySQL extensions</a>
 	<li> <a href="manual.html#examples">Examples</a>
 	</ul>
 <li> <a href=#hist>History</a>
@@ -62,7 +63,7 @@ ul { list-style-type: disc };
 LuaSQL is a simple interface from Lua to a DBMS.
 It enables a Lua program to:
 <ul>
-<li> Connect to ODBC and PostgreSQL databases;
+<li> Connect to ODBC, Oracle, MySQL and PostgreSQL databases;
 <li> Execute arbitrary SQL statements;
 <li> Retrieve results in a row-by-row cursor fashion.
 </ul>
@@ -134,7 +135,7 @@ using <tt>sed</tt>, according to each driver and platform.
 Version 2.0 was redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
 and Tom&aacute;s Guisasola behind the Kepler Project.
 The implementation is compatible with Lua 5.0 and was coded by
-Tom&aacute;s Guisasola.
+Tom&aacute;s Guisasola and Eduardo Quint&atilde;o.
 
 <h4>LuaSQL 1.0</h4>
 <p>
