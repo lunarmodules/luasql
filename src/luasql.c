@@ -1,3 +1,7 @@
+/*
+** $Id: luasql.c,v 1.8 2003/05/08 21:45:40 tomas Exp $
+*/
+
 #include <lua.h>
 #include <lauxlib.h>
 

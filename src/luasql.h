@@ -1,3 +1,7 @@
+/*
+** $Id: luasql.h,v 1.6 2003/05/08 21:45:40 tomas Exp $
+*/
+
 #ifndef _LUASQL_
 #define _LUASQL_
 
