@@ -32,7 +32,7 @@ LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg
 	lua_settable (L, -3);
 
 	lua_pushliteral (L, "__metatable");
-	lua_pushnumber (L, 0); /* !!!!!!! o valor e' usado ? */
+	lua_pushliteral (L, LUASQL_PREFIX"you're not allowed to get this metatable");
 	lua_settable (L, -3);
 
 	return 1;
