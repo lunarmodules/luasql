@@ -80,5 +80,8 @@ install:
 	cp $(LIBNAME) $(LUA_LIB_DIR)/luasql
 	cd $(LUA_LIB_DIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
 
+jdbc:
+	cd jdbc; make $@
+
 clean:
 	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o *.lua
