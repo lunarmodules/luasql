@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.20 2004/06/08 13:00:21 tomas Exp $
+** $Id: ls_odbc.c,v 1.21 2004/07/09 11:37:03 tomas Exp $
 */
 
 #include <assert.h>
@@ -548,7 +548,7 @@ static int conn_rollback (lua_State *L) {
 ** Sets the auto commit mode
 */
 static int conn_setautocommit (lua_State *L) {
-	conn_data *conn = (conn_data *) lua_touserdata(L, 1);
+	conn_data *conn = (conn_data *) getconnection (L);
 	SQLRETURN ret;
 	if (lua_toboolean (L, 2)) {
 		ret = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
