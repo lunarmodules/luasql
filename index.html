@@ -126,7 +126,7 @@ Version 2.0 has some design modifications and implementation improvements
 <ul>
   <li>New <tt>fetch</tt> method: more eficient and more flexible
   <li>New <tt>setautocommit</tt> method
-  <li>Lua 5.0 compatible
+  <li>Lua 5.0 and 5.1 compatible
   <li>Dynamically loadable or statically linked
   <li>New drivers for Oracle and MySQL databases
 </ul>
@@ -137,23 +137,27 @@ Version 2.0 has some design modifications and implementation improvements
 <h2>Installation</h2>
 
 <p>
-LuaSQL is distributed as a set of C source files and a Lua script that
-loads the dynamic library (if the library is not statically linked to
-the application).
+LuaSQL is distributed as a set of C source files:
+a common source and header file (<tt>luasql.h</tt> and <tt>luasql.c</tt>);
+and one source file for each driver.
 Each driver should be compiled together with luasql.c file (it is so small
 that we don't make another library of it) to generate a library.
-This library should be linked to the application (the initialization
-function is <tt>luaopen_luasql_<i>drivername</i></tt> and it is a Lua
+This library could be linked to the application (the initialization
+function is <tt>luaopen_luasql<i>drivername</i></tt> and it is a Lua
 open-library compatible function)
 or dynamically loaded.
-<!--
-In this case, LuaSQL provide a Lua script template that must be
-edited to suit the installation: the text <tt>LIB_NAME</tt> (in the line
-<tt>local&nbsp;libname&nbsp;=&nbsp;"LIB_NAME"</tt>) should be substituted by the
-complete path of the dynamic library.
-The distribution contains a Makefile that has lines to do this job,
-using <tt>sed</tt>, according to each driver and platform.
--->
+<p>
+All LuaSQL drivers follow the
+<a href="http://www.keplerproject.org/compat">package proposal</a>
+for Lua 5.1,
+therefore this package should be "installed".
+In other words,
+if you are using Lua 5.0,
+the files <tt>compat-5.1.c</tt> and <tt>compat-5.1.h</tt> must be used
+in the compilation and the file <tt>compat-5.1.lua</tt> must be installed
+in the <tt>LUA_PATH</tt>.
+If you are using Lua 5.1,
+nothing should be done.
 
 
 <a name="credits">
@@ -207,7 +211,7 @@ Comments are welcome!
 
 <hr>
 <small>
-$Id: index.html,v 1.22 2004/08/30 15:28:51 tomas Exp $
+$Id: index.html,v 1.23 2004/10/05 14:13:47 tomas Exp $
 </small>
 
 </body>
