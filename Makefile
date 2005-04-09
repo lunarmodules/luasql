@@ -8,7 +8,7 @@ T= postgres
 LUA_LIBDIR= /usr/local/lib/lua/5.0
 # Lua includes directory
 LUA_INC= /usr/local/include/lua5
-COMPAT_DIR= ../compat
+COMPAT_DIR= ../compat/src
 LIB_EXT= .so
 #LIB_EXT= .dylib
 LIB_OPTION= -shared
@@ -16,9 +16,9 @@ LIB_OPTION= -shared
 LUA_LIBS= -llua-5.0 -llualib-5.0 -lm
 DLLIB= -ldl
 
-VERSION= 2.0.0
+VERSION= 2.0.1
 
-OBJS= compat-5.1.o luasql.o ls_$T.o
+OBJS= $(COMPAT_DIR)/compat-5.1.o src/luasql.o src/ls_$T.o
 LIBNAME= lib$T.$(VERSION)$(LIB_EXT)
 LOADLIB= $T$(LIB_EXT)
 
@@ -49,25 +49,23 @@ PKG= luasql-$(VERSION)
 DIST_DIR= $(PKG)
 TAR_FILE= $(PKG).tar.gz
 ZIP_FILE= $(PKG).zip
-SRCS= README Makefile \
-	luasql.h luasql.c def.tmpl \
-	ls_postgres.c \
-	ls_odbc.c \
-	ls_oci8.c \
-	ls_mysql.c \
-	ls_sqlite.c \
-	test.lua performance.lua
+SRCS= src/luasql.h src/luasql.c \
+	src/ls_postgres.c \
+	src/ls_odbc.c \
+	src/ls_oci8.c \
+	src/ls_mysql.c \
+	src/ls_sqlite.c
 
 AR= ar rcu
 RANLIB= ranlib
 
 
-lib: $(LIBNAME)
+lib: src/$(LIBNAME)
 
-$(LIBNAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $(LIBNAME) $(LIB_OPTION) $(OBJS) $(DRIVER_LIBS) $(LIBS)
+src/$(LIBNAME): $(OBJS)
+	$(CC) $(CFLAGS) -o src/$(LIBNAME) $(LIB_OPTION) $(OBJS) $(DRIVER_LIBS) $(LIBS)
 
-compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
+$(COMPAT_DIR)/compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
 	$(CC) -c $(CFLAGS) -o $@ $(COMPAT_DIR)/compat-5.1.c
 
 dist: dist_dir
@@ -77,26 +75,29 @@ dist: dist_dir
 
 dist_dir:
 	mkdir $(DIST_DIR)
-	mkdir -p $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
-	mkdir -p $(DIST_DIR)/jdbc/src/lua
-	mkdir -p $(DIST_DIR)/ado
+	mkdir -p $(DIST_DIR)/src/jdbc/src/java/org/keplerproject/luasql/jdbc
+	mkdir -p $(DIST_DIR)/src/jdbc/src/lua
+	mkdir -p $(DIST_DIR)/src/ado
 	mkdir -p $(DIST_DIR)/doc/us
-	cp $(SRCS) $(DIST_DIR)
+	mkdir -p $(DIST_DIR)/tests
+	cp README Makefile $(DIST_DIR)
+	cp $(SRCS) $(DIST_DIR)/src
+	cp tests/test.lua tests/performance.lua tests/example.lua $(DIST_DIR)/tests
 	cp doc/us/*.html $(DIST_DIR)/doc/us
 	cp doc/us/*.png $(DIST_DIR)/doc/us
-	cp jdbc/Makefile $(DIST_DIR)/jdbc
-	cp jdbc/build.xml $(DIST_DIR)/jdbc
-	cp jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
-	cp jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
-	cp ado/ado.lua $(DIST_DIR)/ado
+	cp src/jdbc/Makefile $(DIST_DIR)/jdbc
+	cp src/jdbc/build.xml $(DIST_DIR)/jdbc
+	cp src/jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
+	cp src/jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
+	cp src/ado/ado.lua $(DIST_DIR)/ado
 
 install:
 	mkdir -p $(LUA_LIBDIR)/luasql
-	cp $(LIBNAME) $(LUA_LIBDIR)/luasql
+	cp src/$(LIBNAME) $(LUA_LIBDIR)/luasql
 	cd $(LUA_LIBDIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
 
 jdbc_driver:
 	cd jdbc; make $@
 
 clean:
-	rm -f $(TAR_FILE) $(ZIP_FILE) $(LIBNAME) *.o
+	rm -f $(TAR_FILE) $(ZIP_FILE) src/$(LIBNAME) *.o
