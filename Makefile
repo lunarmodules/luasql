@@ -85,11 +85,11 @@ dist_dir:
 	cp tests/test.lua tests/performance.lua tests/example.lua $(DIST_DIR)/tests
 	cp doc/us/*.html $(DIST_DIR)/doc/us
 	cp doc/us/*.png $(DIST_DIR)/doc/us
-	cp src/jdbc/Makefile $(DIST_DIR)/jdbc
-	cp src/jdbc/build.xml $(DIST_DIR)/jdbc
-	cp src/jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/jdbc/src/java/org/keplerproject/luasql/jdbc
-	cp src/jdbc/src/lua/jdbc.lua $(DIST_DIR)/jdbc/src/lua
-	cp src/ado/ado.lua $(DIST_DIR)/ado
+	cp src/jdbc/Makefile $(DIST_DIR)/src/jdbc
+	cp src/jdbc/build.xml $(DIST_DIR)/src/jdbc
+	cp src/jdbc/src/java/org/keplerproject/luasql/jdbc/LuaSQLCursor.java $(DIST_DIR)/src/jdbc/src/java/org/keplerproject/luasql/jdbc
+	cp src/jdbc/src/lua/jdbc.lua $(DIST_DIR)/src/jdbc/src/lua
+	cp src/ado/ado.lua $(DIST_DIR)/src/ado
 
 install:
 	mkdir -p $(LUA_LIBDIR)/luasql
@@ -97,7 +97,9 @@ install:
 	cd $(LUA_LIBDIR)/luasql; ln -f -s $(LIBNAME) $(LOADLIB)
 
 jdbc_driver:
-	cd jdbc; make $@
+	cd src/jdbc; make $@
 
 clean:
 	rm -f $(TAR_FILE) $(ZIP_FILE) src/$(LIBNAME) *.o
+
+# $Id: Makefile,v 1.43 2005/04/25 17:09:11 tomas Exp $
