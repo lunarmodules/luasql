@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.32 2005/04/28 17:29:40 tomas Exp $
+** $Id: ls_odbc.c,v 1.33 2005/04/28 19:05:12 tomas Exp $
 */
 
 #include <assert.h>
@@ -309,6 +309,7 @@ static int cur_fetch (lua_State *L) {
 ** Closes a cursor.
 */
 static int cur_close (lua_State *L) {
+	conn_data *conn;
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
 	SQLRETURN ret;
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
@@ -386,7 +387,7 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 /*
 ** Creates a cursor table and leave it on the top of the stack.
 */
-static int create_cursor (lua_State *L, int conn, 
+static int create_cursor (lua_State *L, int o, conn_data *conn, 
         const SQLHSTMT hstmt, const SQLSMALLINT numcols) {
     cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
@@ -399,7 +400,7 @@ static int create_cursor (lua_State *L, int conn,
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
     cur->hstmt = hstmt;
-	lua_pushvalue (L, conn);
+	lua_pushvalue (L, o);
     cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	/* make and store column information table */
@@ -414,6 +415,7 @@ static int create_cursor (lua_State *L, int conn,
 */
 static int conn_close (lua_State *L) {
 	SQLRETURN ret;
+	env_data *env;
     conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
@@ -483,7 +485,7 @@ static int conn_execute (lua_State *L) {
 
 	if (numcols > 0)
     	/* if there is a results table (e.g., SELECT) */
-		return create_cursor (L, 1, hstmt, numcols);
+		return create_cursor (L, 1, conn, hstmt, numcols);
 	else {
 		/* if action has no results (e.g., UPDATE) */
 		SQLINTEGER numrows;
@@ -546,7 +548,7 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, int env, SQLHDBC hdbc) {
+static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) {
 	conn_data *conn = (conn_data *) lua_newuserdata(L, sizeof(conn_data));
 	/* set auto commit mode */
 	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT, 
@@ -561,7 +563,7 @@ static int create_connection (lua_State *L, int env, SQLHDBC hdbc) {
 	conn->cur_counter = 0;
 	conn->env = LUA_NOREF;
 	conn->hdbc = hdbc;
-	lua_pushvalue (L, env);
+	lua_pushvalue (L, o);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	env->conn_counter++;
 	return 1;
@@ -600,7 +602,7 @@ static int env_connect (lua_State *L) {
 	}
 
 	/* success, return connection object */
-	return create_connection (L, 1, hdbc);
+	return create_connection (L, 1, env, hdbc);
 }
 
 /*
