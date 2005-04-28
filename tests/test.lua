@@ -445,8 +445,6 @@ function check_close()
 	-- an object with references to it can't be closed
 	local cmd = "select * from t"
 	local cur = CUR_OK(CONN:execute (cmd))
-	--assert2 (false, pcall (CONN.close, CONN), "open cursor could not prevent connection close")
-
 	assert2 (true, cur:close(), "couldn't close cursor")
 
 	-- force garbage collection
@@ -466,6 +464,15 @@ function check_close()
 	assert2(nil, a.cur, "cursor not collected")
 	collectgarbage ()
 	assert2(nil, a.CONN, "connection not collected")
+
+	-- check cursor integrity after trying to close a connection
+	local conn = CONN_OK (ENV:connect (datasource, username, password))
+	assert2 (1, conn:execute"insert into t (f1) values (1)", "could not insert a new record")
+	local cur = CUR_OK (conn:execute (cmd))
+	local ok, err = conn:close ()
+	CUR_OK (cur)
+	assert (cur:fetch(), "corrupted cursor")
+	cur:close ()
 end
 
 ---------------------------------------------------------------------
