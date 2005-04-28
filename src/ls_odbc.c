@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.31 2005/02/02 15:32:49 tuler Exp $
+** $Id: ls_odbc.c,v 1.32 2005/04/28 17:29:40 tomas Exp $
 */
 
 #include <assert.h>
@@ -32,12 +32,14 @@
 
 typedef struct {
 	short      closed;
+	int        conn_counter;
 	SQLHENV    henv;               /* environment handle */
 } env_data;
 
 
 typedef struct {
 	short      closed;
+	int        cur_counter;
 	int        env;                /* reference to environment */
 	SQLHDBC    hdbc;               /* database connection handle */
 } conn_data;
@@ -323,6 +325,10 @@ static int cur_close (lua_State *L) {
 	ret = SQLFreeHandle(hSTMT, cur->hstmt);
 	if (error(ret))
 		return fail(L, hSTMT, cur->hstmt);
+	/* Decrement cursor counter on connection object */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+	conn = lua_touserdata (L, -1);
+	conn->cur_counter--;
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
@@ -385,6 +391,7 @@ static int create_cursor (lua_State *L, int conn,
     cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
+	conn->cur_counter++;
     /* fill in structure */
 	cur->closed = 0;
 	cur->conn = LUA_NOREF;
@@ -413,6 +420,8 @@ static int conn_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
+	if (conn->cur_counter > 0)
+		return luaL_error (L, LUASQL_PREFIX"there are open cursors");
 
 	/* Nullify structure fields. */
 	conn->closed = 1;
@@ -423,6 +432,11 @@ static int conn_close (lua_State *L) {
 	ret = SQLFreeHandle(hDBC, conn->hdbc);
 	if (error(ret))
 		return fail(L, hDBC, conn->hdbc);
+	/* Decrement connection counter on environment object */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+	env = lua_touserdata (L, -1);
+	env->conn_counter--;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
     return pass(L);
 }
 
@@ -544,10 +558,12 @@ static int create_connection (lua_State *L, int env, SQLHDBC hdbc) {
 
 	/* fill in structure */
 	conn->closed = 0;
+	conn->cur_counter = 0;
 	conn->env = LUA_NOREF;
 	conn->hdbc = hdbc;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
+	env->conn_counter++;
 	return 1;
 }
 
@@ -598,6 +614,8 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
+	if (env->conn_counter > 0)
+		return luaL_error (L, LUASQL_PREFIX"there are open connections");
 
 	env->closed = 1;
 	ret = SQLFreeHandle (hENV, env->henv);
@@ -662,6 +680,7 @@ static int create_environment (lua_State *L) {
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
 	/* fill in structure */
 	env->closed = 0;
+	env->conn_counter = 0;
 	env->henv = henv;
 	return 1;
 }
