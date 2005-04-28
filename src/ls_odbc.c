@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.33 2005/04/28 19:05:12 tomas Exp $
+** $Id: ls_odbc.c,v 1.34 2005/04/28 19:25:36 tomas Exp $
 */
 
 #include <assert.h>
@@ -425,6 +425,10 @@ static int conn_close (lua_State *L) {
 	if (conn->cur_counter > 0)
 		return luaL_error (L, LUASQL_PREFIX"there are open cursors");
 
+	/* Decrement connection counter on environment object */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+	env = lua_touserdata (L, -1);
+	env->conn_counter--;
 	/* Nullify structure fields. */
 	conn->closed = 1;
 	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
@@ -434,11 +438,6 @@ static int conn_close (lua_State *L) {
 	ret = SQLFreeHandle(hDBC, conn->hdbc);
 	if (error(ret))
 		return fail(L, hDBC, conn->hdbc);
-	/* Decrement connection counter on environment object */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = lua_touserdata (L, -1);
-	env->conn_counter--;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
     return pass(L);
 }
 
