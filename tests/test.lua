@@ -457,8 +457,8 @@ function check_close()
 	collectgarbage ()
 	CONN_OK (a.CONN)
 	a.cur = cur
-        a.cur:close()
-        a.CONN:close()
+	a.cur:close()
+	a.CONN:close()
 	cur = nil
 	collectgarbage ()
 	assert2(nil, a.cur, "cursor not collected")
@@ -473,13 +473,14 @@ function check_close()
 	CUR_OK (cur)
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
+	conn:close ()
 end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function drop_table ()
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
-        CONN:setautocommit(true)
+	CONN:setautocommit(true)
 	assert (CONN:execute ("drop table t"))
 end
 
