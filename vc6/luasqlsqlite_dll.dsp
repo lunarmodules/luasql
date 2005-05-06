@@ -38,12 +38,12 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../lib/vc6"
+# PROP Output_Dir "../lib/vc6/luasql"
 # PROP Intermediate_Dir "luasqlsqlite_dll/Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "../../external-src/lua5/include" /I "../../external-src/sqlite-2.8.15" /I "../../compat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /FR /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "../../external-src/lua50/include" /I "../../external-src/sqlite-2.8.16" /I "../../compat/src" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x416 /d "NDEBUG"
@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386
-# ADD LINK32 lua5.lib lualib5.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/sqlite.dll" /libpath:"../../external-src/lua5/lib/dll" /libpath:"../../external-src/sqlite-2.8.15/lib/opt"
+# ADD LINK32 lua50.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/luasql/sqlite.dll" /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/sqlite-2.8.15/lib/opt"
 
 !ELSEIF  "$(CFG)" == "luasqlsqlite_dll - Win32 Debug"
 
@@ -64,12 +64,12 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "../lib/vc6"
+# PROP Output_Dir "../lib/vc6/luasql"
 # PROP Intermediate_Dir "luasqlsqlite_dll/Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../../external-src/lua5/include" /I "../../external-src/sqlite-2.8.15" /I "../../compat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../../external-src/lua50/include" /I "../../external-src/sqlite-2.8.16" /I "../../compat/src" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlsqlite_dll_EXPORTS" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x416 /d "_DEBUG"
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 lua5.lib lualib5.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/sqlited.dll" /pdbtype:sept /libpath:"../../external-src/lua5/lib/dll" /libpath:"../sqlite/lib/debug"
+# ADD LINK32 lua50.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/luasql/sqlited.dll" /pdbtype:sept /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/sqlite-2.8.16/lib/debug"
 
 !ENDIF 
 
@@ -92,15 +92,15 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\..\compat\compat-5.1.c"
+SOURCE="..\..\compat\src\compat-5.1.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\ls_sqlite.c
+SOURCE=..\src\ls_sqlite.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\luasql.c
+SOURCE=..\src\luasql.c
 # End Source File
 # Begin Source File
 
@@ -112,11 +112,11 @@ SOURCE=.\sqlite.def
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="..\..\compat\compat-5.1.h"
+SOURCE="..\..\compat\src\compat-5.1.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\luasql.h
+SOURCE=..\src\luasql.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
@@ -128,131 +128,175 @@ SOURCE=..\luasql.h
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\attach.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\attach.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\auth.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\auth.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\btree.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\btree.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\btree_rb.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\btree.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\build.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\btree_rb.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\copy.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\build.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\date.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\config.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\delete.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\copy.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\encode.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\date.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\expr.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\delete.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\func.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\encode.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\hash.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\expr.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\insert.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\func.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\main.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\hash.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\opcodes.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\hash.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\os.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\insert.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\pager.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\main.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\parse.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\opcodes.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\pragma.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\opcodes.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\printf.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\os.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\random.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\os.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\select.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\pager.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\shell.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\pager.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\table.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\parse.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\tokenize.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\parse.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\trigger.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\pragma.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\update.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\printf.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\util.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\random.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\vacuum.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\select.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\vdbe.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\shell.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\vdbeaux.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\sqlite.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\external-src\sqlite-2.8.15\where.c"
+SOURCE="..\..\external-src\sqlite-2.8.16\sqliteInt.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\tokenize.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\trigger.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\update.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\util.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\vacuum.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\vdbe.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\vdbe.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\vdbeaux.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\vdbeInt.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\external-src\sqlite-2.8.16\where.c"
 # End Source File
 # End Group
 # End Target

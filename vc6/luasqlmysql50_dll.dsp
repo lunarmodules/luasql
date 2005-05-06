@@ -38,12 +38,12 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../lib/vc6"
+# PROP Output_Dir "../lib/vc6/luasql"
 # PROP Intermediate_Dir "luasqlmysql50_dll/Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "../../external-src/lua5/include" /I "../../external-src/mysql-5.0.2-alpha-win/include" /I "../../compat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /FR /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "../../external-src/lua50/include" /I "../../external-src/mysql-5.0.3-beta-win32/include" /I "../../compat/src" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x416 /d "NDEBUG"
@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386
-# ADD LINK32 lua5.lib lualib5.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/mysql50.dll" /libpath:"../../external-src/lua5/lib/dll" /libpath:"../../external-src/mysql-5.0.2-alpha-win/lib/opt"
+# ADD LINK32 lua50.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/luasql/mysql50.dll" /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/mysql-5.0.3-beta-win32/lib/opt"
 
 !ELSEIF  "$(CFG)" == "luasqlmysql50_dll - Win32 Debug"
 
@@ -64,12 +64,12 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "../lib/vc6"
+# PROP Output_Dir "../lib/vc6/luasql"
 # PROP Intermediate_Dir "luasqlmysql50_dll/Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../../external-src/lua5/include" /I "../../external-src/mysql-5.0.2-alpha-win/include" /I "../../compat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../../external-src/lua50/include" /I "../../external-src/mysql-5.0.3-beta-win32/include" /I "../../compat/src" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "luasqlmysql50_dll_EXPORTS" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x416 /d "_DEBUG"
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 lua5.lib lualib5.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/mysql50d.dll" /pdbtype:sept /libpath:"../../external-src/lua5/lib/dll" /libpath:"../mysql-5.0.2-alpha-win/lib/debug"
+# ADD LINK32 lua50.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /debug /machine:I386 /out:"../bin/vc6/luasql/mysql50d.dll" /pdbtype:sept /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/mysql-5.0.3-beta-win32/lib/debug"
 
 !ENDIF 
 
@@ -92,15 +92,15 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\..\compat\compat-5.1.c"
+SOURCE="..\..\compat\src\compat-5.1.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\ls_mysql.c
+SOURCE=..\src\ls_mysql.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\luasql.c
+SOURCE=..\src\luasql.c
 # End Source File
 # Begin Source File
 
@@ -116,11 +116,11 @@ SOURCE=.\mysql50.rc
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="..\..\compat\compat-5.1.h"
+SOURCE="..\..\compat\src\compat-5.1.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\luasql.h
+SOURCE=..\src\luasql.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
