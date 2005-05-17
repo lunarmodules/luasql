@@ -54,6 +54,10 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386
 # ADD LINK32 lua50.lib libmysql.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/luasql/mysql40.dll" /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/mysql-4.0.24-win/lib/opt"
+# Begin Special Build Tool
+SOURCE="$(InputPath)"
+PostBuild_Cmds=cd ../bin/vc6	zip.exe luasql-2.0-mysql40-win32.zip luasql/mysql40.dll
+# End Special Build Tool
 
 !ELSEIF  "$(CFG)" == "luasqlmysql40_dll - Win32 Debug"
 
