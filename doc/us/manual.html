@@ -14,7 +14,7 @@
 	<div id="product_logo"><a href="http://www.keplerproject.org">
 		<img alt="LuaSQL logo" src="luasql.png"/>
 	</a></div>
-	<div id="product_name"><big><b>LuaSQL</b></big></div>
+	<div id="product_name"><big><strong>LuaSQL</strong></big></div>
 	<div id="product_description">Database connectivity for the Lua programming language</div>
 </div> <!-- id="product" -->
 
@@ -159,27 +159,27 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
 
 <h4>Methods</h4>
 
-<ul>
+<dl class="reference">
 
-<li><a name="env_close"></a><b><code>env:close()</code></b><br/>
-Closes the environment <code>env</code>.
-Only successful if all connections pertaining to it were closed first.<br/>
-Returns: <code>true</code> in case of success; <code>false</code> when
-the object is already closed.</li>
+	<dt><a name="env_close"></a><strong><code>env:close()</code></strong></dt>
+	<dd>Closes the environment <code>env</code>.
+	Only successful if all connections pertaining to it were closed first.<br/>
+	Returns: <code>true</code> in case of success; <code>false</code> when
+	the object is already closed.</dd>
+	
+	<dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
+	<dd>Connects to a data source specified in <code>sourcename</code> using 
+	<code>username</code> and <code>password</code> if they are supplied.<br/>
+	The <code>sourcename</code> may vary according to each driver.
+	Some use a simple database name, like PostgreSQL, MySQL and SQLite;
+	the ODBC driver expects the name of the DSN;
+	the Oracle driver expects the service name;
+	the JDBC driver expects a string like <code>"jdbc:&lt;database system&gt;://&lt;database name&gt;"</code>, which is specific for each driver.<br/>
+	See also: <a href="#postgres_extensions">PostgreSQL</a>,
+		and <a href="#mysql_extensions">MySQL</a> extensions.<br/>
+	Returns: a <a href="#connection_object">connection object</a>.</dd>
 
-<li><a name="env_connect"></a><b><code>env:connect(sourcename[,username[,password]])</code></b><br/>
-Connects to a data source specified in <code>sourcename</code> using 
-<code>username</code> and <code>password</code> if they are supplied.<br/>
-The <code>sourcename</code> may vary according to each driver.
-Some use a simple database name, like PostgreSQL, MySQL and SQLite;
-the ODBC driver expects the name of the DSN;
-the Oracle driver expects the service name;
-the JDBC driver expects a string like <code>"jdbc:&lt;database system&gt;://&lt;database name&gt;"</code>, which is specific for each driver.<br/>
-See also: <a href="#postgres_extensions">PostgreSQL</a>,
-	and <a href="#mysql_extensions">MySQL</a> extensions.<br/>
-Returns: a <a href="#connection_object">connection object</a>.</li>
-
-</ul>
+</dl>
 
 
 <h2><a name="connection_object"></a>Connection Objects</h2>
@@ -192,48 +192,48 @@ method.</p>
 
 <h4>Methods</h4>
 
-<ul>
+<dl class="reference">
 
-<li><a name="conn_close"></a><b><code>conn:close()</code></b><br/>
-Closes the connection <code>conn</code>.
-Only successful if all cursors pertaining to it were closed first.<br/>
-Returns: <code>true</code> in case of success and <code>false</code> when
-the object is already closed.</li>
+	<dt><a name="conn_close"></a><strong><code>conn:close()</code></strong></dt>
+	<dd>Closes the connection <code>conn</code>.
+	Only successful if all cursors pertaining to it were closed first.<br/>
+	Returns: <code>true</code> in case of success and <code>false</code> when
+	the object is already closed.</dd>
+	
+	
+	<dt><a name="conn_commit"></a><strong><code>conn:commit()</code></strong></dt>
+	<dd>Commits the current transaction.
+	This feature might not work on database systems that do not implement
+	transactions.<br/>
+	Returns: <code>true</code> in case of success and <code>false</code> when
+	the operation could not be performed or when it is not implemented.</dd>
+	
+	
+	<dt><a name="conn_execute"></a><strong><code>conn:execute(statement)</code></strong></dt>
+	<dd>Executes the given SQL <code>statement</code>.<br/>
+	Returns: a <a href="#cursor_object">cursor object</a>
+	if there are results, or the number of rows affected by the command otherwise.</dd>
+	
+	
+	<dt><a name="conn_rollback"></a><strong><code>conn:rollback()</code></strong></dt>
+	<dd>Rolls back the current transaction.
+	This feature might not work on database systems that do not implement
+	transactions.<br/>
+	Returns: <code>true</code> in case of success and <code>false</code> when
+	the operation could not be performed or when it is not implemented.</dd>
+	
+	
+	<dt><a name="conn_setautocommit"></a><strong><code>conn:setautocommit(boolean)</code></strong></dt>
+	<dd>Turns on or off the "auto commit" mode.
+	This feature might not work on database systems that do not implement
+	transactions.
+	On database systems that do not have the concept of "auto commit mode",
+	but do implement transactions, this mechanism is implemented by the driver.
+	<br/>
+	Returns: <code>true</code> in case of success and <code>false</code> when
+	the operation could not be performed or when it is not implemented.</dd>
 
-
-<li><a name="conn_commit"></a><b><code>conn:commit()</code></b><br/>
-Commits the current transaction.
-This feature might not work on database systems that do not implement
-transactions.<br/>
-Returns: <code>true</code> in case of success and <code>false</code> when
-the operation could not be performed or when it is not implemented.</li>
-
-
-<li><a name="conn_execute"></a><b><code>conn:execute(statement)</code></b><br/>
-Executes the given SQL <code>statement</code>.<br/>
-Returns: a <a href="#cursor_object">cursor object</a>
-if there are results, or the number of rows affected by the command otherwise.</li>
-
-
-<li><a name="conn_rollback"></a><b><code>conn:rollback()</code></b><br/>
-Rolls back the current transaction.
-This feature might not work on database systems that do not implement
-transactions.<br/>
-Returns: <code>true</code> in case of success and <code>false</code> when
-the operation could not be performed or when it is not implemented.</li>
-
-
-<li><a name="conn_setautocommit"></a><b><code>conn:setautocommit(boolean)</code></b> <br/>
-Turns on or off the "auto commit" mode.
-This feature might not work on database systems that do not implement
-transactions.
-On database systems that do not have the concept of "auto commit mode",
-but do implement transactions, this mechanism is implemented by the driver.
-<br/>
-Returns: <code>true</code> in case of success and <code>false</code> when
-the operation could not be performed or when it is not implemented.</li>
-
-</ul>
+</dl>
 
 
 <h2><a name="cursor_object"></a>Cursor Objects</h2>
@@ -247,49 +247,51 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 
 <h4>Methods</h4>
 
-<ul>
+<dl class="reference">
 
-<li><a name="cur_close"></a><b><code>cur:close()</code></b> <br/>
-Closes this cursor.<br/>
-Returns: <code>true</code> in case of success and <code>false</code> when
-the object is already closed.</li>
+	<dt><a name="cur_close"></a><strong><code>cur:close()</code></strong></dt>
+	<dd>Closes this cursor.<br/>
+	Returns: <code>true</code> in case of success and <code>false</code> when
+	the object is already closed.</dd>
+	
+	
+	<dt><a name="cur_fetch"></a><strong><code>cur:fetch([table[,modestring]])</code></strong></dt>
+	<dd>Retrieves the next row of results.<br/>
+	If <code>fetch</code> is called without parameters,
+	the results will be returned to the caller directly.
+	If <code>fetch</code> is called with a table, the results will be copied
+	into the table and this table will be returned (for convenience).
+	In this case, an optional <code>mode</code> parameter can be used.
+	It is just a string indicating how the result table should be made.
+	The mode string can contain:
+	<dl>
+	  <dt><strong>"n"</strong></dt><dd>the resulting table will have numerical indices (default)</dd>
+	  <dt><strong>"a"</strong></dt><dd>the resulting table will have alphanumerical indices</dd>
+	</dl>
+	<br/>
+	The <em>numerical indices</em> are the positions of the fields in the select
+	statement;
+	the <em>alphanumerical indices</em> are the names of the fields.<br/>
+	The optional <code>table</code> parameter is a table that should be
+	used to store the next row.
+	This allows the use of a unique table for many fetches which
+	can improve the overall performance.<br/>
+	There is no guarantee about the types of the results, they can be converted to adequate Lua types by the driver or not.
+	In the current implementation,
+	the PostgreSQL and MySQL drivers returns all values as strings
+	while the ODBC and Oracle drivers converts them to Lua types.<br/>
+	Returns: data, as above, or <code>nil</code> if there are no more rows.
+	Note that this method could return <code>nil</code> as a valid result.</dd>
+	
+	
+	<dt><a name="cur_colnames"></a><strong><code>cur:getcolnames()</code></strong></dt>
+	<dd>Returns: a list (table) of column names.</dd>
+	
+	
+	<dt><a name="cur_coltypes"></a><strong><code>cur:getcoltypes()</code></strong></dt>
+	<dd>Returns: a list (table) of column types.</dd>
 
-
-<li><a name="cur_fetch"></a><b><code>cur:fetch([table[,modestring]])</code></b> <br/>
-Retrieves the next row of results.<br/>
-If <code>fetch</code> is called without parameters,
-the results will be returned to the caller directly.
-If <code>fetch</code> is called with a table, the results will be copied
-into the table and this table will be returned (for convenience).
-In this case, an optional <code>mode</code> parameter can be used.
-It is just a string indicating how the result table should be made.
-The mode string can contain:
-<ul>
-  <li><b>"n"</b> the resulting table will have numerical indices (default)</li>
-  <li><b>"a"</b> the resulting table will have alphanumerical indices</li>
-</ul>
-The <em>numerical indices</em> are the positions of the fields in the select
-statement;
-the <em>alphanumerical indices</em> are the names of the fields.<br/>
-The optional <code>table</code> parameter is a table that should be
-used to store the next row.
-This allows the use of a unique table for many fetches which
-can improve the overall performance.<br/>
-There is no guarantee about the types of the results, they can be converted to adequate Lua types by the driver or not.
-In the current implementation,
-the PostgreSQL and MySQL drivers returns all values as strings
-while the ODBC and Oracle drivers converts them to Lua types.<br/>
-Returns: data, as above, or <code>nil</code> if there are no more rows.
-Note that this method could return <code>nil</code> as a valid result.</li>
-
-
-<li><a name="cur_colnames"></a><b><code>cur:getcolnames()</code></b> <br/>
-Returns: a list (table) of column names.</li>
-
-
-<li><a name="cur_coltypes"></a><b><code>cur:getcoltypes()</code></b> <br/>
-Returns: a list (table) of column types.</li>
-</ul>
+</dl>
 
 <p><a name="extensions"></a></p>
 
@@ -298,21 +300,21 @@ Returns: a list (table) of column types.</li>
 <p>Besides the basic functionality provided by all drivers (see manual),
 the Postgres driver also offers these extra features:</p>
 
-<ul>
-  <li><b><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></b> <br/>
-    In the PostgreSQL driver, this method has two other optional parameters
+<dl class="reference">
+  <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></strong></dt>
+  <dd>In the PostgreSQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     Also, the first parameter can contain all connection information,
     as stated in the documentation for <code>PQconnectdb</code> function
     in the PostgreSQL manual
     (e.g. <small><code>environment:connect("dbname=&lt;<em>name</em>&gt; user=&lt;<em>username</em>&gt;")</code></small>) <br/>
     See also: <a href="#environment_object">environment objects</a><br/>
-    Returns: a <a href="#connection_object">connection object</a></li>
+    Returns: a <a href="#connection_object">connection object</a></dd>
 
-  <li><b><code>cur:numrows()</code></b> <br/>
-    See also: <a href="#cursor_object">cursor objects</a><br/>
-    Returns: the number of rows in the query result.</li>
-</ul>
+  <dt><strong><code>cur:numrows()</code></strong></dt>
+  <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: the number of rows in the query result.</dd>
+</dl>
 
 
 <h2><a name="mysql_extensions"></a>MySQL Extensions</h2>
@@ -320,13 +322,13 @@ the Postgres driver also offers these extra features:</p>
 <p>Besides the basic functionality provided by all drivers (see manual),
 the MySQL driver also offers these extra features:</p>
 
-<ul>
-  <li><b><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></b> <br/>
-    In the MySQL driver, this method has two other optional parameters
+<dl class="reference">
+  <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></strong></dt>
+  <dd>In the MySQL driver, this method has two other optional parameters
     that indicate the hostname and port to connect.
     See also: <a href="#environment_object">environment objects</a><br/>
-    Returns: a <a href="#connection_object">connection object</a></li>
-</ul>
+    Returns: a <a href="#connection_object">connection object</a></dd>
+</dl>
 
 <p>Note: This driver is compatible to version 4.0 and 4.1 (alpha) of
 MySQL API. Only version 4.1 provides support for transactions by using
@@ -341,11 +343,11 @@ methods <code>commit</code>, <code>rollback</code> and
 <p>Besides the basic functionality provided by all drivers (see manual),
 the Oracle driver also offers this extra feature:</p>
 
-<ul>
-  <li><b><code>cur:numrows()</code></b> <br/>
-    See also: <a href="#cursor_object">cursor objects</a><br/>
-    Returns: the number of rows in the query result.</li>
-</ul>
+<dl class="reference">
+  <dt><strong><code>cur:numrows()</code></strong></dt>
+  <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: the number of rows in the query result.</dd>
+</dl>
 
 </div> <!-- id="content" -->
 
@@ -354,7 +356,7 @@ the Oracle driver also offers this extra feature:</p>
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
 	<p><small>
-	$Id: manual.html,v 1.10 2005/03/22 22:47:24 tuler Exp $
+	$Id: manual.html,v 1.11 2005/05/22 18:51:52 tuler Exp $
 	</small></p>
 </div> <!-- id="about" -->
 
