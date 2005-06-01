@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.16 2005/03/01 18:19:23 tuler Exp $
+** $Id: luasql.c,v 1.17 2005/06/01 21:28:42 carregal Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -92,6 +92,6 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "2.0.0");
+	lua_pushliteral (L, "2.0.1");
 	lua_settable (L, -3);
 }
