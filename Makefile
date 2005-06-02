@@ -13,7 +13,7 @@ LIB_EXT= .so
 #LIB_EXT= .dylib
 LIB_OPTION= -shared
 #LIB_OPTION= -dynamiclib
-LUA_LIBS= -llua-5.0 -llualib-5.0 -lm
+LUA_LIBS= -lm
 DLLIB= -ldl
 
 VERSION= 2.0.1
@@ -102,4 +102,4 @@ jdbc_driver:
 clean:
 	rm -f $(TAR_FILE) $(ZIP_FILE) src/$(LIBNAME) *.o
 
-# $Id: Makefile,v 1.43 2005/04/25 17:09:11 tomas Exp $
+# $Id: Makefile,v 1.44 2005/06/02 18:40:50 tuler Exp $
