@@ -56,7 +56,7 @@ LINK32=link.exe
 # ADD LINK32 lua50.lib libpq.lib wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /dll /machine:I386 /out:"../bin/vc6/luasql/postgres.dll" /libpath:"../../external-src/lua50/lib/dll" /libpath:"../../external-src/postgresql-7.4.7/src/interfaces/libpq/Release"
 # Begin Special Build Tool
 SOURCE="$(InputPath)"
-PostBuild_Cmds=cd ../bin/vc6	zip.exe luasql-2.0-postgres-win32.zip luasql/postgres.dll
+PostBuild_Cmds=cd ../bin/vc6	zip.exe luasql-2.0.1-postgres-win32.zip luasql/postgres.dll
 # End Special Build Tool
 
 !ELSEIF  "$(CFG)" == "luasqlpostgres_dll - Win32 Debug"
