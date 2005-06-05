@@ -1,7 +1,7 @@
 -- See Copyright Notice in license.html
 
 -- load driver
-require"postgres"
+require"luasql.postgres"
 -- create environment object
 env = assert (luasql.postgres())
 -- connect to data source
