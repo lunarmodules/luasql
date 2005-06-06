@@ -1,6 +1,7 @@
 V= 2.0.1
+CONFIG= ./config
 
-include ./config
+include $(CONFIG)
 
 OBJS= $(COMPAT_DIR)/compat-5.1.o src/luasql.o src/ls_$T.o
 
@@ -35,4 +36,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_DIR)/compat-5.1.o
 
-# $Id: Makefile,v 1.45 2005/06/05 00:48:10 tomas Exp $
+# $Id: Makefile,v 1.46 2005/06/06 20:11:52 tomas Exp $
