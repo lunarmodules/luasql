@@ -35,13 +35,9 @@ DRIVER_INCS= -I/usr/local/pgsql/include
 #DRIVER_LIBS= -lsqlite
 #DRIVER_INCS=
 
-# On FreeBSD systems, the following line should be commented
-DLLIB= -ldl
-#LUA_LIBS= -llua50 -lm
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
 INCS= -I$(LUA_INC)
-LIBS= $(LUA_LIBS) $(DLLIB)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
-# $Id: config,v 1.1 2005/06/05 00:48:10 tomas Exp $
+# $Id: config,v 1.2 2005/06/10 17:38:40 tomas Exp $
