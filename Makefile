@@ -3,6 +3,7 @@ CONFIG= ./config
 
 include $(CONFIG)
 
+LIBNAME= $T.so.$V
 OBJS= $(COMPAT_DIR)/compat-5.1.o src/luasql.o src/ls_$T.o
 
 
@@ -28,7 +29,7 @@ $(COMPAT_DIR)/compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
 install:
 	mkdir -p $(LUA_LIBDIR)/luasql
 	cp src/$(LIBNAME) $(LUA_LIBDIR)/luasql
-	ln -f -s $(LUA_LIBDIR)/luasql/$(LIBNAME) $(LUA_LIBDIR)/luasql/$T.so
+	cd $(LUA_LIBDIR)/luasql; ln -f -s $(LIBNAME) $T.so
 
 jdbc_driver:
 	cd src/jdbc; make $@
@@ -36,4 +37,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_DIR)/compat-5.1.o
 
-# $Id: Makefile,v 1.47 2005/06/06 22:24:36 tomas Exp $
+# $Id: Makefile,v 1.48 2005/06/16 20:35:01 tomas Exp $
