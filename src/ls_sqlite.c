@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.7 2004/11/17 14:16:52 tomas Exp $
+** $Id: ls_sqlite.c,v 1.8 2005/06/16 20:33:47 tomas Exp $
 */
 
 #include <stdio.h>
@@ -443,6 +443,7 @@ static int create_connection(lua_State *L, int env, sqlite *sql_conn)
 	conn->env = LUA_NOREF;
 	conn->auto_commit = 1;
 	conn->sql_conn = sql_conn;
+	conn->cur_counter = 0;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	return 1;
