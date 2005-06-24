@@ -17,7 +17,7 @@ LUA_INC= /usr/local/include/lua5
 LIB_OPTION= -shared #for Linux
 #LIB_OPTION= -bundle -undefined dynamic_lookup #for MacOS X
 
-LIBNAME= lib$T-$V.so
+LIBNAME= $T.so.$V
 COMPAT_DIR= ../compat/src
 
 # Compilation parameters
@@ -40,4 +40,4 @@ INCS= -I$(LUA_INC)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
-# $Id: config,v 1.2 2005/06/10 17:38:40 tomas Exp $
+# $Id: config,v 1.3 2005/06/24 01:57:12 tomas Exp $
