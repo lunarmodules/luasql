@@ -28,7 +28,7 @@ $(COMPAT_DIR)/compat-5.1.o: $(COMPAT_DIR)/compat-5.1.c
 install:
 	mkdir -p $(LUA_LIBDIR)/luasql
 	cp src/$(LIBNAME) $(LUA_LIBDIR)/luasql
-	cd $(LUA_LIBDIR)/luasql; ln -f -h -s $(LIBNAME) $T.so
+	cd $(LUA_LIBDIR)/luasql; ln -f -s $(LIBNAME) $T.so
 
 jdbc_driver:
 	cd src/jdbc; make $@
@@ -36,4 +36,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_DIR)/compat-5.1.o
 
-# $Id: Makefile,v 1.49 2005/06/24 01:57:12 tomas Exp $
+# $Id: Makefile,v 1.50 2005/06/27 17:01:03 tomas Exp $
