@@ -118,8 +118,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 
 <pre class="example">
 function rows (connection, sql_statement)
-  local cursor, err = connection:execute (sql_statement)
-  assert (cursor, string.format ("%s (%s)", err, sql_statement))
+  local cursor = assert (connection:execute (sql_statement))
   return function ()
     return cursor:fetch()
   end
@@ -137,6 +136,15 @@ for id, name, address in rows (con, "select * from contacts") do
 end
 </pre>
 
+<p>
+The iterator could be improved to give better error messages
+(including the SQL statement, for example)
+and also explicit close the cursor
+(by checking whether there are no more rows).
+The above implementation will rely on the garbage collector to close
+the cursor.
+</p>
+
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->
@@ -144,7 +152,7 @@ end
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
 	<p><small>
-		$Id: examples.html,v 1.8 2005/05/22 18:41:39 carregal Exp $
+		$Id: examples.html,v 1.9 2005/08/05 12:43:41 tomas Exp $
 	</small></p>
 </div> <!-- id="about" -->
 
