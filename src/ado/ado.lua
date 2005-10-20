@@ -11,7 +11,7 @@ local libName = "luasql"
 
 local Private = {}
 
-luasql = (_G[libName] and type(_G[libName]) == "table") or {}
+luasql = type(_G[libName]) == "table" and _G[libName] or {}
 
 local ADOTypes = {}
 
