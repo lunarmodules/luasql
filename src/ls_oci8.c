@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.24 2004/11/17 14:16:52 tomas Exp $
+** $Id: ls_oci8.c,v 1.25 2005/11/01 19:28:17 tuler Exp $
 */
 
 #include <assert.h>
@@ -247,8 +247,8 @@ static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
 	switch (col->type) {
 		case SQLT_INT:
 		case SQLT_FLT:
+		case SQLT_NUM:
 			break;
-		case SQLT_NUM: /* NUM is an array of char */
 		case SQLT_CHR:
 		case SQLT_STR:
 		case SQLT_VCS:
