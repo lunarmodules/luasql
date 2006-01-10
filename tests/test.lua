@@ -347,11 +347,6 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
-	if luasql._MYSQLVERSION and string.sub(luasql._MYSQLVERSION, 1, 3) == "4.0" then
-		io.write("skipping rollback test (mysql version 4.0.x)")
-		return
-	end
-
 	CONN:setautocommit (false) -- == begin transaction
 	-- insert a record and commit the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('a')"))
