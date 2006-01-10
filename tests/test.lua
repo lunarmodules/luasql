@@ -396,7 +396,7 @@ function rollback ()
 	assert2 (false, cur:close())
 --]]
 	-- clean the table.
-	assert2 (1, CONN:execute (sql_erase_table"t")
+	assert2 (1, CONN:execute (sql_erase_table"t"))
 	CONN:commit ()
 	CONN:setautocommit (true)
 	-- check resulting table with no records.
