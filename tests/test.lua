@@ -1,4 +1,4 @@
-#!/usr/local/bin/lua
+#!/usr/local/bin/lua50
 -- See Copyright Notice in license.html
 
 TOTAL_FIELDS = 40
