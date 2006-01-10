@@ -493,20 +493,6 @@ end
 
 
 ---------------------------------------------------------------------
-tests = {
-	{ "basic checking", basic_test },
-	{ "create table", create_table },
-	{ "fetch two values", fetch2 },
-	{ "fetch new table", fetch_new_table },
-	{ "fetch many", fetch_many },
-	{ "rollback", rollback },
-	{ "get column information", column_info },
-	{ "close objects", check_close },
-	{ "drop table", drop_table },
-	{ "close connection", close_conn },
-}
-
----------------------------------------------------------------------
 -- Main
 ---------------------------------------------------------------------
 
@@ -519,6 +505,31 @@ driver = arg[1]
 datasource = arg[2] or "luasql-test"
 username = arg[3] or nil
 password = arg[4] or nil
+
+-- Loading driver specific functions
+if arg[0] then
+	local path = string.gsub (arg[0], "^([^/]*%/).*$", "%1")
+	local f, err = loadfile (path..driver..".lua")
+	if not f then
+		print ("LuaSQL test: couldn't find driver-specific test file.\nProceeding with general test")
+	else
+		f ()
+	end
+end
+
+-- Complete set of tests
+tests = {
+	{ "basic checking", basic_test },
+	{ "create table", create_table },
+	{ "fetch two values", fetch2 },
+	{ "fetch new table", fetch_new_table },
+	{ "fetch many", fetch_many },
+	{ "rollback", rollback },
+	{ "get column information", column_info },
+	{ "close objects", check_close },
+	{ "drop table", drop_table },
+	{ "close connection", close_conn },
+}
 
 require ("luasql."..driver)
 assert (luasql, "no luasql table")
