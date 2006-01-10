@@ -99,16 +99,11 @@ end
 -- Build SQL command to create the test table.
 ---------------------------------------------------------------------
 function define_table (n)
-	local s = "create table t ("
+	local t = {}
 	for i = 1, n do
-		s = s.."f"..i.." varchar (30), "
+		table.insert (t, "f"..i.." varchar (30)")
 	end
-	s = string.sub (s, 1, -3)
-	if driver == "mysql" then 
-	    return s..") TYPE = InnoDB;"
-	else
-		return s..")"
-	end
+	return "create table t ("..table.concat (t, ',')..")"
 end
 
 
