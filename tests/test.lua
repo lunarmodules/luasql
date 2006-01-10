@@ -5,6 +5,15 @@ TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
 
 ---------------------------------------------------------------------
+-- Produces a SQL statement which completely erases a table.
+-- @param table_name String with the name of the table.
+-- @return String with SQL statement.
+---------------------------------------------------------------------
+function sql_erase_table (table_name)
+	return string.format ("delete from %s", table_name)
+end
+
+---------------------------------------------------------------------
 -- checks for a value and throw an error if it is invalid.
 ---------------------------------------------------------------------
 function assert2 (expected, value, msg)
@@ -397,11 +406,7 @@ function rollback ()
 	assert2 (false, cur:close())
 --]]
 	-- clean the table.
-	if string.find (driver, "sqlite", 1, 1) then
-		assert2 (1, CONN:execute ("delete from t where 1"))
-	else
-		assert2 (1, CONN:execute ("delete from t"))
-	end
+	assert2 (1, CONN:execute (sql_erase_table"t")
 	CONN:commit ()
 	CONN:setautocommit (true)
 	-- check resulting table with no records.
