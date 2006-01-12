@@ -34,10 +34,13 @@ DRIVER_INCS= -I/usr/local/pgsql/include
 ######## SQLite
 #DRIVER_LIBS= -lsqlite
 #DRIVER_INCS=
+######## ODBC
+#DRIVER_LIBS= -L/usr/local/lib -lodbc
+#DRIVER_INCS= -DUNIXODBC -I/usr/local/include
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
 INCS= -I$(LUA_INC)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
-# $Id: config,v 1.3 2005/06/24 01:57:12 tomas Exp $
+# $Id: config,v 1.4 2006/01/12 20:57:53 tomas Exp $

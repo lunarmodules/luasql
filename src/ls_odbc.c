@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.34 2005/04/28 19:25:36 tomas Exp $
+** $Id: ls_odbc.c,v 1.35 2006/01/12 20:57:53 tomas Exp $
 */
 
 #include <assert.h>
@@ -17,6 +17,10 @@
 #include <sqlext.h>
 #elif defined(INFORMIX)
 #include "infxcli.h"
+#elif defined(UNIXODBC)
+#include "sql.h"
+#include "sqltypes.h"
+#include "sqlext.h"
 #endif
 
 #include "lua.h"
