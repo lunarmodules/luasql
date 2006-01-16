@@ -47,14 +47,17 @@ function test_object (obj, objmethods)
 	return obj
 end
 
+ENV_METHODS = { "close", "connect", }
 ENV_OK = function (obj)
-	return test_object (obj, { "close", "connect", })
+	return test_object (obj, ENV_METHODS)
 end
+CONN_METHODS = { "close", "commit", "execute", "rollback", "setautocommit", }
 CONN_OK = function (obj)
-	return test_object (obj, { "close", "commit", "execute", "rollback", "setautocommit", })
+	return test_object (obj, CONN_METHODS)
 end
+CUR_METHODS = { "close", "fetch", "getcolnames", "getcoltypes", }
 CUR_OK = function (obj)
-	return test_object (obj, { "close", "fetch", "getcolnames", "getcoltypes", })
+	return test_object (obj, CUR_METHODS)
 end
 
 ---------------------------------------------------------------------
