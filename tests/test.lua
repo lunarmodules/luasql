@@ -23,7 +23,7 @@ function assert2 (expected, value, msg)
 		msg = msg..'\n'
 	end
 	return assert (value == expected,
-		msg.."wrong value (["..tostring(value).."] instead of "..
+		msg.."wrong value ("..tostring(value).." instead of "..
 		tostring(expected)..")")
 end
 
@@ -115,8 +115,7 @@ function create_table ()
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
-	-- Postgres returns 0, while ODBC returns -1.
-	assert (CONN:execute (cmd))
+	assert2 (0, CONN:execute (cmd))
 end
 
 ---------------------------------------------------------------------
@@ -476,7 +475,7 @@ end
 function drop_table ()
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
 	CONN:setautocommit(true)
-	assert (CONN:execute ("drop table t"))
+	assert2 (0, CONN:execute ("drop table t"))
 end
 
 ---------------------------------------------------------------------
