@@ -4,6 +4,12 @@
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
 
+DEFINITION_STRING_TYPE_NAME = "text"
+QUERYING_STRING_TYPE_NAME = "text"
+
+CREATE_TABLE_RETURN_VALUE = 0
+DROP_TABLE_RETURN_VALUE = 0
+
 ---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.
 -- @param table_name String with the name of the table.
@@ -104,7 +110,7 @@ end
 function define_table (n)
 	local t = {}
 	for i = 1, n do
-		table.insert (t, "f"..i.." varchar (30)")
+		table.insert (t, "f"..i.." "..DEFINITION_STRING_TYPE_NAME)
 	end
 	return "create table t ("..table.concat (t, ',')..")"
 end
@@ -118,7 +124,7 @@ function create_table ()
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
-	assert2 (0, CONN:execute (cmd))
+	assert2 (CREATE_TABLE_RETURN_VALUE, CONN:execute (cmd))
 end
 
 ---------------------------------------------------------------------
@@ -423,8 +429,8 @@ function column_info ()
 	assert2 (4, table.getn(types), "incorrect column types table")
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, names[i], "incorrect column names table")
-		local type_i = string.gsub(types[i], "%s+", "")
-		assert (type_i == "adVarWChar" or type_i == "varchar(30)" or type_i == "string" or type_i == "string(30)", "incorrect column types table")
+		local type_i = types[i]
+		assert (type_i == QUERYING_STRING_TYPE_NAME, "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
@@ -478,7 +484,7 @@ end
 function drop_table ()
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
 	CONN:setautocommit(true)
-	assert2 (0, CONN:execute ("drop table t"))
+	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
 end
 
 ---------------------------------------------------------------------
