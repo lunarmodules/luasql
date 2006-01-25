@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.19 2004/12/14 19:27:05 eduquintao Exp $
+** $Id: ls_mysql.c,v 1.20 2006/01/25 20:24:35 tomas Exp $
 */
 
 #include <assert.h>
@@ -305,6 +305,15 @@ static int cur_getcolnames (lua_State *L) {
 */
 static int cur_getcoltypes (lua_State *L) {
 	pushtable (L, getcursor(L), coltypes);
+	return 1;
+}
+
+
+/*
+** Push the number of rows.
+*/
+static int cur_numrows (lua_State *L) {
+	lua_pushnumber (L, (lua_Number)mysql_num_rows (getcursor(L)->my_res));
 	return 1;
 }
 
