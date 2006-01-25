@@ -1,9 +1,12 @@
 ---------------------------------------------------------------------
 -- MySQL specific tests and configurations.
--- $Id: mysql.lua,v 1.3 2006/01/23 20:13:25 tomas Exp $
+-- $Id: mysql.lua,v 1.4 2006/01/25 20:28:30 tomas Exp $
 ---------------------------------------------------------------------
 
 QUERYING_STRING_TYPE_NAME = "binary(65535)"
+
+table.insert (CUR_METHODS, "numrows")
+table.insert (EXTENSIONS, numrows)
 
 ---------------------------------------------------------------------
 -- Build SQL command to create the test table.
