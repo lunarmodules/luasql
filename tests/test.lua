@@ -494,6 +494,56 @@ function close_conn ()
 	assert (true, ENV:close())
 end
 
+---------------------------------------------------------------------
+-- Testing Extensions
+---------------------------------------------------------------------
+EXTENSIONS = {
+}
+function extensions_test ()
+	for i, f in ipairs (EXTENSIONS) do
+		f ()
+	end
+end
+
+---------------------------------------------------------------------
+-- Testing numrows method.
+-- This is not a default test, it must be added to the extensions
+-- table to be executed.
+---------------------------------------------------------------------
+function numrows()
+    local cur = CUR_OK(CONN:execute"select * from t")
+    assert2(0,cur:numrows())
+    cur:close()
+
+    -- Inserts one row.
+    assert2 (1, CONN:execute"insert into t (f1) values ('a')", "could not insert a new record")
+    cur = CUR_OK(CONN:execute"select * from t")
+    assert2(1,cur:numrows())
+    cur:close()
+
+    -- Inserts three more rows (total = 4).
+    assert2 (1, CONN:execute"insert into t (f1) values ('b')", "could not insert a new record")
+    assert2 (1, CONN:execute"insert into t (f1) values ('c')", "could not insert a new record")
+    assert2 (1, CONN:execute"insert into t (f1) values ('d')", "could not insert a new record")
+    cur = CUR_OK(CONN:execute"select * from t")
+    assert2(4,cur:numrows())
+	cur:close()
+
+    -- Deletes one row
+    assert2(1, CONN:execute"delete from t where f1 = 'a'", "could not delete the specified row")
+    cur = CUR_OK(CONN:execute"select * from t")
+    assert2(3,cur:numrows())
+    cur:close()
+
+    -- Deletes all rows
+    assert2 (3, CONN:execute (sql_erase_table"t"))
+    cur = CUR_OK(CONN:execute"select * from t")
+    assert2(0,cur:numrows())
+    cur:close()
+
+	io.write (" numrows")
+end
+
 
 ---------------------------------------------------------------------
 -- Main
@@ -529,6 +579,7 @@ tests = {
 	{ "fetch many", fetch_many },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
+	{ "extensions", extensions_test },
 	{ "close objects", check_close },
 	{ "drop table", drop_table },
 	{ "close connection", close_conn },
