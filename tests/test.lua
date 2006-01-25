@@ -562,9 +562,14 @@ password = arg[4] or nil
 -- Loading driver specific functions
 if arg[0] then
 	local path = string.gsub (arg[0], "^([^/]*%/).*$", "%1")
-	local f, err = loadfile (path..driver..".lua")
+	if path == "test.lua" then
+		path = ""
+	end
+	local file = path..driver..".lua"
+	local f, err = loadfile (file)
 	if not f then
-		print ("LuaSQL test: couldn't find driver-specific test file.\nProceeding with general test")
+		print ("LuaSQL test: couldn't find driver-specific test file ("..
+			file..").\nProceeding with general test")
 	else
 		f ()
 	end
