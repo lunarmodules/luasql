@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.20 2006/01/25 20:24:35 tomas Exp $
+** $Id: ls_mysql.c,v 1.21 2006/01/25 20:49:30 tomas Exp $
 */
 
 #include <assert.h>
@@ -514,6 +514,7 @@ static void create_metatables (lua_State *L) {
         {"getcolnames", cur_getcolnames},
         {"getcoltypes", cur_getcoltypes},
         {"fetch", cur_fetch},
+        {"numrows", cur_numrows},
 		{NULL, NULL},
     };
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_MYSQL, environment_methods);
