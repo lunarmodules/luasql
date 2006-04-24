@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by postgres.rc
+// Used by mysql40.rc
 //
 
 // Next default values for new objects
