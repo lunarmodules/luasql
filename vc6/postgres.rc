@@ -28,8 +28,8 @@ LANGUAGE LANG_PORTUGUESE, SUBLANG_PORTUGUESE_BRAZILIAN
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,3,0
- PRODUCTVERSION 2,0,0,0
+ FILEVERSION 2,0,2,0
+ PRODUCTVERSION 2,0,2,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x21L
@@ -47,14 +47,14 @@ BEGIN
             VALUE "Comments", "Postgresql 7.4.6\0"
             VALUE "CompanyName", "Ideais\0"
             VALUE "FileDescription", "postgres\0"
-            VALUE "FileVersion", "2, 0, 3, 0\0"
+            VALUE "FileVersion", "2, 0, 2, 0\0"
             VALUE "InternalName", "postgres\0"
-            VALUE "LegalCopyright", "Copyright © 2005\0"
+            VALUE "LegalCopyright", "Copyright © 2006\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "postgres.dll\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "LuaSQL Postgresql Driver\0"
-            VALUE "ProductVersion", "2, 0, 0, 0\0"
+            VALUE "ProductVersion", "2, 0, 2, 0\0"
             VALUE "SpecialBuild", "Kepler Project\0"
         END
     END
