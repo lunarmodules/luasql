@@ -44,7 +44,7 @@ BEGIN
     BEGIN
         BLOCK "000004b0"
         BEGIN
-            VALUE "Comments", "MySQL 4.1.12\0"
+            VALUE "Comments", "MySQL 4.1.16\0"
             VALUE "CompanyName", "Kepler\0"
             VALUE "FileDescription", "mysql41\0"
             VALUE "FileVersion", "2, 0, 1, 0\0"
