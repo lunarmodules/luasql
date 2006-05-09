@@ -341,12 +341,17 @@ the MySQL driver also offers these extra features:</p>
     Returns: the number of rows in the query result.</dd>
 </dl>
 
-<p>Note: This driver is compatible with versions 4.0 and 4.1 (alpha) of
-MySQL API. Only version 4.1 provides support for transactions by using
+<p>Notes:</p>
+
+<p>This driver is compatible with versions 4.0, 4.1 and 5.0 of the
+MySQL API. Only from version 4.1 MySQL provides support for transactions by using
 BDB or INNODB tables.
 Therefore, with version 4.0 or without one of these types of tables, the
 methods <code>commit</code>, <code>rollback</code> and
 <code>setautocommit</code> will not work.</p>
+
+<p>If you are using LuaSQL 2.0, <strong><code>cur:numrows()</code></strong>
+is available only in version 2.0.2 or later.</p>
 
 
 <h2><a name="oracle_extensions"></a>Oracle Extensions</h2>
@@ -367,7 +372,7 @@ the Oracle driver also offers this extra feature:</p>
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
 	<p><small>
-	$Id: manual.html,v 1.18 2006/04/26 21:15:11 carregal Exp $
+	$Id: manual.html,v 1.19 2006/05/09 19:14:50 carregal Exp $
 	</small></p>
 </div> <!-- id="about" -->
 
