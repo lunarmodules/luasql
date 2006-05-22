@@ -92,15 +92,14 @@ LuaSQL is distributed as a set of C source files:
 a pair of common source and header files (<code>luasql.h</code> and <code>luasql.c</code>);
 and one source file for each driver.
 Each driver should be compiled with the luasql.c file to generate a library.
-This library can be linked to the application (the initialization
-function is <code>luaopen_luasql<em>drivername</em></code> and it is a Lua
-open-library compatible function),
-or dynamically loaded.
+This library can be linked to the application or dynamically loaded. 
+The initialization function is <code>luaopen_luasql<em>drivername</em></code> and it is a Lua
+<code>open-library</code> compatible function.
 </p>
 
 <h2><a name="installation"></a>Installation</h2>
 
-<p>All LuaSQL drivers follows the
+<p>All LuaSQL drivers follow the
 <a href="http://www.keplerproject.org/compat">package model</a>
 for Lua 5.1 and therefore should be "installed". Refer to the
 <a href="http://www.keplerproject.org/compat/manual.html#configuration">
@@ -372,7 +371,7 @@ the Oracle driver also offers this extra feature:</p>
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
 	<p><small>
-	$Id: manual.html,v 1.19 2006/05/09 19:14:50 carregal Exp $
+	$Id: manual.html,v 1.20 2006/05/22 22:50:20 carregal Exp $
 	</small></p>
 </div> <!-- id="about" -->
 
