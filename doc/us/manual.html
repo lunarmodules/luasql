@@ -35,8 +35,10 @@
 		<li><strong>Manual</strong>
 			<ul>
 				<li><a href="manual.html#introduction">Introduction</a></li>
+				<li><a href="manual.html#compiling">Compiling</a></li>
 				<li><a href="manual.html#installation">Installation</a></li>
 				<li><a href="manual.html#errors">Error handling</a></li>
+				<li><a href="manual.html#drivers">Drivers</a></li>
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
@@ -87,8 +89,10 @@ LuaSQL is free software and uses the same
 as Lua 5.0.
 </p>
 
-<p>
-LuaSQL is distributed as a set of C source files:
+
+<h2><a name="compiling"></a>Compiling</h2>
+
+<p>LuaSQL is distributed as a set of C source files:
 a pair of common source and header files (<code>luasql.h</code> and <code>luasql.c</code>);
 and one source file for each driver.
 Each driver should be compiled with the luasql.c file to generate a library.
@@ -108,7 +112,7 @@ binary.
 The compiled binary should be copied to a directory named <code>luasql</code>
 in your LUA_CPATH.</p>
 
-<p>Windows users can use the executable versions of LuaSQL available at
+<p>Windows users can use the compiled versions of LuaSQL available at
 <a href="http://luaforge.net/projects/luasql/files">LuaForge</a></p>
 
 <p>
@@ -146,14 +150,52 @@ This behavior will be followed by all functions/methods
 described in this document unless otherwise stated.
 </p>
 
+<h2><a name="drivers"></a>Drivers</h2>
+
+<p>
+A LuaSQL driver allows the use of the LuaSQL API with a database management system
+that corresponds to the driver. To use a driver you have to load it in the
+<code>luasql</code> table. The example below
+</p>
+
+<pre class="example">
+require "luasql.odbc"
+</pre>
+
+<p>
+loads the ODBC driver in the <code>luasql</code> table. Note that you can have more than one
+driver loaded at the same time doing something like:
+</p>
+
+<pre class="example">
+require "luasql.odbc"
+require "luasql.oci8"
+</pre>
+
+<p>
+This example also shows that the driver name not always correspond to the
+Database name, but to the driver name in the file system. Since it refers to
+the OCI8 API, the Oracle driver has the name <code>oci8</code> instead of
+<code>oracle</code>.
+</p>
+
+<p>
+Some drivers, such as the MySQL, have libraries for a number of database versions that
+use the same file name (<code>mysql</code>). In this case it is not possible to
+load more than one version of the MySQL driver in the <code>luasql</code> table.
+</p>
+
 <h2><a name="environment_object"></a>Environment Objects</h2>
+
 <p>An environment object is created by calling the driver's initialization
 function that is stored in the <code>luasql</code> table, indexed with the same
 name as the driver (odbc, postgres etc). For example,
 </p>
+
 <pre class="example">
 env = luasql.odbc()
 </pre>
+
 <p>will try to create an environment object using the ODBC driver.
 The only exception is the JDBC driver, which needs to know which 
 internal driver to use. Therefore, when creating an environment, 
@@ -371,7 +413,7 @@ the Oracle driver also offers this extra feature:</p>
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
 	<p><small>
-	$Id: manual.html,v 1.20 2006/05/22 22:50:20 carregal Exp $
+	$Id: manual.html,v 1.21 2006/05/29 21:44:44 carregal Exp $
 	</small></p>
 </div> <!-- id="about" -->
 
