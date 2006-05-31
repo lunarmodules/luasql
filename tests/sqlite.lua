@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------
 -- SQLite specific tests and configurations.
--- $Id: sqlite.lua,v 1.1 2006/01/10 18:22:46 tomas Exp $
+-- $Id: sqlite.lua,v 1.2 2006/05/31 21:43:33 carregal Exp $
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
@@ -10,4 +10,8 @@
 ---------------------------------------------------------------------
 function sql_erase_table (table_name)
 	return string.format ("delete from %s where 1", table_name)
+end
+
+function checkUnknownDatabase(ENV)
+	-- skip this test
 end

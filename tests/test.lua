@@ -66,6 +66,10 @@ CUR_OK = function (obj)
 	return test_object (obj, CUR_METHODS)
 end
 
+function checkUnknownDatabase(ENV)
+	assert2 (nil, ENV:connect ("/unknown-data-base"), "this should be an error")
+end
+
 ---------------------------------------------------------------------
 -- basic checking test.
 ---------------------------------------------------------------------
@@ -91,7 +95,7 @@ function basic_test ()
 	-- it is ok to close a closed object, but false is returned instead of true.
 	assert2 (false, conn:close())
 	-- Check error situation.
-	assert2 (nil, ENV:connect ("/unknown-data-base"), "this should be an error")
+	checkUnknownDatabase(ENV)	
 
 	-- force garbage collection
 	local a = {}
