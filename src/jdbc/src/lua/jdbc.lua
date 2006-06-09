@@ -14,6 +14,10 @@ luasql = type(_G[libName]) == "table" and _G[libName] or {}
 
 Private.createJavaCursor = luajava.loadLib("org.keplerproject.luasql.jdbc.LuaSQLCursor", "open")
 
+luasql._COPYRIGHT = "Copyright (C) 2003-2006 Kepler Project"
+luasql._DESCRIPTION = "LuaSQL is a simple interface from Lua to a DBMS"
+luasql._VERSION = "LuaSQL 2.0.2"
+
 ---------------------------------------------------------------------
 -- function that returns a jdbc environment
 ---------------------------------------------------------------------
