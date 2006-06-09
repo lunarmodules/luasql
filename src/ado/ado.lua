@@ -30,6 +30,10 @@ local metatable = {
   __metatable = "LuaSQL: you're not allowed to get this metatable"
 }
 
+luasql._COPYRIGHT = "Copyright (C) 2003-2006 Kepler Project"
+luasql._DESCRIPTION = "LuaSQL is a simple interface from Lua to a DBMS"
+luasql._VERSION = "LuaSQL 2.0.2"
+
 ---------------------------------------------------------------------
 -- function that returns an ADO environment
 ---------------------------------------------------------------------
