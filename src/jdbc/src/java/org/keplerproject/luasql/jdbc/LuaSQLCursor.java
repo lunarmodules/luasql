@@ -64,18 +64,19 @@ public class LuaSQLCursor
     {
       if (!rs.next())
         return null;
-
+      
       table.push();
 
       ResultSetMetaData md = rs.getMetaData();
-      for (int i = 1; i <= md.getColumnCount(); i++)
+      int columnCount = md.getColumnCount();
+      for (int i = 1; i <= columnCount; i++)
       {
         int type = md.getColumnType(i);
         
-        if ("a".equalsIgnoreCase(modeString))
+/*        if ("a".equalsIgnoreCase(modeString))
           L.pushString(md.getColumnName(i));
         else
-          L.pushNumber(i);
+          L.pushNumber(i);*/
         
         switch (type)
         {
@@ -107,6 +108,11 @@ public class LuaSQLCursor
             
             L.pushString(rs.getDate(i).toString());
             break;
+            
+          case Types.NULL:
+            
+            L.pushNil();
+            break;
           
           default:
             
@@ -114,7 +120,20 @@ public class LuaSQLCursor
             break;
         }
         
-        L.setTable(-3);
+        if (modeString.contains("a"))
+        {
+          L.pushString(md.getColumnName(i));
+          L.pushValue(-2);
+          L.setTable(-4);
+        }
+        if (modeString.contains("n"))
+        {
+          L.pushNumber(i);
+          L.pushValue(-2);
+          L.setTable(-4);
+        }
+        
+        L.pop(1);
       }
       
       L.pop(1);
