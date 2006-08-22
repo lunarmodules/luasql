@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.21 2006/01/25 20:49:30 tomas Exp $
+** $Id: ls_mysql.c,v 1.22 2006/08/22 14:42:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -20,7 +20,10 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
+#endif
+
 
 #include "luasql.h"
 
@@ -541,7 +544,7 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasqlmysql (lua_State *L) { 
+LUASQL_API int luaopen_luasql_mysql (lua_State *L) { 
 	struct luaL_reg driver[] = {
 		{"mysql", create_environment},
 		{NULL, NULL},

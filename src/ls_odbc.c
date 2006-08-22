@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.35 2006/01/12 20:57:53 tomas Exp $
+** $Id: ls_odbc.c,v 1.36 2006/08/22 14:42:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -25,7 +25,10 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
+#endif
+
 
 #include "luasql.h"
 
@@ -695,7 +698,7 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasqlodbc (lua_State *L) {
+LUASQL_API int luaopen_luasql_odbc (lua_State *L) {
 	struct luaL_reg driver[] = {
 		{"odbc", create_environment},
 		{NULL, NULL},

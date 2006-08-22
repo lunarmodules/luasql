@@ -1,9 +1,13 @@
-V= 2.0.1
+V= 2.0.3
 CONFIG= ./config
 
 include $(CONFIG)
 
-OBJS= $(COMPAT_DIR)/compat-5.1.o src/luasql.o src/ls_$T.o
+ifeq "$(LUA_VERSION_NUM)" "500"
+COMPAT_O= $(COMPAT_DIR)/compat-5.1.o
+endif
+
+OBJS= src/luasql.o src/ls_$T.o $(COMPAT_O)
 
 
 SRCS= src/luasql.h src/luasql.c \
@@ -34,6 +38,6 @@ jdbc_driver:
 	cd src/jdbc; make $@
 
 clean:
-	rm -f src/$(LIBNAME) src/*.o $(COMPAT_DIR)/compat-5.1.o
+	rm -f src/$(LIBNAME) src/*.o $(COMPAT_O)
 
-# $Id: Makefile,v 1.50 2005/06/27 17:01:03 tomas Exp $
+# $Id: Makefile,v 1.51 2006/08/22 14:42:59 tomas Exp $

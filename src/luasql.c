@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.19 2006/05/31 22:44:21 carregal Exp $
+** $Id: luasql.c,v 1.20 2006/08/22 14:42:59 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -7,7 +7,10 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
+#endif
+
 
 #include "luasql.h"
 
@@ -89,6 +92,6 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "LuaSQL 2.0.2");
+	lua_pushliteral (L, "LuaSQL 2.0.3");
 	lua_settable (L, -3);
 }

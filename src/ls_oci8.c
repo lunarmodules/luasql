@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.25 2005/11/01 19:28:17 tuler Exp $
+** $Id: ls_oci8.c,v 1.26 2006/08/22 14:42:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -18,7 +18,10 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
+#endif
+
 
 #include "luasql.h"
 
@@ -841,7 +844,7 @@ static void create_metatables (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasqloci8 (lua_State *L) {
+LUASQL_API int luaopen_luasql_oci8 (lua_State *L) {
 	struct luaL_reg driver[] = {
 		{"oci8", create_environment},
 		{NULL, NULL},

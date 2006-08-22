@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.2 2004/11/17 14:16:52 tomas Exp $
+** $Id: ls_postgres.c,v 1.3 2006/08/22 14:42:59 tomas Exp $
 */
 
 #include <assert.h>
@@ -16,7 +16,10 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
+#endif
+
 
 #include "luasql.h"
 
@@ -50,7 +53,7 @@ typedef struct {
 typedef void (*creator) (lua_State *L, cur_data *cur);
 
 
-LUASQL_API int luaopen_luasqlpostgres(lua_State *L);
+LUASQL_API int luaopen_luasql_postgres(lua_State *L);
 
 
 /*
@@ -432,7 +435,7 @@ static int env_connect (lua_State *L) {
 	PGconn *conn;
 	getenvironment (L);	/* validate environment */
 	if ((lua_gettop (L) == 2) && (strchr (sourcename, '=') != NULL))
-		conn = PQconnectdb (luaL_check_string(L, 2));
+		conn = PQconnectdb (luaL_checkstring(L, 2));
 	else {
 		const char *username = luaL_optstring(L, 3, NULL);
 		const char *password = luaL_optstring(L, 4, NULL);
@@ -516,7 +519,7 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasqlpostgres (lua_State *L) {
+LUASQL_API int luaopen_luasql_postgres (lua_State *L) {
     struct luaL_reg driver[] = {
 		{"postgres", create_environment},
 		{NULL, NULL},
