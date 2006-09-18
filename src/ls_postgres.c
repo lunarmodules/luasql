@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.3 2006/08/22 14:42:59 tomas Exp $
+** $Id: ls_postgres.c,v 1.4 2006/09/18 11:39:00 tomas Exp $
 */
 
 #include <assert.h>
@@ -435,7 +435,7 @@ static int env_connect (lua_State *L) {
 	PGconn *conn;
 	getenvironment (L);	/* validate environment */
 	if ((lua_gettop (L) == 2) && (strchr (sourcename, '=') != NULL))
-		conn = PQconnectdb (luaL_checkstring(L, 2));
+		conn = PQconnectdb (sourcename);
 	else {
 		const char *username = luaL_optstring(L, 3, NULL);
 		const char *password = luaL_optstring(L, 4, NULL);
