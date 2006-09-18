@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.4 2006/09/18 11:39:00 tomas Exp $
+** $Id: ls_postgres.c,v 1.5 2006/09/18 14:04:56 tomas Exp $
 */
 
 #include <assert.h>
@@ -344,14 +344,17 @@ static int conn_execute (lua_State *L) {
 	if (res && PQresultStatus(res)==PGRES_COMMAND_OK) {
 		/* no tuples returned */
 		lua_pushnumber(L, atof(PQcmdTuples(res)));
+		PQclear (res);
 		return 1;
 	}
 	else if (res && PQresultStatus(res)==PGRES_TUPLES_OK)
 		/* tuples returned */
 		return create_cursor (L, 1, res);
-	else
+	else {
 		/* error */
+		PQclear (res);
 		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
+	}
 }
 
 
