@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.26 2006/08/22 14:42:59 tomas Exp $
+** $Id: ls_oci8.c,v 1.27 2007/03/09 14:56:20 tomas Exp $
 */
 
 #include <assert.h>
@@ -704,7 +704,8 @@ static int conn_setautocommit (lua_State *L) {
 		conn->auto_commit = 0;
 		/* sql_begin(conn);*/
 	}
-	return 0;
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 

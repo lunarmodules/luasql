@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.9 2006/08/22 14:42:59 tomas Exp $
+** $Id: ls_sqlite.c,v 1.10 2007/03/09 14:56:20 tomas Exp $
 */
 
 #include <stdio.h>
@@ -429,7 +429,8 @@ static int conn_setautocommit(lua_State *L)
             lua_error(L);
         }
 	}
-	return 0;
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 

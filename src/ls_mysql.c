@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.22 2006/08/22 14:42:59 tomas Exp $
+** $Id: ls_mysql.c,v 1.23 2007/03/09 14:56:20 tomas Exp $
 */
 
 #include <assert.h>
@@ -426,7 +426,8 @@ static int conn_setautocommit (lua_State *L) {
 	else {
 		mysql_autocommit(conn->my_conn, 0);
 	}
-	return 0;
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 

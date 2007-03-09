@@ -359,7 +359,8 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
-	CONN:setautocommit (false) -- == begin transaction
+	-- begin transaction
+	assert2 (true, CONN:setautocommit (false), "couldn't disable autocommit")
 	-- insert a record and commit the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('a')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
@@ -400,7 +401,7 @@ function rollback ()
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
-	CONN:setautocommit (true)
+	assert2 (true, CONN:setautocommit (true), "couldn't enable autocommit")
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
@@ -410,7 +411,7 @@ function rollback ()
 	-- clean the table.
 	assert2 (1, CONN:execute (sql_erase_table"t"))
 	CONN:commit ()
-	CONN:setautocommit (true)
+	assert2 (true, CONN:setautocommit (true), "couldn't enable autocommit")
 	-- check resulting table with no records.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber(cur:fetch()), "Rollback failed")
@@ -486,8 +487,8 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function drop_table ()
+	assert2 (true, CONN:setautocommit(true), "couldn't enable autocommit")
 	-- Postgres retorna 0, enquanto ODBC retorna -1.
-	CONN:setautocommit(true)
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
 end
 

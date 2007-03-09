@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.5 2006/09/18 14:04:56 tomas Exp $
+** $Id: ls_postgres.c,v 1.6 2007/03/09 14:56:20 tomas Exp $
 */
 
 #include <assert.h>
@@ -397,7 +397,8 @@ static int conn_setautocommit (lua_State *L) {
 		conn->auto_commit = 0;
 		sql_begin(conn);
 	}
-	return 0;
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 
