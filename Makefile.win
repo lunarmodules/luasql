@@ -1,0 +1,32 @@
+LUA_INC=c:\lua5.1\include
+LUA_DIR=c:\lua5.1\lua
+LUA_LIBDIR=c:\lua5.1\lib
+LUA_LIB=c:\lua5.1\bin\lua5.1.lib
+
+T=odbc
+
+DRIVER_INCLUDE=
+DRIVER_LIBS="C:\Program Files\Microsoft Visual Studio 8\VC\PlatformSDK\Lib\odbc32.lib"
+
+OBJS= src\luasql.obj src\ls_$T.obj
+
+.c.obj:
+	cl /c /Fo$@ /O2 /I$(LUA_INC) /D_CRT_SECURE_NO_DEPRECATE $(DRIVER_INCLUDE) $<
+
+src\$T.dll: $(OBJS)
+	link /dll /def:src\$T.def /out:$@ $(OBJS) $(DRIVER_LIBS) $(LUA_LIB) 
+
+install: src/$T.dll
+	IF NOT EXIST $(LUA_LIBDIR)\luasql mkdir $(LUA_LIBDIR)\luasql
+	copy src\$T.dll $(LUA_LIBDIR)\luasql
+	IF NOT EXIST $(LUA_DIR)\luasql mkdir $(LUA_DIR)\luasql
+	copy src\ado\ado.lua $(LUA_DIR)\luasql
+
+jdbc_driver:
+	cd src\jdbc
+	nmake -f Makefile.win $@
+
+clean:
+	del src\$T.dll
+	del src\*.obj
+
