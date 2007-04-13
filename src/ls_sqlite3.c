@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.1 2007/04/06 23:46:04 mascarenhas Exp $
+** $Id: ls_sqlite3.c,v 1.2 2007/04/13 03:05:59 mascarenhas Exp $
 */
 
 #include <stdio.h>
@@ -22,9 +22,9 @@
 
 #include "luasql.h"
 
-#define LUASQL_ENVIRONMENT_SQLITE "SQLite environment"
-#define LUASQL_CONNECTION_SQLITE "SQLite connection"
-#define LUASQL_CURSOR_SQLITE "SQLite cursor"
+#define LUASQL_ENVIRONMENT_SQLITE "SQLite3 environment"
+#define LUASQL_CONNECTION_SQLITE "SQLite3 connection"
+#define LUASQL_CURSOR_SQLITE "SQLite3 cursor"
 
 typedef struct
 {
@@ -400,6 +400,13 @@ static int conn_rollback(lua_State *L)
 	return 0;
 }
 
+static int conn_getlastautoid(lua_State *L)
+{
+  conn_data *conn = getconnection(L);
+  lua_pushnumber(L, sqlite3_last_insert_rowid(conn->sql_conn));
+  return 1;
+}
+
 
 /*
 ** Set "auto commit" property of the connection.
@@ -516,6 +523,7 @@ static void create_metatables (lua_State *L)
         {"commit", conn_commit},
         {"rollback", conn_rollback},
         {"setautocommit", conn_setautocommit},
+	{"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
     };
     struct luaL_reg cursor_methods[] = {
