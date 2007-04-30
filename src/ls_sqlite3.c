@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.2 2007/04/13 03:05:59 mascarenhas Exp $
+** $Id: ls_sqlite3.c,v 1.3 2007/04/30 00:24:42 mascarenhas Exp $
 */
 
 #include <stdio.h>
@@ -308,7 +308,7 @@ static int conn_execute(lua_State *L)
     int numcols;
     const char *tail;
 
-    res = sqlite3_prepare_v2(conn->sql_conn, statement, -1, &vm, &tail);
+    res = sqlite3_prepare(conn->sql_conn, statement, -1, &vm, &tail);
     if (res != SQLITE_OK)
     {
         errmsg = sqlite3_errmsg(conn->sql_conn);
