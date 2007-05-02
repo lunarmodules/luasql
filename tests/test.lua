@@ -1,4 +1,4 @@
-#!/usr/local/bin/lua50
+#!/usr/local/bin/lua5.1
 -- See Copyright Notice in license.html
 
 TOTAL_FIELDS = 40
@@ -367,14 +367,14 @@ function rollback ()
 	assert2 (1, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
-	CONN:commit ()
+	assert2 (true, CONN:commit(), "couldn't commit transaction")
 	-- insert a record and roll back the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (2, tonumber (cur:fetch ()), "Insert failed")
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
-	CONN:rollback ()
+	assert2 (true, CONN:rollback (), "couldn't roolback transaction")
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
@@ -386,7 +386,7 @@ function rollback ()
 	assert2 (0, tonumber(cur:fetch()))
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
-	CONN:rollback ()
+	assert2 (true, CONN:rollback (), "couldn't roolback transaction")
 	-- check resulting table with one record.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (1, tonumber(cur:fetch()), "Rollback failed")
@@ -410,7 +410,7 @@ function rollback ()
 --]]
 	-- clean the table.
 	assert2 (1, CONN:execute (sql_erase_table"t"))
-	CONN:commit ()
+	assert2 (true, CONN:commit (), "couldn't commit transaction")
 	assert2 (true, CONN:setautocommit (true), "couldn't enable autocommit")
 	-- check resulting table with no records.
 	cur = CUR_OK (CONN:execute ("select count(*) from t"))

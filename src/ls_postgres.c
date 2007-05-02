@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.7 2007/05/02 13:42:25 tomas Exp $
+** $Id: ls_postgres.c,v 1.8 2007/05/02 13:58:56 tomas Exp $
 */
 
 #include <assert.h>
@@ -364,9 +364,12 @@ static int conn_execute (lua_State *L) {
 static int conn_commit (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	sql_commit(conn);
-	if (conn->auto_commit == 0) 
+	if (conn->auto_commit == 0) {
 		sql_begin(conn); 
-	return 0;
+		lua_pushboolean (L, 1);
+	} else
+		lua_pushboolean (L, 0);
+	return 1;
 }
 
 
@@ -376,9 +379,12 @@ static int conn_commit (lua_State *L) {
 static int conn_rollback (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	sql_rollback(conn);
-	if (conn->auto_commit == 0) 
+	if (conn->auto_commit == 0) {
 		sql_begin(conn); 
-	return 0;
+		lua_pushboolean (L, 1);
+	} else
+		lua_pushboolean (L, 0);
+	return 1;
 }
 
 
