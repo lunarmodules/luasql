@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.6 2007/03/09 14:56:20 tomas Exp $
+** $Id: ls_postgres.c,v 1.7 2007/05/02 13:42:25 tomas Exp $
 */
 
 #include <assert.h>
@@ -298,17 +298,17 @@ static int create_cursor (lua_State *L, int conn, PGresult *result) {
 
 
 static void sql_commit(conn_data *conn) {
-	PQexec(conn->pg_conn, "COMMIT");
+	PQclear(PQexec(conn->pg_conn, "COMMIT"));
 }
 
 
 static void sql_begin(conn_data *conn) {
-	PQexec(conn->pg_conn, "BEGIN"); 
+	PQclear(PQexec(conn->pg_conn, "BEGIN")); 
 }
 
 
 static void sql_rollback(conn_data *conn) {
-	PQexec(conn->pg_conn, "ROLLBACK");
+	PQclear(PQexec(conn->pg_conn, "ROLLBACK"));
 }
 
 
