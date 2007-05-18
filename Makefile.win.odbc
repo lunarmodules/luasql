@@ -1,7 +1,7 @@
 LUA_INC=c:\lua5.1\include
 LUA_DIR=c:\lua5.1\lua
 LUA_LIBDIR=c:\lua5.1\lib
-LUA_LIB=c:\lua5.1\bin\lua5.1.lib
+LUA_LIB=c:\lua5.1\lua5.1.lib
 
 T=odbc
 
