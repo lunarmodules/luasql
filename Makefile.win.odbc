@@ -1,6 +1,6 @@
 LUA_INC=c:\lua5.1\include
 LUA_DIR=c:\lua5.1\lua
-LUA_LIBDIR=c:\lua5.1\lib
+LUA_LIBDIR=c:\lua5.1
 LUA_LIB=c:\lua5.1\lua5.1.lib
 
 T=odbc
@@ -26,5 +26,7 @@ jdbc_driver:
 
 clean:
 	del src\$T.dll
+	del src\$T.exp
+	del src\$T.lib
 	del $(OBJS)
 
