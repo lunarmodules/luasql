@@ -6,12 +6,12 @@ LUA_LIB=c:\lua5.1\lua5.1.lib
 T=mysql
 
 DRIVER_INCLUDE= /I"c:\Program Files\MySQL\MySQL Server 5.0\include"
-DRIVER_LIBS=/L"C:\Program Files\MySQL\MySQL Server 5.0\lib\opt\mysqlclient.lib"
+DRIVER_LIBS= "C:\Program Files\MySQL\MySQL Server 5.0\lib\opt\libmySQL.lib" "C:\Program Files\MySQL\MySQL Server 5.0\lib\opt\mysqlclient.lib" 
 
 OBJS= src\luasql.obj src\ls_$T.obj
 
 .c.obj:
-	cl /c /Fo$@ /O2 /I$(LUA_INC) /D_CRT_SECURE_NO_DEPRECATE $(DRIVER_INCLUDE) $<
+	cl /c /Fo$@ /O2 /I$(LUA_INC) /DWIN32 /D_CRT_SECURE_NO_DEPRECATE $(DRIVER_INCLUDE) $<
 
 src\$T.dll: $(OBJS)
 	link /dll /def:src\$T.def /out:$@ $(OBJS) $(DRIVER_LIBS) $(LUA_LIB) 
