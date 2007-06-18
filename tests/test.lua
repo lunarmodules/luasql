@@ -448,6 +448,13 @@ function column_info ()
 end
 
 ---------------------------------------------------------------------
+-- Escaping strings
+---------------------------------------------------------------------
+function escape ()
+	assert2 ("a''b''c''d", CONN:escape"a'b'c'd")
+end
+
+---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function check_close()
 	-- an object with references to it can't be closed
@@ -589,6 +596,7 @@ tests = {
 	{ "fetch many", fetch_many },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
+	{ "escape", escape },
 	{ "extensions", extensions_test },
 	{ "close objects", check_close },
 	{ "drop table", drop_table },

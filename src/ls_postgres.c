@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.8 2007/05/02 13:58:56 tomas Exp $
+** $Id: ls_postgres.c,v 1.9 2007/06/18 01:22:45 tomas Exp $
 */
 
 #include <assert.h>
@@ -333,6 +333,25 @@ static int conn_close (lua_State *L) {
 
 
 /*
+** Escapes a string for use within an SQL statement.
+** Returns a string with the escaped string.
+*/
+static int conn_escape (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	size_t len;
+	const char *from = luaL_checklstring (L, 2, &len);
+	char to[len*2+1];
+	int error;
+	len = PQescapeStringConn (conn->pg_conn, to, from, len, &error);
+	if (error == 0) { /* success ! */
+		lua_pushlstring (L, to, len);
+		return 1;
+	} else
+		return luasql_faildirect (L, PQerrorMessage (conn->pg_conn));
+}
+
+
+/*
 ** Execute an SQL statement.
 ** Return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
@@ -492,6 +511,7 @@ static void create_metatables (lua_State *L) {
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
+        {"escape", conn_escape},
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
