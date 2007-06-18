@@ -1,4 +1,4 @@
-V= 2.0.3
+V= 2.1.0
 CONFIG= ./config
 
 include $(CONFIG)
@@ -39,4 +39,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_O)
 
-# $Id: Makefile,v 1.52 2007/04/06 23:46:04 mascarenhas Exp $
+# $Id: Makefile,v 1.53 2007/06/18 01:27:49 tomas Exp $

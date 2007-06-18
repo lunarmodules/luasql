@@ -45,9 +45,9 @@ DRIVER_INCS= -I/opt/local/include
 #DRIVER_LIBS= -L/usr/local/lib -lodbc
 #DRIVER_INCS= -DUNIXODBC -I/usr/local/include
 
-WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi
+WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi -pedantic
 INCS= -I$(LUA_INC)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
-# $Id: config,v 1.6 2007/04/06 23:46:04 mascarenhas Exp $
+# $Id: config,v 1.7 2007/06/18 01:27:49 tomas Exp $
