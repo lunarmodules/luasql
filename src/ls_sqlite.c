@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.10 2007/03/09 14:56:20 tomas Exp $
+** $Id: ls_sqlite.c,v 1.11 2007/08/22 18:37:06 tomas Exp $
 */
 
 #include <stdio.h>
@@ -50,7 +50,7 @@ typedef struct
 	sqlite_vm  *sql_vm;
 } cur_data;
 
-LUASQL_API int luaopen_luasqlsqlite(lua_State *L);
+LUASQL_API int luaopen_luasql_sqlite(lua_State *L);
 
 
 /*

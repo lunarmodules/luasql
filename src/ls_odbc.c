@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.36 2006/08/22 14:42:59 tomas Exp $
+** $Id: ls_odbc.c,v 1.37 2007/08/22 18:37:06 tomas Exp $
 */
 
 #include <assert.h>
@@ -68,8 +68,7 @@ typedef struct {
 #define error(a) ((a) != SQL_SUCCESS && (a) != SQL_SUCCESS_WITH_INFO) 
 
 
-LUASQL_API int luasql_libopen_odbc(lua_State *L);
-
+LUASQL_API int luaopen_luasql_odbc (lua_State *L);
 
 /*
 ** Check for valid environment.

@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.23 2007/03/09 14:56:20 tomas Exp $
+** $Id: ls_mysql.c,v 1.24 2007/08/22 18:37:06 tomas Exp $
 */
 
 #include <assert.h>
@@ -81,7 +81,7 @@ typedef struct {
 	MYSQL_RES *my_res;
 } cur_data;
 
-LUASQL_API int luaopen_luasqlmysql (lua_State *L);
+LUASQL_API int luaopen_luasql_mysql (lua_State *L);
 
 
 /*

@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.3 2007/04/30 00:24:42 mascarenhas Exp $
+** $Id: ls_sqlite3.c,v 1.4 2007/08/22 18:37:06 tomas Exp $
 */
 
 #include <stdio.h>
@@ -51,7 +51,7 @@ typedef struct
 	sqlite3_stmt  *sql_vm;
 } cur_data;
 
-LUASQL_API int luaopen_luasqlsqlite(lua_State *L);
+LUASQL_API int luaopen_luasql_sqlite3(lua_State *L);
 
 
 /*
