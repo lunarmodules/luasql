@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.21 2007/06/18 01:22:45 tomas Exp $
+** $Id: luasql.c,v 1.22 2007/08/22 18:40:24 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -34,7 +34,7 @@ static int luasql_tostring (lua_State *L) {
 	if (obj->closed)
 		strcpy (buff, "closed");
 	else
-		sprintf (buff, "%p", obj);
+		sprintf (buff, "%p", (void *)obj);
 	lua_pushfstring (L, "%s (%s)", lua_tostring(L,lua_upvalueindex(1)), buff);
 	return 1;
 }
