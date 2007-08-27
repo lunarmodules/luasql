@@ -64,35 +64,67 @@
 <h2><a name="history"></a>History</h2>
 
 <dl class="history">
-    <dt><strong>2.0.2</strong> [06/26/2006]</dt>
-    <dd><a href="manual.html#mysql_extensions">numrows</a> method added to MySQL driver.<br />
-    Added a <code>config</code> for the <code>makefile</code>.<br />
-    Added configuration for the UnixODBC driver.<br />
-    Bug fixes to the SQLite driver (bug found by Mike Petersen).<br />
-    Bug fixes to the JDBC, OCI8 and ADO drivers.<br />
-    Improved tests.<br />
-    Updated documentation.<br />
+    <dt><strong>LuaSQL 2.1.0</strong> [27/Aug/2007]</dt>
+    <dd>
+    <ul>
+        <li>Added function to escape strings</li>
+        <li>Added support for SQLite 3</li>
+        <li>Bug correction: freeing PGresults in the Postgres driver (thanks to Michael Broughton)</li>
+        <li>Corrected memory leak when no cursor created (thanks to Klaus Ripke)</li>
+        <li>Corrected bug avoiding duplicate access to stack</li>
+    </ul>
+    </dd>
+    
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0.2</a></strong> [26/Jun/2006]</dt>
+    <dd>
+    <ul>
+        <li><a href="manual.html#mysql_extensions">numrows</a> method added to MySQL driver.</li>
+        <li>Added a <code>config</code> for the <code>makefile</code>.</li>
+        <li>Added configuration for the UnixODBC driver.</li>
+        <li>Bug fixes to the SQLite driver (bug found by Mike Petersen).</li>
+        <li>Bug fixes to the JDBC, OCI8 and ADO drivers.</li>
+        <li>Improved tests.</li>
+        <li>Updated documentation.</li>
+    </ul>
     </dd>
 
-    <dt><strong>2.0.1</strong> [06/02/2005]</dt>
-    <dd>Bug fixes to the ODBC driver.</dd>
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0.1</a></strong> [02/Jun/2005]</dt>
+    <dd>
+    <ul>
+        <li>Bug fixes to the ODBC driver.</li>
+    </ul>
+    </dd>
 
-    <dt><strong>2.0.0</strong> [03/22/2005]</dt>
-    <dd>Added ADO driver and some bug fixes to the ODBC driver.</dd>
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0.0</a></strong> [22/Mar/2005]</dt>
+    <dd>
+    <ul>
+        <li>Added ADO driver and some bug fixes to the ODBC driver.</li>
+    </ul>
+    </dd>
 
-    <dt><strong>2.0 beta 3</strong> [12/23/2004]</dt>
-    <dd>Minor bug fixes.</dd>
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0 Beta 3</a></strong> [23/Dec/2004]</dt>
+    <dd>
+    <ul>
+        <li>Minor bug fixes.</li>
+    </ul>
+    </dd>
 
-    <dt><strong>2.0 beta 2</strong> [11/26/2004]</dt>
-    <dd>Bug fixes. New SQLite and JDBC drivers. LuaSQL now follows the
-    <a href="http://www.keplerproject.org/compat/">package model</a>
-    for Lua 5.1 
-    (see <a href="manual.html#installation">Installation</a> section for more details).</dd>
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0 Beta 2</a></strong> [26/Nov/2004]</dt>
+    <dd>
+    <ul>
+        <li>Bug fixes</li>
+        <li>New SQLite and JDBC drivers</li>
+        <li>LuaSQL now follows the <a href="http://www.keplerproject.org/compat/">package model</a>
+        for Lua 5.1 (see <a href="manual.html#installation">Installation</a> section for more details).</li>
+    </ul>
+    </dd>
 
-    <dt><strong>2.0 beta</strong> [12/10/2003]</dt>
+    <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0 Beta</a></strong> [10/Nov/2003]</dt>
 </dl>
 
-<p>Version 2.0 has some design changes and implementation improvements compared to version 1.0:</p>
+<h2>Changes from previous versions</h2>
+
+<p>Version 2.x has some design changes and implementation improvements compared to version 1.0:</p>
 
 <ul>
   <li>New <code>fetch</code> method: more eficient and more flexible</li>
@@ -113,7 +145,7 @@
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">
     <img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
-	<p><small>$Id: history.html,v 1.12 2006/06/26 17:18:35 carregal Exp $</small></p>
+	<p><small>$Id: history.html,v 1.13 2007/08/27 19:29:10 carregal Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
