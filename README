@@ -1,23 +1,23 @@
-LuaSQL is a Lua library that provides access to the most important
-functionality available in any database manager. For more details check
+LuaSQL 2.1
 http://www.keplerproject.org/luasql/
 
-Here goes a small description of the files in the distribution
+LuaSQL is a simple interface from Lua to a DBMS. It enables a Lua program to:
 
-    def.tmpl         -- .DEF template
-    loader.tmpl      -- Lua loader template
-    ls_mysql.c       -- MySQL driver
-    ls_oci8.c        -- Oracle OCI 8 driver
-    ls_odbc.c        -- ODBC driver
-    ls_pg.c          -- PostgreSQL driver
-    ado/*            -- ADO driver
-    doc/us/*         -- Documentation
-    jdbc/*           -- JDBC driver
-    luasql.c         -- Common functions
-    luasql.h         -- Common definitions
-    Makefile         -- Makefile for Unix systems
-    performance.lua  -- Performance test script
-    README           -- This file
-    test.lua         -- Overall API test script
+    * Connect to ODBC, ADO, Oracle, MySQL, SQLite and PostgreSQL databases;
+    * Execute arbitrary SQL statements;
+    * Retrieve results in a row-by-row cursor fashion.
 
-$Id: README,v 1.8 2005/03/22 23:46:05 carregal Exp $
+LuaSQL is free software and uses the same license as Lua 5.1. 
+
+
+Source code for LuaSQL can be downloaded from the LuaForge page.
+
+If you are using LuaBinaries a Windows binary version of LuaSQL can be found at the same LuaForge page.
+
+LuaSQL 2.1.0 [27/Aug/2007]
+
+        * Added function to escape strings
+        * Added support for SQLite 3
+        * Bug correction: freeing PGresults in the Postgres driver (thanks to Michael Broughton)
+        * Corrected memory leak when no cursor created (thanks to Klaus Ripke)
+        * Corrected bug avoiding duplicate access to stack
