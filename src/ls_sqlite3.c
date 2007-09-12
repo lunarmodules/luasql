@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.4 2007/08/22 18:37:06 tomas Exp $
+** $Id: ls_sqlite3.c,v 1.5 2007/09/12 00:26:10 carregal Exp $
 */
 
 #include <stdio.h>
@@ -339,8 +339,8 @@ static int conn_execute(lua_State *L)
     }
 
     /* error */
-    sqlite3_finalize(vm);
     errmsg = sqlite3_errmsg(sqlite3_db_handle(vm));
+    sqlite3_finalize(vm);
     lua_pushnil(L);
     lua_pushliteral(L, LUASQL_PREFIX);
     lua_pushstring(L, errmsg);
