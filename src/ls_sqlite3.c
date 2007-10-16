@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.6 2007/10/16 15:23:48 carregal Exp $
+** $Id: ls_sqlite3.c,v 1.7 2007/10/16 15:36:08 carregal Exp $
 */
 
 #include <stdio.h>
@@ -138,7 +138,7 @@ static int cur_fetch (lua_State *L) {
 			/* Copy values to numerical indices */
 			for (i = 0; i < cur->numcols;)
             {
-	      lua_pushstring(L, sqlite3_column_text(vm, i));
+	            lua_pushstring(L, (const char *)sqlite3_column_text(vm, i));
 				lua_rawseti(L, 2, ++i);
 			}
         }
@@ -150,7 +150,7 @@ static int cur_fetch (lua_State *L) {
 			for (i = 0; i < cur->numcols; i++)
             {
 				lua_rawgeti(L, -1, i+1);
-				lua_pushstring(L, sqlite3_column_text(vm,i));
+				lua_pushstring(L, (const char*)sqlite3_column_text(vm,i));
 				lua_rawset (L, 2);
 			}
         }
@@ -162,7 +162,7 @@ static int cur_fetch (lua_State *L) {
 		int i;
 		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 0; i < cur->numcols; ++i)
-		  lua_pushstring(L, sqlite3_column_text(vm, i));
+		  lua_pushstring(L, (const char *)sqlite3_column_text(vm, i));
 		return cur->numcols; /* return #numcols values */
 	}
 }
@@ -251,7 +251,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
     lua_newtable(L);
     for (i = 0; i < numcols;)
     {
-      lua_pushstring(L, sqlite3_column_name(sql_vm, i));
+        lua_pushstring(L, sqlite3_column_name(sql_vm, i));
         lua_rawseti(L, -2, ++i);
     }
     cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -260,7 +260,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
     lua_newtable(L);
     for (i = 0; i < numcols;)
     {
-      lua_pushstring(L, sqlite3_column_decltype(sql_vm, i));
+        lua_pushstring(L, sqlite3_column_decltype(sql_vm, i));
         lua_rawseti(L, -2, ++i);
     }
     cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -276,7 +276,8 @@ static int conn_close(lua_State *L)
 {
 	conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	if (conn->closed) {
+	if (conn->closed) 
+	{
 		lua_pushboolean(L, 0);
 		return 1;
 	}
@@ -292,6 +293,21 @@ static int conn_close(lua_State *L)
 	return 1;
 }
 
+static int conn_escape(lua_State *L)
+{
+	const char *from = luaL_checklstring (L, 2, 0);
+    char *escaped = sqlite3_mprintf("%q", from);
+    if (escaped == NULL) 
+    {
+        lua_pushnil(L);
+    } 
+    else
+    {
+        lua_pushstring(L, escaped);        
+        sqlite3_free(escaped);
+    }
+    return 1;
+}
 
 /*
 ** Execute an SQL statement.
@@ -362,6 +378,7 @@ static int conn_commit(lua_State *L)
     if (conn->auto_commit == 0) sql = "COMMIT;BEGIN";
 
     res = sqlite3_exec(conn->sql_conn, sql, NULL, NULL, &errmsg);
+
     if (res != SQLITE_OK)
     {
 		lua_pushnil(L);
@@ -371,7 +388,8 @@ static int conn_commit(lua_State *L)
         lua_concat(L, 2);
         return 2;
     }
-	return 0;
+    lua_pushboolean(L, 1);
+	return 1;
 }
 
 
@@ -397,7 +415,8 @@ static int conn_rollback(lua_State *L)
         lua_concat(L, 2);
         return 2;
     }
-	return 0;
+    lua_pushboolean(L, 1);
+	return 1;
 }
 
 static int conn_getlastautoid(lua_State *L)
@@ -519,11 +538,12 @@ static void create_metatables (lua_State *L)
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
+        {"escape", conn_escape},
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
         {"setautocommit", conn_setautocommit},
-	{"getlastautoid", conn_getlastautoid},
+	    {"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
     };
     struct luaL_reg cursor_methods[] = {
