@@ -1,7 +1,9 @@
 ---------------------------------------------------------------------
 -- SQLite specific tests and configurations.
--- $Id: sqlite3.lua,v 1.1 2007/04/06 23:46:04 mascarenhas Exp $
+-- $Id: sqlite3.lua,v 1.2 2007/10/16 15:42:50 carregal Exp $
 ---------------------------------------------------------------------
+
+DROP_TABLE_RETURN_VALUE = 1
 
 ---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.

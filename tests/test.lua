@@ -495,7 +495,7 @@ end
 ---------------------------------------------------------------------
 function drop_table ()
 	assert2 (true, CONN:setautocommit(true), "couldn't enable autocommit")
-	-- Postgres retorna 0, enquanto ODBC retorna -1.
+	-- Postgres retorns 0, ODBC retorns -1, sqlite returns 1
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
 end
 
