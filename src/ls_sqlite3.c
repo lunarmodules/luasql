@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.5 2007/09/12 00:26:10 carregal Exp $
+** $Id: ls_sqlite3.c,v 1.6 2007/10/16 15:23:48 carregal Exp $
 */
 
 #include <stdio.h>
@@ -102,6 +102,7 @@ static int finalize(lua_State *L, cur_data *cur) {
         lua_concat(L, 2);
         return 2;
     }
+    cur->sql_vm = NULL;
     lua_pushnil(L);
     return 1;
 }
@@ -184,7 +185,6 @@ static int cur_close(lua_State *L)
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	sqlite3_finalize(cur->sql_vm);
-
 	/* Decrement cursor counter on connection object */
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
 	conn = lua_touserdata (L, -1);
