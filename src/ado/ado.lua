@@ -32,7 +32,7 @@ local metatable = {
 
 luasql._COPYRIGHT = "Copyright (C) 2003-2006 Kepler Project"
 luasql._DESCRIPTION = "LuaSQL is a simple interface from Lua to a DBMS"
-luasql._VERSION = "LuaSQL 2.0.2"
+luasql._VERSION = "LuaSQL 2.1.1"
 
 ---------------------------------------------------------------------
 -- function that returns an ADO environment

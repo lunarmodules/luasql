@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.22 2007/08/22 18:40:24 tomas Exp $
+** $Id: luasql.c,v 1.23 2007/10/29 20:58:23 carregal Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -92,6 +92,6 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "LuaSQL 2.1.0");
+	lua_pushliteral (L, "LuaSQL 2.1.1");
 	lua_settable (L, -3);
 }
