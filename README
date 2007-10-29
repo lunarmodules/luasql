@@ -14,10 +14,7 @@ Source code for LuaSQL can be downloaded from the LuaForge page.
 
 If you are using LuaBinaries a Windows binary version of LuaSQL can be found at the same LuaForge page.
 
-LuaSQL 2.1.0 [27/Aug/2007]
-
-        * Added function to escape strings
-        * Added support for SQLite 3
-        * Bug correction: freeing PGresults in the Postgres driver (thanks to Michael Broughton)
-        * Corrected memory leak when no cursor created (thanks to Klaus Ripke)
-        * Corrected bug avoiding duplicate access to stack
+LuaSQL 2.1.1 [29/Oct/2007]
+* Fixed a bug in the SQLite3 error handling (patch by David Burgess)
+* Fixed bug [#1834] for SQLite 3 (found by Savin Zlobec, patch by Marc Nijdam)
+* Fixed bug [#1770] for SQLite 3 (found by Enrico Tassi, patch by Marc Nijdam)
