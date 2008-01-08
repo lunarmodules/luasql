@@ -15,7 +15,8 @@ SRCS= src/luasql.h src/luasql.c \
 	src/ls_odbc.c \
 	src/ls_oci8.c \
 	src/ls_mysql.c \
-	src/ls_sqlite.c
+	src/ls_sqlite.c \
+	src/ls_sqlite3.c
 
 AR= ar rcu
 RANLIB= ranlib
@@ -39,4 +40,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_O)
 
-# $Id: Makefile,v 1.54 2007/10/29 21:44:54 carregal Exp $
+# $Id: Makefile,v 1.55 2008/01/08 18:50:49 mascarenhas Exp $
