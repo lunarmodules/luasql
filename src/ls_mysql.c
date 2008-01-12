@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.24 2007/08/22 18:37:06 tomas Exp $
+** $Id: ls_mysql.c,v 1.25 2008/01/12 20:54:09 mascarenhas Exp $
 */
 
 #include <assert.h>
@@ -432,6 +432,15 @@ static int conn_setautocommit (lua_State *L) {
 
 
 /*
+** Get Last auto-increment id generated
+*/
+static int conn_getlastautoid (lua_State *L) {
+  conn_data *conn = getconnection(L);
+  lua_pushnumber(L, mysql_insert_id(conn->my_conn);
+  return 1;
+}
+
+/*
 ** Create a new Connection object and push it on top of the stack.
 */
 static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
@@ -511,6 +520,7 @@ static void create_metatables (lua_State *L) {
         {"commit", conn_commit},
         {"rollback", conn_rollback},
         {"setautocommit", conn_setautocommit},
+	{"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
     };
     struct luaL_reg cursor_methods[] = {
