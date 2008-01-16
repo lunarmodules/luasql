@@ -36,9 +36,9 @@ build = {
       LUA_LIBDIR = "$(LIBDIR)",
    },
    platforms = {
-     "windows" = {
-       build_variables = {
-         LIB_OPTION = "$(SQLITE_LIB)",
+     win32 = {
+       variables = {
+         LIB_OPTION = "$(SQLITE_LIB) $(LUA_LIBDIR)\\lua5.1.lib",
          CFLAGS = "$(CFLAGS) /I$(LUA_INCDIR) /I$(SQLITE_INCDIR)"
        }
      }

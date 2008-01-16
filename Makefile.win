@@ -11,7 +11,7 @@ all: src\$(LIBNAME)
 	cl /c /Fo$@ /O2 $(CFLAGS) /DWIN32 /D_CRT_SECURE_NO_DEPRECATE $<
 
 src\$(LIBNAME): $(OBJS)
-	link /out:$@ $(LIB_OPTION) $(OBJS)
+	link /dll /out:$@ $(LIB_OPTION) $(OBJS)
 
 install:
 	IF NOT EXIST "$(LUA_LIBDIR)\luasql" mkdir "$(LUA_LIBDIR)\luasql"
