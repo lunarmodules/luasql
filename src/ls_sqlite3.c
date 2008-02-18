@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.8 2008/02/18 05:20:34 mascarenhas Exp $
+** $Id: ls_sqlite3.c,v 1.9 2008/02/18 05:44:23 mascarenhas Exp $
 */
 
 #include <stdio.h>
@@ -48,6 +48,7 @@ typedef struct
 	int         conn;               /* reference to connection */
 	int         numcols;            /* number of columns */
 	int         colnames, coltypes; /* reference to column information tables */
+        conn_data   *conn_data;         /* reference to connection for cursor */
 	sqlite3_stmt  *sql_vm;
 } cur_data;
 
@@ -94,7 +95,7 @@ static int finalize(lua_State *L, cur_data *cur) {
     const char *errmsg;
     if (sqlite3_finalize(cur->sql_vm) != SQLITE_OK)
     {
-        errmsg = sqlite3_errmsg(sqlite3_db_handle(cur->sql_vm));
+        errmsg = sqlite3_errmsg(cur->conn_data->sql_conn);
         cur->sql_vm = NULL;
         lua_pushnil(L);
         lua_pushliteral(L, LUASQL_PREFIX);
@@ -243,27 +244,28 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
 	cur->sql_vm = sql_vm;
+	cur->conn_data = conn;
 
-    lua_pushvalue(L, o);
+	lua_pushvalue(L, o);
 	cur->conn = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    /* create table with column names */
-    lua_newtable(L);
-    for (i = 0; i < numcols;)
-    {
-        lua_pushstring(L, sqlite3_column_name(sql_vm, i));
-        lua_rawseti(L, -2, ++i);
-    }
-    cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    /* create table with column types */
-    lua_newtable(L);
-    for (i = 0; i < numcols;)
-    {
-        lua_pushstring(L, sqlite3_column_decltype(sql_vm, i));
-        lua_rawseti(L, -2, ++i);
-    }
-    cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
+	/* create table with column names */
+	lua_newtable(L);
+	for (i = 0; i < numcols;)
+	  {
+	    lua_pushstring(L, sqlite3_column_name(sql_vm, i));
+	    lua_rawseti(L, -2, ++i);
+	  }
+	cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
+	
+	/* create table with column types */
+	lua_newtable(L);
+	for (i = 0; i < numcols;)
+	  {
+	    lua_pushstring(L, sqlite3_column_decltype(sql_vm, i));
+	    lua_rawseti(L, -2, ++i);
+	  }
+	cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
@@ -355,7 +357,7 @@ static int conn_execute(lua_State *L)
     }
 
     /* error */
-    errmsg = sqlite3_errmsg(sqlite3_db_handle(vm));
+    errmsg = sqlite3_errmsg(conn->sql_conn);
     sqlite3_finalize(vm);
     lua_pushnil(L);
     lua_pushliteral(L, LUASQL_PREFIX);
