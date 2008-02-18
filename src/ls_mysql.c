@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.26 2008/01/12 20:57:43 mascarenhas Exp $
+** $Id: ls_mysql.c,v 1.27 2008/02/18 05:12:02 mascarenhas Exp $
 */
 
 #include <assert.h>
@@ -362,6 +362,21 @@ static int conn_close (lua_State *L) {
 }
 
 
+static int escape_string (lua_State *L) {
+  size_t size, new_size;
+  conn_data *conn = getconnection (L);
+  const char *from = luaL_checklstring(L, 2, &size);
+  char *to;
+  to = (char*)malloc(sizeof(char) * (2 * size + 1));
+  if(to) {
+    new_size = mysql_real_escape_string(conn->my_conn, to, from, size);
+    lua_pushlstring(L, to, new_size);
+    return 1;
+  }
+  luaL_error(L, "could not allocate escaped string");
+  return 0;
+}
+
 /*
 ** Execute an SQL statement.
 ** Return a Cursor object if the statement is a query, otherwise
@@ -400,8 +415,8 @@ static int conn_execute (lua_State *L) {
 */
 static int conn_commit (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	mysql_commit(conn->my_conn);
-	return 0;
+	lua_pushboolean(L, !mysql_commit(conn->my_conn));
+	return 1;
 }
 
 
@@ -410,8 +425,8 @@ static int conn_commit (lua_State *L) {
 */
 static int conn_rollback (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	mysql_rollback(conn->my_conn);
-	return 0;
+	lua_pushboolean(L, !mysql_rollback(conn->my_conn));
+	return 1;
 }
 
 
@@ -516,6 +531,7 @@ static void create_metatables (lua_State *L) {
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
+        {"escape", escape_string},
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
