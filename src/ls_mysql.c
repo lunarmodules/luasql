@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.27 2008/02/18 05:12:02 mascarenhas Exp $
+** $Id: ls_mysql.c,v 1.28 2008/02/18 05:14:09 mascarenhas Exp $
 */
 
 #include <assert.h>
@@ -371,6 +371,7 @@ static int escape_string (lua_State *L) {
   if(to) {
     new_size = mysql_real_escape_string(conn->my_conn, to, from, size);
     lua_pushlstring(L, to, new_size);
+    free(to);
     return 1;
   }
   luaL_error(L, "could not allocate escaped string");
