@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.11 2007/08/22 18:37:06 tomas Exp $
+** $Id: ls_sqlite.c,v 1.12 2008/02/18 05:20:34 mascarenhas Exp $
 */
 
 #include <stdio.h>
@@ -370,7 +370,8 @@ static int conn_commit(lua_State *L)
         lua_concat(L, 2);
         return 2;
     }
-	return 0;
+    lua_pushboolean(L, 1);
+	return 1;
 }
 
 
@@ -396,7 +397,8 @@ static int conn_rollback(lua_State *L)
         lua_concat(L, 2);
         return 2;
     }
-	return 0;
+    lua_pushboolean(L, 1);
+	return 1;
 }
 
 
@@ -495,7 +497,21 @@ static int env_close (lua_State *L)
 	return 1;
 }
 
-
+static int conn_escape(lua_State *L)
+{
+    const char *from = luaL_checklstring (L, 2, 0);
+    char *escaped = sqlite_mprintf("%q", from);
+    if (escaped == NULL) 
+    {
+        lua_pushnil(L);
+    } 
+    else
+    {
+        lua_pushstring(L, escaped);        
+        sqlite_freemem(escaped);
+    }
+    return 1;
+}
 
 /*
 ** Create metatables for each class of object.
@@ -509,6 +525,7 @@ static void create_metatables (lua_State *L)
 	};
     struct luaL_reg connection_methods[] = {
         {"close", conn_close},
+	{"escape", conn_escape},
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},

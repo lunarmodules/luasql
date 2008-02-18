@@ -451,7 +451,8 @@ end
 -- Escaping strings
 ---------------------------------------------------------------------
 function escape ()
-	assert2 ("a\\'b\\'c\\'d", CONN:escape"a'b'c'd")
+        local escaped = CONN:escape"a'b'c'd"
+	assert ("a\\'b\\'c\\'d" == escaped or "a''b''c''d" == escaped)
 end
 
 ---------------------------------------------------------------------

@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.7 2007/10/16 15:36:08 carregal Exp $
+** $Id: ls_sqlite3.c,v 1.8 2008/02/18 05:20:34 mascarenhas Exp $
 */
 
 #include <stdio.h>
@@ -295,7 +295,7 @@ static int conn_close(lua_State *L)
 
 static int conn_escape(lua_State *L)
 {
-	const char *from = luaL_checklstring (L, 2, 0);
+    const char *from = luaL_checklstring (L, 2, 0);
     char *escaped = sqlite3_mprintf("%q", from);
     if (escaped == NULL) 
     {
