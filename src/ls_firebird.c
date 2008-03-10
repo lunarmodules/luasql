@@ -14,7 +14,6 @@
 #include <lauxlib.h>
 
 #include "luasql.h"
-#include "ls_firebird.h"
 
 #define LUASQL_ENVIRONMENT_FIREBIRD "Firebird environment"
 #define LUASQL_CONNECTION_FIREBIRD "Firebird connection"
