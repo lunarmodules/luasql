@@ -42,10 +42,12 @@ typedef struct {
 	conn_data*		conn;			/* the DB connection this cursor is from */
 	isc_stmt_handle stmt;			/* the statment handle */
 	XSQLDA			*out_sqlda;
-	XSQLVAR			*var;
 } cur_data;
 
-/* Macro to easy code reading*/
+/* How many field to pre-alloc to the cursor */
+#define CURSOR_PREALLOC 10
+
+/* Macro to ease code reading */
 #define CHECK_DB_ERROR( X ) ( (X)[0] == 1 && (X)[1] )
 
 /*
@@ -213,7 +215,7 @@ static int conn_execute (lua_State *L) {
 	long dtype;
 	int i, n, count, stmt_type;
 
-	cur_data* cur;
+	cur_data cur;
 
 	/* closed? */
 	if(conn->closed != 0) {
@@ -222,28 +224,27 @@ static int conn_execute (lua_State *L) {
 		return 2;
 	}
 
-	cur = (cur_data*)malloc(sizeof(cur_data));
-	cur->closed = 0;
-	cur->env = conn->env;
-	cur->conn = conn;
-	cur->stmt = NULL;
+	cur.closed = 0;
+	cur.env = conn->env;
+	cur.conn = conn;
+	cur.stmt = NULL;
 
-	cur->out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(0));
-	cur->out_sqlda->version = SQLDA_VERSION1;
-	cur->out_sqlda->sqln = 0;
+	cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(CURSOR_PREALLOC));
+	cur.out_sqlda->version = SQLDA_VERSION1;
+	cur.out_sqlda->sqln = CURSOR_PREALLOC;
 
 	/* create a statment to handle the query */
-	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur->stmt);
+	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur.stmt);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
 	/* process the SQL ready to run the query */
-	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &cur->stmt, 0, (char*)statement, dialect, cur->out_sqlda);
+	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &cur.stmt, 0, (char*)statement, dialect, cur.out_sqlda);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
 	/* what type of SQL statment is it? */
-	stmt_type = get_statment_type(cur);
+	stmt_type = get_statment_type(&cur);
 	if(stmt_type < 0)
 		return return_db_error(L, conn->env->status_vector);
 
@@ -256,20 +257,20 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* resize the result set if needed */
-	if (cur->out_sqlda->sqld > cur->out_sqlda->sqln)
+	if (cur.out_sqlda->sqld > cur.out_sqlda->sqln)
 	{
-		n = cur->out_sqlda->sqld;
-		free(cur->out_sqlda);
-		cur->out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
-		cur->out_sqlda->sqln = n;
-		cur->out_sqlda->version = SQLDA_VERSION1;
-		isc_dsql_describe(conn->env->status_vector, &cur->stmt, 1, cur->out_sqlda);
+		n = cur.out_sqlda->sqld;
+		free(cur.out_sqlda);
+		cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
+		cur.out_sqlda->sqln = n;
+		cur.out_sqlda->version = SQLDA_VERSION1;
+		isc_dsql_describe(conn->env->status_vector, &cur.stmt, 1, cur.out_sqlda);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) )
 			return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* prep the result set ready to handle the data */
-	for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
+	for (i=0, var = cur.out_sqlda->sqlvar; i < cur.out_sqlda->sqld; i++, var++) {
 		dtype = (var->sqltype & ~1); /* drop flag bit for now */
 		switch(dtype) {
 		case SQL_VARYING:
@@ -317,7 +318,7 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* run the query */
-	isc_dsql_execute(conn->env->status_vector, &conn->transaction, &cur->stmt, 1, NULL);
+	isc_dsql_execute(conn->env->status_vector, &conn->transaction, &cur.stmt, 1, NULL);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
@@ -329,10 +330,10 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* what do we return? a cursor or a count */
-	if(cur->out_sqlda->sqld > 0) { /* a cursor */
+	if(cur.out_sqlda->sqld > 0) { /* a cursor */
 		cur_data* user_cur;
 		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur->env->status_vector, &cur->stmt, "dyn_cursor", (unsigned short)NULL);
+		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, "dyn_cursor", (unsigned short)NULL);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) )
 			return return_db_error(L, conn->env->status_vector);
 
@@ -340,20 +341,18 @@ static int conn_execute (lua_State *L) {
 		user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
 
-		memcpy((void*)user_cur, (void*)cur, sizeof(cur_data));
-		free(cur);	/* finnished with this copy */
+		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
 		/* add cursor to the lock count */
 		++conn->lock;
 	} else { /* a count */
-		if( (count = count_rows_affected(cur)) < 0 )
+		if( (count = count_rows_affected(&cur)) < 0 )
 			return return_db_error(L, conn->env->status_vector);
 
 		lua_pushnumber(L, count);
 
 		/* totaly finnished with the cursor */
-		free(cur->out_sqlda);
-		free(cur);
+		free(cur.out_sqlda);
 	}
 
 	return 1;
