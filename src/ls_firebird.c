@@ -29,7 +29,7 @@ typedef struct {
 	short			closed;
 	env_data*		env;			/* the DB enviroment this is in */
 	isc_db_handle	db;				/* the database handle */
-	char*			dpb_buffer;		/* holds the database paramet buffer */
+	char			dpb_buffer[256];/* holds the database paramet buffer */
 	short			dpb_length;		/* the used amount of the dpb */
 	isc_tr_handle	transaction;	/* the transaction handle */
 	int				lock;			/* lock count for open cursors */
@@ -41,7 +41,7 @@ typedef struct {
 	env_data*		env;			/* the DB enviroment this is in */
 	conn_data*		conn;			/* the DB connection this cursor is from */
 	isc_stmt_handle stmt;			/* the statment handle */
-	XSQLDA			*out_sqlda;
+	XSQLDA			*out_sqlda;		/* the cursor data array */
 } cur_data;
 
 /* How many fields to pre-alloc to the cursor */
@@ -62,6 +62,25 @@ int return_db_error(lua_State *L, ISC_STATUS *pvector)
 	lua_pushstring(L, errmsg);
 
 	return 2;
+}
+
+/*
+** Free's up the memory alloc'd to the cursor data
+*/
+void free_cur(cur_data* cur)
+{
+	int i;
+	XSQLVAR *var;
+
+	/* free the field memory blocks */
+	for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
+		free(var->sqldata);
+		if(var->sqlind != NULL)
+			free(var->sqlind);
+	}
+
+	/* free the data array */
+	free(cur->out_sqlda);
 }
 
 /*
@@ -233,21 +252,29 @@ static int conn_execute (lua_State *L) {
 
 	/* create a statment to handle the query */
 	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur.stmt);
-	if ( CHECK_DB_ERROR(conn->env->status_vector) )
+	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+		free(cur.out_sqlda);
 		return return_db_error(L, conn->env->status_vector);
+	}
 
 	/* process the SQL ready to run the query */
 	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &cur.stmt, 0, (char*)statement, dialect, cur.out_sqlda);
-	if ( CHECK_DB_ERROR(conn->env->status_vector) )
+	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+		free(cur.out_sqlda);
 		return return_db_error(L, conn->env->status_vector);
+	}
 
 	/* what type of SQL statment is it? */
 	stmt_type = get_statment_type(&cur);
-	if(stmt_type < 0)
+	if(stmt_type < 0) {
+		free(cur.out_sqlda);
 		return return_db_error(L, conn->env->status_vector);
+	}
 
 	/* an unsupported SQL statment (something like COMMIT) */
 	if(stmt_type > 5) {
+		free(cur.out_sqlda);
+
 		lua_pushnil(L);
 		lua_pushstring(L, "Unsupported SQL statment");
 
@@ -263,8 +290,10 @@ static int conn_execute (lua_State *L) {
 		cur.out_sqlda->sqln = n;
 		cur.out_sqlda->version = SQLDA_VERSION1;
 		isc_dsql_describe(conn->env->status_vector, &cur.stmt, 1, cur.out_sqlda);
-		if ( CHECK_DB_ERROR(conn->env->status_vector) )
+		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+			free(cur.out_sqlda);
 			return return_db_error(L, conn->env->status_vector);
+		}
 	}
 
 	/* prep the result set ready to handle the data */
@@ -317,14 +346,18 @@ static int conn_execute (lua_State *L) {
 
 	/* run the query */
 	isc_dsql_execute(conn->env->status_vector, &conn->transaction, &cur.stmt, 1, NULL);
-	if ( CHECK_DB_ERROR(conn->env->status_vector) )
+	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+		free_cur(&cur);
 		return return_db_error(L, conn->env->status_vector);
+	}
 
 	/* if autocommit is set and it's a non SELECT query, commit change */
 	if(conn->autocommit != 0 && stmt_type > 1) {
 		isc_commit_retaining(conn->env->status_vector, &conn->transaction);
-		if ( CHECK_DB_ERROR(conn->env->status_vector) )
+		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+			free_cur(&cur);
 			return return_db_error(L, conn->env->status_vector);
+		}
 	}
 
 	/* what do we return? a cursor or a count */
@@ -332,8 +365,10 @@ static int conn_execute (lua_State *L) {
 		cur_data* user_cur;
 		/* open the cursor ready for fetch cycles */
 		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, "dyn_cursor", (unsigned short)NULL);
-		if ( CHECK_DB_ERROR(conn->env->status_vector) )
+		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+			free_cur(&cur);
 			return return_db_error(L, conn->env->status_vector);
+		}
 
 		/* copy the cursor into a new lua userdata object */
 		user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
@@ -344,8 +379,10 @@ static int conn_execute (lua_State *L) {
 		/* add cursor to the lock count */
 		++conn->lock;
 	} else { /* a count */
-		if( (count = count_rows_affected(&cur)) < 0 )
+		if( (count = count_rows_affected(&cur)) < 0 ) {
+			free(cur.out_sqlda);
 			return return_db_error(L, conn->env->status_vector);
+		}
 
 		lua_pushnumber(L, count);
 
@@ -716,15 +753,8 @@ static int cur_close (lua_State *L) {
 	if ( CHECK_DB_ERROR(cur->env->status_vector) )
 		return return_db_error(L, cur->env->status_vector);
 
-		/* free the field memory blocks */
-		for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
-			free(var->sqldata);
-			if(var->sqlind != NULL)
-				free(var->sqlind);
-		}
-
-		/* free the statment handler */
-		free(cur->out_sqlda);
+		/* free the cursor data */
+		free_cur(cur);
 
 		cur->closed = 1;
 
@@ -791,7 +821,6 @@ static int env_connect (lua_State *L) {
 	conn->closed = 0;
 	conn->env = env;
 	conn->db = 0L;
-    conn->dpb_buffer = (char*)malloc(sizeof(char) * 256);
 	conn->transaction = 0L;
 	conn->lock = 0;
 	conn->autocommit = 0;
