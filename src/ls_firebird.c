@@ -44,7 +44,7 @@ typedef struct {
 	XSQLDA			*out_sqlda;
 } cur_data;
 
-/* How many field to pre-alloc to the cursor */
+/* How many fields to pre-alloc to the cursor */
 #define CURSOR_PREALLOC 10
 
 /* Macro to ease code reading */
@@ -53,7 +53,7 @@ typedef struct {
 /*
 ** Returns a standard database error message
 */
-int return_db_error(lua_State *L, long *pvector)
+int return_db_error(lua_State *L, ISC_STATUS *pvector)
 {
 	char errmsg[512];
 
@@ -205,8 +205,6 @@ int count_rows_affected(cur_data* cur)
 **   row count: number of rows affected by statement if no results
 */
 static int conn_execute (lua_State *L) {
-	char errmsg[512];
-	long *pvector;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 	const char *statement = luaL_checkstring(L, 2);
 	int dialect = (int)luaL_optnumber(L, 3, 3);
@@ -362,8 +360,6 @@ static int conn_execute (lua_State *L) {
 ** Commits the current transaction
 */
 static int conn_commit(lua_State *L) {
-	char errmsg[512];
-	long *pvector;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 
 	/* closed? */
@@ -388,8 +384,6 @@ static int conn_commit(lua_State *L) {
 **   nil and error message otherwise.
 */
 static int conn_rollback(lua_State *L) {
-	char errmsg[512];
-	long *pvector;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 
 	/* closed? */
@@ -439,8 +433,6 @@ static int conn_setautocommit(lua_State *L) {
 **   nil and error message otherwise.
 */
 static int conn_close (lua_State *L) {
-	char errmsg[512];
-	long *pvector;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 
 	/* already closed */
@@ -483,8 +475,6 @@ static int conn_close (lua_State *L) {
 **   nil and error message otherwise.
 */
 static int cur_fetch (lua_State *L) {
-	char errmsg[512];
-	long *pvector;
 	ISC_STATUS fetch_stat;
 	struct tm timevar;
 	char timestr[256];
@@ -627,14 +617,8 @@ static int cur_fetch (lua_State *L) {
 
 	/* isc_dsql_fetch returns 100 if no more rows remain to be retrieved
 	   so this can be ignored */
-	if (fetch_stat != 100L) {
-		lua_pushnil(L);
-		pvector = cur->env->status_vector;
-		isc_interprete(errmsg, &pvector);
-		lua_pushstring(L, errmsg);
-
-		return 2;
-	}
+	if (fetch_stat != 100L)
+		return return_db_error(L, cur->env->status_vector);
 
 	return 0;
 }
@@ -723,21 +707,14 @@ static int cur_coltypes (lua_State *L) {
 **   nil and error message otherwise.
 */
 static int cur_close (lua_State *L) {
-	char errmsg[512];
 	int i;
 	XSQLVAR *var;
 	cur_data *cur = (cur_data *)luaL_checkudata(L,1,LUASQL_CURSOR_FIREBIRD);
 
 	if(cur->closed == 0 ) {
 		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
-		if (cur->env->status_vector[0] == 1 && cur->env->status_vector[1] > 0)
-		{
-			isc_interprete(errmsg, (ISC_STATUS**)&cur->env->status_vector);
-			lua_pushnil(L);
-			lua_pushstring(L, errmsg);
-
-			return 2;
-		}
+	if ( CHECK_DB_ERROR(cur->env->status_vector) )
+		return return_db_error(L, cur->env->status_vector);
 
 		/* free the field memory blocks */
 		for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
@@ -792,8 +769,6 @@ static int create_environment (lua_State *L) {
 */
 static int env_connect (lua_State *L) {
 	char *dpb;
-	char errmsg[512];
-	long *pvector;
 	int i;
 	static char isc_tpb[] = {	isc_tpb_version3,
 								isc_tpb_write		};
@@ -846,14 +821,8 @@ static int env_connect (lua_State *L) {
 						conn->dpb_length,	conn->dpb_buffer);
 
 	/* an error? */
-	if (env->status_vector[0] == 1 && env->status_vector[1]) {
-		lua_pushnil(L);
-		pvector = env->status_vector;
-		isc_interprete(errmsg, &pvector);
-		lua_pushstring(L, errmsg);
-
-		return 2;
-	}
+	if ( CHECK_DB_ERROR(conn->env->status_vector) )
+		return return_db_error(L, conn->env->status_vector);
 
 	/* open up the transaction handle */
 	isc_start_transaction(	env->status_vector, &conn->transaction, 1,
@@ -861,14 +830,8 @@ static int env_connect (lua_State *L) {
 							isc_tpb );
 
 	/* return NULL on error */
-	if (env->status_vector[0] == 1 && env->status_vector[1]) {
-		lua_pushnil(L);
-		pvector = env->status_vector;
-		isc_interprete(errmsg, &pvector);
-		lua_pushstring(L, errmsg);
-
-		return 2;
-	}
+	if ( CHECK_DB_ERROR(conn->env->status_vector) )
+		return return_db_error(L, conn->env->status_vector);
 
 	/* add the connection to the lock */
 	++env->lock;
