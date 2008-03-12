@@ -496,8 +496,6 @@ static int conn_close (lua_State *L) {
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
-	free((void*)conn->dpb_buffer);
-
 	conn->closed = 1;
 	--conn->env->lock;
 
