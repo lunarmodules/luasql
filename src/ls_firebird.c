@@ -50,6 +50,14 @@ typedef struct {
 /* Macro to ease code reading */
 #define CHECK_DB_ERROR( X ) ( (X)[0] == 1 && (X)[1] )
 
+/* Use the new interpret API if available */
+#undef FB_INTERPRET
+#if FB_API_VER >= 20
+  #define FB_INTERPRET(BUF, LEN, VECTOR) fb_interpret(BUF, LEN, VECTOR)
+#else
+  #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
+#endif
+
 /*
 ** Returns a standard database error message
 */
@@ -58,8 +66,13 @@ int return_db_error(lua_State *L, ISC_STATUS *pvector)
 	char errmsg[512];
 
 	lua_pushnil(L);
-	isc_interprete(errmsg, &pvector);
+	FB_INTERPRET(errmsg, 512, &pvector);
 	lua_pushstring(L, errmsg);
+	while(FB_INTERPRET(errmsg, 512, &pvector)) {
+		lua_pushstring(L, "\n * ");
+		lua_pushstring(L, errmsg);
+		lua_concat(L, 3);
+	}
 
 	return 2;
 }
@@ -742,8 +755,6 @@ static int cur_coltypes (lua_State *L) {
 **   nil and error message otherwise.
 */
 static int cur_close (lua_State *L) {
-	int i;
-	XSQLVAR *var;
 	cur_data *cur = (cur_data *)luaL_checkudata(L,1,LUASQL_CURSOR_FIREBIRD);
 
 	if(cur->closed == 0 ) {
