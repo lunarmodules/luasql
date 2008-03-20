@@ -336,6 +336,13 @@ the Postgres driver also offers these extra features:</p>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
 
+  <dt><strong><code>conn:escape(str)</code></strong></dt>
+  <dd>Escape especial characters in the given string according to the
+    connection's character set.<br/>
+    See also: Official documentation of function <a href="http://www.postgresql.org/docs/8.3/static/libpq-exec.html#LIBPQ-EXEC-ESCAPE-STRING">PQescapeStringConn</a><br/>
+    Returns: the escaped string.
+  </dd>
+
   <dt><strong><code>cur:numrows()</code></strong></dt>
   <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
     Returns: the number of rows in the query result.</dd>
@@ -350,9 +357,23 @@ the MySQL driver also offers these extra features:</p>
 <dl class="reference">
   <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></strong></dt>
   <dd>In the MySQL driver, this method adds two optional parameters
-    that indicate the hostname and port to connect.
+    that indicate the hostname and port to connect.<br/>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
+
+  <dt><strong><code>conn:escape(str)</code></strong></dt>
+  <dd>Escape especial characters in the given string according to the
+    connection's character set.<br/>
+    See also: Official documentation of function <a href="http://dev.mysql.com/doc/refman/4.1/en/mysql-real-escape-string.html">mysql_real_escape_string</a><br/>
+    Returns: the escaped string.
+  </dd>
+
+  <dt><strong><code>conn:getlastautoid()</code></strong></dt>
+  <dd>Obtains the value generated for an AUTO_INCREMENT column by the previous
+    INSERT or UPDATE statement.<br/>
+    See also: Official documentation of function <code>mysql_insert_id</code> for versions <a href="http://dev.mysql.com/doc/refman/4.1/en/mysql-insert-id.html">4.0</a>, <a href="http://dev.mysql.com/doc/refman/5.1/en/mysql-insert-id.html">5.1</a> and <a href="http://dev.mysql.com/doc/refman/6.0/en/mysql-insert-id.html">6.0</a><br/>
+    Returns: the number of the last value generated for an AUTO_INCREMENT column.
+  </dd>
 
   <dt><strong><code>cur:numrows()</code></strong></dt>
   <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
@@ -389,7 +410,7 @@ the Oracle driver also offers this extra feature:</p>
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: manual.html,v 1.25 2007/10/30 01:10:49 carregal Exp $</small></p>
+	<p><small>$Id: manual.html,v 1.26 2008/03/20 17:30:14 tomas Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
