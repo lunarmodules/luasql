@@ -10,6 +10,8 @@ QUERYING_STRING_TYPE_NAME = "text"
 CREATE_TABLE_RETURN_VALUE = 0
 DROP_TABLE_RETURN_VALUE = 0
 
+MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
+
 ---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.
 -- @param table_name String with the name of the table.
@@ -91,7 +93,7 @@ function basic_test ()
 	assert2 (true, conn:close(), "couldn't close connection")
 	-- trying to execute a statement with a closed connection.
 	assert2 (false, pcall (conn.execute, conn, "create table x (c char)"),
-		"error connecting with a closed environment")
+		"error while executing through a closed connection")
 	-- it is ok to close a closed object, but false is returned instead of true.
 	assert2 (false, conn:close())
 	-- Check error situation.
@@ -145,7 +147,7 @@ function fetch2 ()
 	assert2 ('c', f2)
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 	-- insert a second record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('d', 'e')"))
@@ -159,7 +161,7 @@ function fetch2 ()
 	assert2 ('e', f2)
 	assert2 (nil, f3)
 	assert2 (nil, cur:fetch())
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
@@ -196,7 +198,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch())
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table.
@@ -223,7 +225,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	assert2 (nil, cur:fetch{})
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table with alphabetic indexes.
@@ -250,7 +252,7 @@ function fetch_new_table ()
 	assert2 ('h', row.f3)
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "a"))
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table with both indexes.
@@ -277,7 +279,7 @@ function fetch_new_table ()
 	assert2 ('h', row.f3)
 	assert2 ('i', row.f4)
 	assert2 (nil, cur:fetch(row, "an"))
-	assert2 (true, cur:close(), "couldn't close cursor")
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
@@ -304,8 +306,7 @@ function fetch_many ()
 		assert2 ('v'..i, row[i])
 	end
 	assert2 (nil, cur:fetch (row))
-	assert2 (true, cur:close(), "couldn't close cursor")
-	assert2 (false, cur:close())
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- fetch values (with a table and default indexing).
 	io.write ("with a table...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
@@ -315,8 +316,7 @@ function fetch_many ()
 		assert2 ('v'..i, row[i])
 	end
 	assert2 (nil, cur:fetch (row))
-	assert2 (true, cur:close(), "couldn't close cursor")
-	assert2 (false, cur:close())
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- fetch values (with numbered indexes on a table).
 	io.write ("with numbered keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
@@ -326,8 +326,7 @@ function fetch_many ()
 		assert2 ('v'..i, row[i])
 	end
 	assert2 (nil, cur:fetch (row))
-	assert2 (true, cur:close(), "couldn't close cursor")
-	assert2 (false, cur:close())
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- fetch values (with alphanumeric indexes on a table).
 	io.write ("with alpha keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
@@ -337,8 +336,7 @@ function fetch_many ()
 		assert2 ('v'..i, row['f'..i])
 	end
 	assert2 (nil, cur:fetch (row))
-	assert2 (true, cur:close(), "couldn't close cursor")
-	assert2 (false, cur:close())
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- fetch values (with both indexes on a table).
 	io.write ("with both keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
@@ -350,8 +348,7 @@ function fetch_many ()
 		assert2 ('v'..i, row['f'..i])
 	end
 	assert2 (nil, cur:fetch (row))
-	assert2 (true, cur:close(), "couldn't close cursor")
-	assert2 (false, cur:close())
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'v1'"))
 end
@@ -610,7 +607,25 @@ assert (luasql, "no luasql table")
 for i = 1, table.getn (tests) do
 	local t = tests[i]
 	io.write (t[1].." ...")
-	t[2] ()
+	local ok, err = xpcall (t[2], debug.traceback)
+	if not ok then
+		io.write ("\n"..err)
+		io.write"\n... trying to drop test table ..."
+		local ok, err = pcall (drop_table)
+		if not ok then
+			io.write (" failed: "..err)
+		else
+			io.write" OK !\n... and to close the connection ..."
+			local ok, err = pcall (close_conn)
+			if not ok then
+				io.write (" failed: "..err)
+			else
+				io.write" OK !"
+			end
+		end
+		io.write"\nThe test failed!\n"
+		return
+	end
 	io.write (" OK !\n")
 end
-
+io.write ("The test passed!\n")

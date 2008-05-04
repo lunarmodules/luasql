@@ -58,10 +58,12 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
+LUASQL_API int luaopen_luasql_firebird(lua_State *L);
+
 /*
 ** Returns a standard database error message
 */
-int return_db_error(lua_State *L, ISC_STATUS *pvector)
+static int return_db_error(lua_State *L, const ISC_STATUS *pvector)
 {
 	char errmsg[512];
 
@@ -80,7 +82,7 @@ int return_db_error(lua_State *L, ISC_STATUS *pvector)
 /*
 ** Free's up the memory alloc'd to the cursor data
 */
-void free_cur(cur_data* cur)
+static void free_cur(cur_data* cur)
 {
 	int i;
 	XSQLVAR *var;
@@ -109,7 +111,7 @@ static env_data *getenvironment (lua_State *L) {
 /*
 ** Returns the statment type
 */
-int get_statment_type(cur_data* cur)
+static int get_statment_type(cur_data* cur)
 {
 	int length, type;
 	char type_item[] = { isc_info_sql_stmt_type };
@@ -140,9 +142,9 @@ int get_statment_type(cur_data* cur)
 /*
 ** Return the number of rows affected by last operation
 */
-int count_rows_affected(cur_data* cur)
+static int count_rows_affected(cur_data* cur)
 {
-	int length, type, res;
+	int length, type, res=0;
 	int del_count = 0, ins_count = 0, upd_count = 0, sel_count = 0;
 	char type_item[] = { isc_info_sql_stmt_type, isc_info_sql_records };
 	char res_buffer[88], *pres;
@@ -423,7 +425,7 @@ static int conn_commit(lua_State *L) {
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -447,7 +449,7 @@ static int conn_rollback(lua_State *L) {
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -487,7 +489,7 @@ static int conn_close (lua_State *L) {
 
 	/* already closed */
 	if(conn->closed != 0) {
-		lua_pushnumber(L, 0);
+		lua_pushboolean(L, 0);
 		return 1;
 	}
 
@@ -512,7 +514,7 @@ static int conn_close (lua_State *L) {
 	conn->closed = 1;
 	--conn->env->lock;
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -771,11 +773,11 @@ static int cur_close (lua_State *L) {
 		--cur->conn->lock;
 
 		/* return sucsess */
-		lua_pushnumber(L, 1);
+		lua_pushboolean(L, 1);
 		return 1;
 	}
 
-	lua_pushnumber(L, 0);
+	lua_pushboolean(L, 0);
 	return 1;
 }
 
@@ -888,7 +890,7 @@ static int env_close (lua_State *L) {
 
 	/* already closed? */
 	if(env->closed == 1) {
-		lua_pushnumber(L, 0);
+		lua_pushboolean(L, 0);
 		return 1;
 	}
 
@@ -902,7 +904,7 @@ static int env_close (lua_State *L) {
 	/* mark as closed */
 	env->closed = 1;
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -911,11 +913,13 @@ static int env_close (lua_State *L) {
 */
 static void create_metatables (lua_State *L) {
 	struct luaL_reg environment_methods[] = {
+		{"__gc", env_close},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
 	struct luaL_reg connection_methods[] = {
+		{"__gc", conn_close},
 		{"close", conn_close},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
@@ -924,6 +928,7 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_reg cursor_methods[] = {
+		{"__gc", cur_close},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},

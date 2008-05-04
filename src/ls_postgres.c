@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.9 2007/06/18 01:22:45 tomas Exp $
+** $Id: ls_postgres.c,v 1.10 2008/05/04 02:46:17 tomas Exp $
 */
 
 #include <assert.h>
@@ -101,6 +101,19 @@ static void pushvalue (lua_State *L, PGresult *res, int tuple, int i) {
 
 
 /*
+** Closes the cursor and nullify all structure fields.
+*/
+static void cur_nullify (lua_State *L, cur_data *cur) {
+	/* Nullify structure fields. */
+	cur->closed = 1;
+	PQclear(cur->pg_res);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+}
+
+
+/*
 ** Get another row of the given cursor.
 */
 static int cur_fetch (lua_State *L) {
@@ -109,6 +122,7 @@ static int cur_fetch (lua_State *L) {
 	int tuple = cur->curr_tuple;
 
 	if (tuple >= PQntuples(cur->pg_res)) {
+		cur_nullify (L, cur);
 		lua_pushnil(L);  /* no more results */
 		return 1;
 	}
@@ -144,8 +158,21 @@ static int cur_fetch (lua_State *L) {
 
 
 /*
-** Close the cursor on top of the stack.
-** Return 1
+** Cursor object collector function
+*/
+static int cur_gc (lua_State *L) {
+	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
+	if (cur != NULL && !(cur->closed))
+		cur_nullify (L, cur);
+	return 0;
+}
+
+
+/*
+** Closes the cursor on top of the stack.
+** Returns true in case of success, or false in case the cursor was
+** already closed.
+** Throws an error if the argument is not a cursor.
 */
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_PG);
@@ -154,14 +181,7 @@ static int cur_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
-	/* Nullify structure fields. */
-	cur->closed = 1;
-	PQclear(cur->pg_res);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
-
+	cur_nullify (L, cur); /* == cur_gc (L); */
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -173,10 +193,10 @@ static int cur_close (lua_State *L) {
 static char *getcolumntype (PGconn *conn, PGresult *result, int i, char *buff) {
 	Oid codigo = PQftype (result, i);
 	char stmt[100];
-  	PGresult *res;
+	PGresult *res;
 
- 	sprintf (stmt, "select typname from pg_type where oid = %d", codigo);
-  	res = PQexec(conn, stmt);
+	sprintf (stmt, "select typname from pg_type where oid = %d", codigo);
+	res = PQexec(conn, stmt);
 	strcpy (buff, "undefined");
 
 	if (PQresultStatus (res) == PGRES_TUPLES_OK) {
@@ -313,7 +333,25 @@ static void sql_rollback(conn_data *conn) {
 
 
 /*
-** Close a Connection object.
+** Connection object collector function
+*/
+static int conn_gc (lua_State *L) {
+	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
+	if (conn != NULL && !(conn->closed)) {
+		/* Nullify structure fields. */
+		conn->closed = 1;
+		luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+		PQfinish (conn->pg_conn);
+	}
+	return 0;
+}
+
+
+/*
+** Closes the connection on top of the stack.
+** Returns true in case of success, or false in case the connection was
+** already closed.
+** Throws an error if the argument is not a connection.
 */
 static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_PG);
@@ -322,11 +360,7 @@ static int conn_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
-	/* Nullify structure fields. */
-	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	PQfinish (conn->pg_conn);
+	conn_gc (L);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -340,7 +374,7 @@ static int conn_escape (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	size_t len;
 	const char *from = luaL_checklstring (L, 2, &len);
-	char to[len*2+1];
+	char to[len*sizeof(char)*2+1];
 	int error;
 	len = PQescapeStringConn (conn->pg_conn, to, from, len, &error);
 	if (error == 0) { /* success ! */
@@ -446,8 +480,8 @@ static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 
 
 static void notice_processor (void *arg, const char *message) {
-  (void)arg; (void)message;
-  /* arg == NULL */
+	(void)arg; (void)message;
+	/* arg == NULL */
 }
 
 
@@ -483,7 +517,21 @@ static int env_connect (lua_State *L) {
 
 
 /*
-** Close environment object.
+** Environment object collector function.
+*/
+static int env_gc (lua_State *L) {
+	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
+	if (env != NULL && !(env->closed))
+		env->closed = 1;
+	return 0;
+}
+
+
+/*
+** Closes the environment on top of the stack.
+** Returns true in case of success, or false in case the environment was
+** already closed.
+** Throws an error if the argument is not an environment.
 */
 static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
@@ -492,8 +540,7 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
-	env->closed = 1;
+	env_gc (L);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -504,28 +551,31 @@ static int env_close (lua_State *L) {
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
-    struct luaL_reg environment_methods[] = {
-        {"close", env_close},
-        {"connect", env_connect},
+	struct luaL_reg environment_methods[] = {
+		{"__gc",    env_gc},
+		{"close",   env_close},
+		{"connect", env_connect},
 		{NULL, NULL},
 	};
-    struct luaL_reg connection_methods[] = {
-        {"close", conn_close},
-        {"escape", conn_escape},
-        {"execute", conn_execute},
-        {"commit", conn_commit},
-        {"rollback", conn_rollback},
-        {"setautocommit", conn_setautocommit},
+	struct luaL_reg connection_methods[] = {
+		{"__gc",          conn_gc},
+		{"close",         conn_close},
+		{"escape",        conn_escape},
+		{"execute",       conn_execute},
+		{"commit",        conn_commit},
+		{"rollback",      conn_rollback},
+		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
-    };
-    struct luaL_reg cursor_methods[] = {
-        {"close", cur_close},
-        {"getcolnames", cur_getcolnames},
-        {"getcoltypes", cur_getcoltypes},
-        {"fetch", cur_fetch},
-		{"numrows", cur_numrows},
+	};
+	struct luaL_reg cursor_methods[] = {
+		{"__gc",        cur_gc},
+		{"close",       cur_close},
+		{"getcolnames", cur_getcolnames},
+		{"getcoltypes", cur_getcoltypes},
+		{"fetch",       cur_fetch},
+		{"numrows",     cur_numrows},
 		{NULL, NULL},
-    };
+	};
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_PG, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_PG, connection_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_PG, cursor_methods);
@@ -550,7 +600,7 @@ static int create_environment (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luaopen_luasql_postgres (lua_State *L) {
-    struct luaL_reg driver[] = {
+	struct luaL_reg driver[] = {
 		{"postgres", create_environment},
 		{NULL, NULL},
 	};

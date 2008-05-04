@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.10 2008/04/24 17:37:45 mascarenhas Exp $
+** $Id: ls_sqlite3.c,v 1.11 2008/05/04 02:46:17 tomas Exp $
 */
 
 #include <stdio.h>
@@ -559,11 +559,13 @@ static int env_close (lua_State *L)
 static void create_metatables (lua_State *L)
 {
   struct luaL_reg environment_methods[] = {
+    {"__gc", env_close},
     {"close", env_close},
     {"connect", env_connect},
     {NULL, NULL},
   };
   struct luaL_reg connection_methods[] = {
+    {"__gc", conn_close},
     {"close", conn_close},
     {"escape", conn_escape},
     {"execute", conn_execute},
@@ -574,6 +576,7 @@ static void create_metatables (lua_State *L)
     {NULL, NULL},
   };
   struct luaL_reg cursor_methods[] = {
+    {"__gc", cur_close},
     {"close", cur_close},
     {"getcolnames", cur_getcolnames},
     {"getcoltypes", cur_getcoltypes},

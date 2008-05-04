@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.23 2007/10/29 20:58:23 carregal Exp $
+** $Id: luasql.c,v 1.24 2008/05/04 02:46:17 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -51,10 +51,6 @@ LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg
 	luaL_openlib (L, NULL, methods, 0);
 
 	/* define metamethods */
-	lua_pushliteral (L, "__gc");
-	lua_pushcfunction (L, methods->func);
-	lua_settable (L, -3);
-
 	lua_pushliteral (L, "__index");
 	lua_pushvalue (L, -2);
 	lua_settable (L, -3);

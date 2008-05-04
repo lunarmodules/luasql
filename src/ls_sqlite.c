@@ -2,7 +2,7 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.12 2008/02/18 05:20:34 mascarenhas Exp $
+** $Id: ls_sqlite.c,v 1.13 2008/05/04 02:46:17 tomas Exp $
 */
 
 #include <stdio.h>
@@ -519,13 +519,15 @@ static int conn_escape(lua_State *L)
 static void create_metatables (lua_State *L)
 {
     struct luaL_reg environment_methods[] = {
+        {"__gc", env_close},
         {"close", env_close},
         {"connect", env_connect},
 		{NULL, NULL},
 	};
     struct luaL_reg connection_methods[] = {
+        {"__gc", conn_close},
         {"close", conn_close},
-	{"escape", conn_escape},
+		{"escape", conn_escape},
         {"execute", conn_execute},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
@@ -533,6 +535,7 @@ static void create_metatables (lua_State *L)
 		{NULL, NULL},
     };
     struct luaL_reg cursor_methods[] = {
+        {"__gc", cur_close},
         {"close", cur_close},
         {"getcolnames", cur_getcolnames},
         {"getcoltypes", cur_getcoltypes},
