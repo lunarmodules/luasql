@@ -4,7 +4,8 @@
 #T= odbc
 #T= postgres
 #T= sqlite
-T=sqlite3
+#T=sqlite3
+T=firebird
 
 # Installation directories
 
@@ -45,15 +46,18 @@ COMPAT_DIR= ../compat/src
 #DRIVER_LIBS= -lsqlite
 #DRIVER_INCS=
 ######## SQLite3 
-DRIVER_LIBS= -L/opt/local/lib -lsqlite3
-DRIVER_INCS= -I/opt/local/include
+#DRIVER_LIBS= -L/opt/local/lib -lsqlite3
+#DRIVER_INCS= -I/opt/local/include
 ######## ODBC
 #DRIVER_LIBS= -L/usr/local/lib -lodbc
 #DRIVER_INCS= -DUNIXODBC -I/usr/local/include
+######## Firebird
+DRIVER_LIBS= -L/usr/local/firebird -lfbclient
+DRIVER_INCS=
 
 WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi -pedantic
 INCS= -I$(LUA_INC)
 CFLAGS= -O2 $(WARN) -I$(COMPAT_DIR) $(DRIVER_INCS) $(INCS) $(DEFS)
 CC= gcc
 
-# $Id: config,v 1.8 2007/10/27 22:55:27 carregal Exp $
+# $Id: config,v 1.9 2008/05/04 02:25:58 tomas Exp $
