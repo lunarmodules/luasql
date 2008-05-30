@@ -1,4 +1,4 @@
-V= 2.1.1
+V= 2.2.0
 CONFIG= ./config
 
 include $(CONFIG)
@@ -11,6 +11,7 @@ OBJS= src/luasql.o src/ls_$T.o $(COMPAT_O)
 
 
 SRCS= src/luasql.h src/luasql.c \
+	src/ls_firebird.c \
 	src/ls_postgres.c \
 	src/ls_odbc.c \
 	src/ls_oci8.c \
@@ -40,4 +41,4 @@ jdbc_driver:
 clean:
 	rm -f src/$(LIBNAME) src/*.o $(COMPAT_O)
 
-# $Id: Makefile,v 1.55 2008/01/08 18:50:49 mascarenhas Exp $
+# $Id: Makefile,v 1.56 2008/05/30 17:21:18 tomas Exp $
