@@ -13,6 +13,30 @@ DROP_TABLE_RETURN_VALUE = 0
 MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
 
 ---------------------------------------------------------------------
+-- Creates a table that can handle differing capitlization of field
+-- names
+-- @return A table with altered metatable
+---------------------------------------------------------------------
+(function()
+	local mt = {
+		__index = function(t, i)
+					if type(i) == "string" then
+						return rawget(t, i) or rawget(t, string.upper(i)) or rawget(t, string.lower(i))
+					end
+
+					return rawget(t, i)
+				end
+	}
+	
+	function fetch_table ( tab )
+		local res = tab or {}
+		setmetatable(res, mt)
+
+		return res
+	end
+end)()
+
+---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.
 -- @param table_name String with the name of the table.
 -- @return String with SQL statement.
@@ -177,7 +201,7 @@ function fetch_new_table ()
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
 	-- retrieve data using a new table.
 	local cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
-	local row, err = cur:fetch{}
+	local row, err = cur:fetch(fetch_table())
 	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
@@ -187,7 +211,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f2)
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
-	row, err = cur:fetch{}
+	row, err = cur:fetch(fetch_table())
 	assert (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
@@ -197,14 +221,14 @@ function fetch_new_table ()
 	assert2 (nil, row.f2)
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
-	assert2 (nil, cur:fetch())
+	assert2 (nil, cur:fetch{})
 	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table.
 	io.write ("reusing a table...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
-	local row, err = cur:fetch{}
+	local row, err = cur:fetch(fetch_table())
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
@@ -224,14 +248,14 @@ function fetch_new_table ()
 	assert2 (nil, row.f2)
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
-	assert2 (nil, cur:fetch{})
+	assert2 (nil, cur:fetch(fetch_table()))
 	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	assert2 (false, cur:close())
 
 	-- retrieve data reusing the same table with alphabetic indexes.
 	io.write ("with alpha keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
-	local row, err = cur:fetch ({}, "a")
+	local row, err = cur:fetch (fetch_table(), "a")
 	assert (type(row), "table", err)
 	assert2 (nil, row[1])
 	assert2 (nil, row[2])
@@ -258,7 +282,7 @@ function fetch_new_table ()
 	-- retrieve data reusing the same table with both indexes.
 	io.write ("with both keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
-	local row, err = cur:fetch ({}, "an")
+	local row, err = cur:fetch (fetch_table(), "an")
 	assert (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
@@ -310,7 +334,7 @@ function fetch_many ()
 	-- fetch values (with a table and default indexing).
 	io.write ("with a table...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
-	local row = cur:fetch {}
+	local row = cur:fetch(fetch_table())
 	assert2 ("string", type(row[1]), "error while trying to fetch many values (default indexing)")
 	for i = 1, TOTAL_FIELDS do
 		assert2 ('v'..i, row[i])
@@ -320,7 +344,7 @@ function fetch_many ()
 	-- fetch values (with numbered indexes on a table).
 	io.write ("with numbered keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
-	local row = cur:fetch ({}, "n")
+	local row = cur:fetch (fetch_table(), "n")
 	assert2 ("string", type(row[1]), "error while trying to fetch many values (numbered indexes)")
 	for i = 1, TOTAL_FIELDS do
 		assert2 ('v'..i, row[i])
@@ -330,7 +354,7 @@ function fetch_many ()
 	-- fetch values (with alphanumeric indexes on a table).
 	io.write ("with alpha keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
-	local row = cur:fetch ({}, "a")
+	local row = cur:fetch (fetch_table(), "a")
 	assert2 ("string", type(row.f1), "error while trying to fetch many values (alphanumeric indexes)")
 	for i = 1, TOTAL_FIELDS do
 		assert2 ('v'..i, row['f'..i])
@@ -340,7 +364,7 @@ function fetch_many ()
 	-- fetch values (with both indexes on a table).
 	io.write ("with both keys...")
 	local cur = CUR_OK (CONN:execute ("select * from t where f1 = 'v1'"))
-	local row = cur:fetch ({}, "na")
+	local row = cur:fetch (fetch_table(), "na")
 	assert2 ("string", type(row[1]), "error while trying to fetch many values (both indexes)")
 	assert2 ("string", type(row.f1), "error while trying to fetch many values (both indexes)")
 	for i = 1, TOTAL_FIELDS do
@@ -430,7 +454,7 @@ function column_info ()
 	assert2 (4, table.getn(names), "incorrect column names table")
 	assert2 (4, table.getn(types), "incorrect column types table")
 	for i = 1, table.getn(names) do
-		assert2 ("f"..i, names[i], "incorrect column names table")
+		assert2 ("f"..i, string.lower(names[i]), "incorrect column names table")
 		local type_i = types[i]
 		assert (type_i == QUERYING_STRING_TYPE_NAME, "incorrect column types table")
 	end
