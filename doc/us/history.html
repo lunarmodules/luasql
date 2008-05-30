@@ -64,6 +64,18 @@
 <h2><a name="history"></a>History</h2>
 
 <dl class="history">
+    <dt><strong>LuaSQL 2.2.0</strong> [??/??/200?]</dt>
+    <dd>
+    <ul>
+        <li>Added Firebird driver</li>
+        <li>Added LuaRocks specifications</li>
+        <li><a href="manual.html#escape">escape</a> method added to some drivers</li>
+        <li><a href="manual.html#mysql_getlastautoid">getlastautoid</a> method added to MySQL driver</li>
+        <li><a href="manual.html#cur_fetch">fetch</a> method now closes the cursor when there is no more rows to retrieve</li>
+        <li>Uniformization of method's return values on all drivers</li>
+    </ul>
+    </dd>
+
     <dt><strong>LuaSQL 2.1.1</strong> [29/Oct/2007]</dt>
     <dd>
     <ul>
@@ -156,7 +168,7 @@
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: history.html,v 1.18 2007/10/30 01:10:49 carregal Exp $</small></p>
+	<p><small>$Id: history.html,v 1.19 2008/05/30 19:49:41 tomas Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->

@@ -106,7 +106,7 @@ The initialization function is <code>luaopen_luasql<em>drivername</em></code> an
 <p>All LuaSQL drivers follow the
 <a href="http://www.keplerproject.org/compat">package model</a>
 for Lua 5.1 and therefore should be "installed" in your
-<code>package.path</code>.</p>
+<code>package.cpath</code>.</p>
 
 <p>Windows users can use the compiled versions of LuaSQL available at
 <a href="http://luaforge.net/projects/luasql/files">LuaForge</a></p>
@@ -301,6 +301,8 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 	used to store the next row.
 	This allows the use of a unique table for many fetches, which
 	can improve the overall performance.<br/>
+	A call to <code>fetch</code> after the last row has already being returned
+	will close the corresponding cursor.
 	There is no guarantee about the types of the results: they may or may not be converted to adequate Lua types by the driver.
 	In the current implementation,
 	the PostgreSQL and MySQL drivers return all values as strings
@@ -368,6 +370,7 @@ the MySQL driver also offers these extra features:</p>
     Returns: the escaped string.
   </dd>
 
+  <a name="mysql_getlastautoid"></a>
   <dt><strong><code>conn:getlastautoid()</code></strong></dt>
   <dd>Obtains the value generated for an AUTO_INCREMENT column by the previous
     INSERT or UPDATE statement.<br/>
@@ -410,7 +413,7 @@ the Oracle driver also offers this extra feature:</p>
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: manual.html,v 1.26 2008/03/20 17:30:14 tomas Exp $</small></p>
+	<p><small>$Id: manual.html,v 1.27 2008/05/30 19:49:41 tomas Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
