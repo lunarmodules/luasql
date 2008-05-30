@@ -1,5 +1,6 @@
 #!/usr/local/bin/lua5.1
 -- See Copyright Notice in license.html
+-- $Id: test.lua,v 1.49 2008/05/30 17:23:59 tomas Exp $
 
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
@@ -13,28 +14,22 @@ DROP_TABLE_RETURN_VALUE = 0
 MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
 
 ---------------------------------------------------------------------
--- Creates a table that can handle differing capitlization of field
+-- Creates a table that can handle differing capitalization of field
 -- names
 -- @return A table with altered metatable
 ---------------------------------------------------------------------
-(function()
-	local mt = {
-		__index = function(t, i)
-					if type(i) == "string" then
-						return rawget(t, i) or rawget(t, string.upper(i)) or rawget(t, string.lower(i))
-					end
+local mt = {
+	__index = function(t, i)
+		if type(i) == "string" then
+			return rawget(t, string.upper(i)) or rawget(t, string.lower(i))
+		end
 
-					return rawget(t, i)
-				end
-	}
-	
-	function fetch_table ( tab )
-		local res = tab or {}
-		setmetatable(res, mt)
-
-		return res
+		return rawget(t, i)
 	end
-end)()
+}
+function fetch_table ()
+	return setmetatable({}, mt)
+end
 
 ---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.
@@ -64,7 +59,7 @@ end
 ---------------------------------------------------------------------
 function test_object (obj, objmethods)
 	-- checking object type.
-	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type")
+	assert2 (true, type(obj) == "userdata", "incorrect object type")
 	-- trying to get metatable.
 	assert2 ("LuaSQL: you're not allowed to get this metatable",
 		getmetatable(obj), "error permitting access to object's metatable")
@@ -626,7 +621,8 @@ tests = {
 }
 
 require ("luasql."..driver)
-assert (luasql, "no luasql table")
+assert (luasql, "Could not load driver: no luasql table.")
+io.write (luasql._VERSION.." "..driver.." driver test.  "..luasql._COPYRIGHT.."\n")
 
 for i = 1, table.getn (tests) do
 	local t = tests[i]
