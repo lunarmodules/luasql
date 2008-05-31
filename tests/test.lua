@@ -1,6 +1,6 @@
 #!/usr/local/bin/lua5.1
 -- See Copyright Notice in license.html
--- $Id: test.lua,v 1.49 2008/05/30 17:23:59 tomas Exp $
+-- $Id: test.lua,v 1.50 2008/05/31 14:06:19 tomas Exp $
 
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
@@ -59,7 +59,8 @@ end
 ---------------------------------------------------------------------
 function test_object (obj, objmethods)
 	-- checking object type.
-	assert2 (true, type(obj) == "userdata", "incorrect object type")
+	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type")
+
 	-- trying to get metatable.
 	assert2 ("LuaSQL: you're not allowed to get this metatable",
 		getmetatable(obj), "error permitting access to object's metatable")
