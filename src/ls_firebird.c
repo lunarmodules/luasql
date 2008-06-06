@@ -80,6 +80,28 @@ static int return_db_error(lua_State *L, const ISC_STATUS *pvector)
 }
 
 /*
+** Registers a given C object in the registry to avoid GC
+*/
+static void lua_registerobj(lua_State *L, int index, void *obj)
+{
+	lua_pushvalue(L, index);
+	lua_pushlightuserdata(L, obj);
+	lua_pushvalue(L, -2);
+	lua_settable(L, LUA_REGISTRYINDEX);
+	lua_pop(L, 1);
+}
+
+/*
+** Unregisters a given C object from the registry
+*/
+static void lua_unregisterobj(lua_State *L, void *obj)
+{
+	lua_pushlightuserdata(L, obj);
+	lua_pushnil(L);
+	lua_settable(L, LUA_REGISTRYINDEX);
+}
+
+/*
 ** Free's up the memory alloc'd to the cursor data
 */
 static void free_cur(cur_data* cur)
@@ -412,6 +434,7 @@ static int conn_execute (lua_State *L) {
 		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
 		/* add cursor to the lock count */
+		lua_registerobj(L, 1, conn);
 		++conn->lock;
 	} else { /* a count */
 		if( (count = count_rows_affected(&cur)) < 0 ) {
@@ -536,8 +559,37 @@ static int conn_close (lua_State *L) {
 	conn->closed = 1;
 	--conn->env->lock;
 
+	/* check environment can be GC'd */
+	if(conn->env->lock == 0)
+		lua_unregisterobj(L, conn->env);
+
 	lua_pushboolean(L, 1);
 	return 1;
+}
+
+/*
+** GCs an connection object
+*/
+static int conn_gc (lua_State *L) {
+	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
+
+	if(conn->closed == 0) {
+		if(conn->autocommit != 0)
+			isc_commit_transaction(conn->env->status_vector, &conn->transaction);
+		else
+			isc_rollback_transaction(conn->env->status_vector, &conn->transaction);
+
+		isc_detach_database(conn->env->status_vector, &conn->db);
+
+		conn->closed = 1;
+		--conn->env->lock;
+
+		/* check environment can be GC'd */
+		if(conn->env->lock == 0)
+			lua_unregisterobj(L, conn->env);
+	}
+
+	return 0;
 }
 
 /*
@@ -804,10 +856,13 @@ static int cur_close (lua_State *L) {
 		/* free the cursor data */
 		free_cur(cur);
 
-		cur->closed = 1;
-
 		/* remove cursor from lock count */
+		cur->closed = 1;
 		--cur->conn->lock;
+
+		/* check if connection can be unregistered */
+		if(cur->conn->lock == 0)
+			lua_unregisterobj(L, cur->conn);
 
 		/* return sucsess */
 		lua_pushboolean(L, 1);
@@ -816,6 +871,31 @@ static int cur_close (lua_State *L) {
 
 	lua_pushboolean(L, 0);
 	return 1;
+}
+
+/*
+** GCs a cursor object
+*/
+static int cur_gc (lua_State *L) {
+	cur_data *cur = (cur_data *)luaL_checkudata(L,1,LUASQL_CURSOR_FIREBIRD);
+	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
+
+	if(cur->closed == 0) {
+		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
+
+		/* free the cursor data */
+		free_cur(cur);
+
+		/* remove cursor from lock count */
+		cur->closed = 1;
+		--cur->conn->lock;
+
+		/* check if connection can be unregistered */
+		if(cur->conn->lock == 0)
+			lua_unregisterobj(L, cur->conn);
+	}
+
+	return 0;
 }
 
 /*
@@ -913,6 +993,8 @@ static int env_connect (lua_State *L) {
 	luasql_setmeta (L, LUASQL_CONNECTION_FIREBIRD);
 	memcpy(res_conn, &conn, sizeof(conn_data));
 
+	/* register the connection */
+	lua_registerobj(L, 1, env);
 	++env->lock;
 
 	return 1;
@@ -941,6 +1023,9 @@ static int env_close (lua_State *L) {
 		return 2;
 	}
 
+	/* unregister */
+	lua_unregisterobj(L, env);
+
 	/* mark as closed */
 	env->closed = 1;
 
@@ -949,17 +1034,25 @@ static int env_close (lua_State *L) {
 }
 
 /*
+** GCs an environment object
+*/
+static int env_gc (lua_State *L) {
+	/* nothing to be done for the FB envronment */
+	return 0;
+}
+
+/*
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
 	struct luaL_reg environment_methods[] = {
-		{"__gc", env_close},
+		{"__gc", env_gc},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
 	struct luaL_reg connection_methods[] = {
-		{"__gc", conn_close},
+		{"__gc", conn_gc},
 		{"close", conn_close},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
@@ -968,7 +1061,7 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_reg cursor_methods[] = {
-		{"__gc", cur_close},
+		{"__gc", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},
