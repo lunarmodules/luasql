@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.11 2008/05/04 02:46:17 tomas Exp $
+** $Id: ls_sqlite3.c,v 1.12 2008/06/11 00:26:13 jasonsantos Exp $
 */
 
 #include <stdio.h>
@@ -518,7 +518,9 @@ static int env_connect(lua_State *L)
   const char *errmsg;
   int res;
   getenvironment(L);  /* validate environment */
+  
   sourcename = luaL_checkstring(L, 2);
+  
   res = sqlite3_open(sourcename, &conn);
   if (res != SQLITE_OK)
     {
@@ -530,6 +532,11 @@ static int env_connect(lua_State *L)
       sqlite3_close(conn);
       return 2;
     }
+  
+  if (lua_isnumber(L, 3)) {
+  	sqlite3_busy_timeout(conn, lua_tonumber(L,3));
+  }
+  
   return create_connection(L, 1, conn);
 }
 
@@ -552,6 +559,16 @@ static int env_close (lua_State *L)
 }
 
 
+/*
+** Sets the timeout for a lock in the connection.
+*/
+static int opts_settimeout  (lua_State *L)
+{
+	conn_data *conn = getconnection(L);
+	int milisseconds = luaL_checknumber(L, 2);
+	lua_pushnumber(L, sqlite3_busy_timeout(conn, milisseconds));
+	return 1;
+}
 
 /*
 ** Create metatables for each class of object.

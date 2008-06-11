@@ -45,6 +45,7 @@
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
+				<li><a href="manual.html#sqlite3_extensions">SQLite3</a></li>
 			</ul>
 		</li>
 		<li><a href="examples.html">Examples</a></li>
@@ -407,13 +408,24 @@ the Oracle driver also offers this extra feature:</p>
     Returns: the number of rows in the query result.</dd>
 </dl>
 
+<h2><a name="sqlite3_extensions"></a>SQLite3 Extensions</h2>
+
+<p>Besides the basic functionality provided by all drivers,
+the SQLite3 driver also offers this extra feature:</p>
+
+<dt><strong><code>env:connect(sourcename[,locktimeout])</code></strong></dt>
+  <dd>In the SQLite3 driver, this method adds an optional parameter
+    that indicate the amount of milisseconds to wait for a write lock if one cannot be obtained immediately.<br/>
+    See also: <a href="#environment_object">environment objects</a><br/>
+    Returns: a <a href="#connection_object">connection object</a></dd>
+
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: manual.html,v 1.27 2008/05/30 19:49:41 tomas Exp $</small></p>
+	<p><small>$Id: manual.html,v 1.28 2008/06/11 00:26:13 jasonsantos Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
