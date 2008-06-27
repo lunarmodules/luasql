@@ -593,6 +593,34 @@ static int conn_gc (lua_State *L) {
 }
 
 /*
+** Escapes a given string so that it can't break out of it's delimiting quotes
+*/
+static int conn_escape(lua_State *L) {
+	size_t len;
+	const char *from = luaL_checklstring (L, 2, &len);
+    char *res = malloc(len*sizeof(char)*2+1);
+	char *to = res;
+
+	if(res) {
+		while(*from != '\0') {
+			*(to++) = *from;
+			if(*from == '\'')
+				*(to++) = *from;
+
+			from++;
+		}
+		*to = '\0';
+
+		lua_pushstring(L, res);
+		free(res);
+		return 1;
+	}
+
+	luaL_error(L, "could not allocate escaped string");
+	return 0;
+}
+
+/*
 ** Pushes the indexed value onto the lua stack
 */
 static void push_column(lua_State *L, int i, cur_data *cur) {
@@ -1058,6 +1086,7 @@ static void create_metatables (lua_State *L) {
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
+		{"escape", conn_escape},
 		{NULL, NULL},
 	};
 	struct luaL_reg cursor_methods[] = {
