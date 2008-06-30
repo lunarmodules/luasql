@@ -1,6 +1,6 @@
 #!/usr/local/bin/lua5.1
 -- See Copyright Notice in license.html
--- $Id: test.lua,v 1.51 2008/06/27 18:39:31 blumf Exp $
+-- $Id: test.lua,v 1.52 2008/06/30 10:43:03 blumf Exp $
 
 TOTAL_FIELDS = 40
 TOTAL_ROWS = 40 --unused
@@ -12,6 +12,8 @@ CREATE_TABLE_RETURN_VALUE = 0
 DROP_TABLE_RETURN_VALUE = 0
 
 MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
+
+CHECK_GETCOL_INFO_TABLES = true
 
 ---------------------------------------------------------------------
 -- Creates a table that can handle differing capitalization of field
@@ -52,6 +54,23 @@ function assert2 (expected, value, msg)
 	return assert (value == expected,
 		msg.."wrong value ("..tostring(value).." instead of "..
 		tostring(expected)..")")
+end
+
+---------------------------------------------------------------------
+-- Shallow compare of two tables
+---------------------------------------------------------------------
+function table_compare(t1, t2)
+	if t1 == t2 then return true; end
+
+	for i, v in pairs(t1) do
+		if t2[i] ~= v then return false; end
+	end
+
+	for i, v in pairs(t2) do
+		if t1[i] ~= v then return false; end
+	end
+
+	return true
 end
 
 ---------------------------------------------------------------------
@@ -456,8 +475,13 @@ function column_info ()
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
-	if names ~= n2 then io.write("\nInfo : getcolnames is rebuilding the table ..."); end
-	if types ~= t2 then io.write("\nInfo : getcoltypes is rebuilding the table ..."); end
+	if CHECK_GETCOL_INFO_TABLES then 
+		assert2 (names, n2, "getcolnames is rebuilding the table")
+		assert2 (types, t2, "getcoltypes is rebuilding the table")
+	else
+		assert2 (true, table_compare(names, n2), "getcolnames is inconsistent")
+		assert2 (true, table_compare(types, t2), "getcoltypes is inconsistent")
+	end
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
 	-- clean the table.
