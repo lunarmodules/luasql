@@ -1100,6 +1100,7 @@ static void create_metatables (lua_State *L) {
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_FIREBIRD, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_FIREBIRD, connection_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_FIREBIRD, cursor_methods);
+	lua_pop (L, 3);
 }
 
 /*
