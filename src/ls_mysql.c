@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.29 2008/05/04 02:46:17 tomas Exp $
+** $Id: ls_mysql.c,v 1.30 2008/08/25 18:13:09 carregal Exp $
 */
 
 #include <assert.h>
@@ -385,8 +385,8 @@ static int escape_string (lua_State *L) {
 */
 static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	const char *statement = luaL_checkstring (L, 2);
-	unsigned long st_len = strlen(statement);
+	size_t st_len;
+	const char *statement = luaL_checklstring (L, 2, &st_len);
 	if (mysql_real_query(conn->my_conn, statement, st_len)) 
 		/* error executing query */
 		return luasql_failmessage(L, "Error executing query. MySQL: ", mysql_error(conn->my_conn));
