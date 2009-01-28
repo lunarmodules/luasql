@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.12 2008/06/11 00:26:13 jasonsantos Exp $
+** $Id: ls_sqlite3.c,v 1.13 2009/01/28 21:46:16 jasonsantos Exp $
 */
 
 #include <stdio.h>
@@ -37,7 +37,7 @@ typedef struct
   short        closed;
   int          env;                /* reference to environment */
   short        auto_commit;        /* 0 for manual commit */
-  unsigned int cur_counter;          
+  unsigned int cur_counter;
   sqlite3      *sql_conn;
 } conn_data;
 
@@ -252,7 +252,7 @@ static int cur_getcoltypes(lua_State *L)
 */
 /* static int create_cursor(lua_State *L, int conn, sqlite3_stmt *sql_vm,
    int numcols, const char **row, const char **col_info)*/
-static int create_cursor(lua_State *L, int o, conn_data *conn, 
+static int create_cursor(lua_State *L, int o, conn_data *conn,
 			 sqlite3_stmt *sql_vm, int numcols)
 {
   int i;
@@ -282,7 +282,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
       lua_rawseti(L, -2, ++i);
     }
   cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
-	
+
   /* create table with column types */
   lua_newtable(L);
   for (i = 0; i < numcols;)
@@ -303,7 +303,7 @@ static int conn_close(lua_State *L)
 {
   conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
   luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-  if (conn->closed) 
+  if (conn->closed)
     {
       lua_pushboolean(L, 0);
       return 1;
@@ -324,13 +324,13 @@ static int conn_escape(lua_State *L)
 {
   const char *from = luaL_checklstring (L, 2, 0);
   char *escaped = sqlite3_mprintf("%q", from);
-  if (escaped == NULL) 
+  if (escaped == NULL)
     {
       lua_pushnil(L);
-    } 
+    }
   else
     {
-      lua_pushstring(L, escaped);        
+      lua_pushstring(L, escaped);
       sqlite3_free(escaped);
     }
   return 1;
@@ -518,9 +518,9 @@ static int env_connect(lua_State *L)
   const char *errmsg;
   int res;
   getenvironment(L);  /* validate environment */
-  
+
   sourcename = luaL_checkstring(L, 2);
-  
+
   res = sqlite3_open(sourcename, &conn);
   if (res != SQLITE_OK)
     {
@@ -532,11 +532,11 @@ static int env_connect(lua_State *L)
       sqlite3_close(conn);
       return 2;
     }
-  
+
   if (lua_isnumber(L, 3)) {
-  	sqlite3_busy_timeout(conn, lua_tonumber(L,3));
+  	sqlite3_busy_timeout(conn, lua_tonumber(L,3)); -- TODO: remove this
   }
-  
+
   return create_connection(L, 1, conn);
 }
 
