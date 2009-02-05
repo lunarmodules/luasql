@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.13 2009/01/28 21:46:16 jasonsantos Exp $
+** $Id: ls_sqlite3.c,v 1.14 2009/02/05 16:43:50 jasonsantos Exp $
 */
 
 #include <stdio.h>
@@ -534,7 +534,7 @@ static int env_connect(lua_State *L)
     }
 
   if (lua_isnumber(L, 3)) {
-  	sqlite3_busy_timeout(conn, lua_tonumber(L,3)); -- TODO: remove this
+  	sqlite3_busy_timeout(conn, lua_tonumber(L,3)); // TODO: remove this
   }
 
   return create_connection(L, 1, conn);
