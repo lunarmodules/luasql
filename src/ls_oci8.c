@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.29 2008/05/04 02:46:17 tomas Exp $
+** $Id: ls_oci8.c,v 1.30 2009/02/07 22:47:49 tomas Exp $
 */
 
 #include <assert.h>
@@ -128,7 +128,7 @@ int checkerr (lua_State *L, sword status, OCIError *errhp) {
 			lua_pushnil (L); /* !!!!!!!!!!!!! */
 			break;
 		case OCI_SUCCESS_WITH_INFO:
-			lua_pushstring (L, LUASQL_PREFIX"Sucesso com info!");
+			lua_pushstring (L, LUASQL_PREFIX"Success with info!");
 			break;
 		case OCI_NEED_DATA:
 			lua_pushstring (L, LUASQL_PREFIX"OCI_NEED_DATA");
