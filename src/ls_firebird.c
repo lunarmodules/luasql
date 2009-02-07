@@ -33,14 +33,14 @@ typedef struct {
 	short			dpb_length;		/* the used amount of the dpb */
 	isc_tr_handle	transaction;	/* the transaction handle */
 	int				lock;			/* lock count for open cursors */
-	int				autocommit;		/* should each statment be commited */
+	int				autocommit;		/* should each statement be commited */
 } conn_data;
 
 typedef struct {
 	short			closed;
 	env_data*		env;			/* the DB enviroment this is in */
 	conn_data*		conn;			/* the DB connection this cursor is from */
-	isc_stmt_handle stmt;			/* the statment handle */
+	isc_stmt_handle stmt;			/* the statement handle */
 	XSQLDA			*out_sqlda;		/* the cursor data array */
 } cur_data;
 
@@ -151,9 +151,9 @@ static cur_data *getcursor (lua_State *L, int i) {
 }
 
 /*
-** Returns the statment type
+** Returns the statement type
 */
-static int get_statment_type(cur_data* cur)
+static int get_statement_type(cur_data* cur)
 {
 	int length, type;
 	char type_item[] = { isc_info_sql_stmt_type };
@@ -167,7 +167,7 @@ static int get_statment_type(cur_data* cur)
 	if (cur->env->status_vector[0] == 1 && cur->env->status_vector[1] > 0)
 		return -1;
 
-	/* check the type of the statment */
+	/* check the type of the statement */
 	if (*pres == isc_info_sql_stmt_type)
 	{
 		pres++;
@@ -199,7 +199,7 @@ static int count_rows_affected(cur_data* cur)
 	if (cur->env->status_vector[0] == 1 && cur->env->status_vector[1] > 0)
 		return -1;
 
-	/* check the type of the statment */
+	/* check the type of the statement */
 	if (*pres == isc_info_sql_stmt_type)
 	{
 		pres++;
@@ -211,7 +211,7 @@ static int count_rows_affected(cur_data* cur)
 		return -2;	/* should have had the isc_info_sql_stmt_type info */
 
 	if(type > 4)
-		return 0;	/* not a SELECT, INSERT, UPDATE or DELETE SQL statment */
+		return 0;	/* not a SELECT, INSERT, UPDATE or DELETE SQL statement */
 
 	if (*pres == isc_info_sql_records)
 	{
@@ -307,7 +307,7 @@ static int conn_execute (lua_State *L) {
 	cur.out_sqlda->version = SQLDA_VERSION1;
 	cur.out_sqlda->sqln = CURSOR_PREALLOC;
 
-	/* create a statment to handle the query */
+	/* create a statement to handle the query */
 	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur.stmt);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 		free(cur.out_sqlda);
@@ -321,19 +321,19 @@ static int conn_execute (lua_State *L) {
 		return return_db_error(L, conn->env->status_vector);
 	}
 
-	/* what type of SQL statment is it? */
-	stmt_type = get_statment_type(&cur);
+	/* what type of SQL statement is it? */
+	stmt_type = get_statement_type(&cur);
 	if(stmt_type < 0) {
 		free(cur.out_sqlda);
 		return return_db_error(L, conn->env->status_vector);
 	}
 
-	/* an unsupported SQL statment (something like COMMIT) */
+	/* an unsupported SQL statement (something like COMMIT) */
 	if(stmt_type > 5) {
 		free(cur.out_sqlda);
 
 		lua_pushnil(L);
-		lua_pushstring(L, "Unsupported SQL statment");
+		lua_pushstring(L, "Unsupported SQL statement");
 
 		return 2;
 	}
