@@ -291,13 +291,6 @@ static int conn_execute (lua_State *L) {
 
 	cur_data cur;
 
-	/* closed? */
-	if(conn->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "connection is closed");
-		return 2;
-	}
-
 	cur.closed = 0;
 	cur.env = conn->env;
 	cur.conn = conn;
@@ -454,13 +447,6 @@ static int conn_execute (lua_State *L) {
 static int conn_commit(lua_State *L) {
 	conn_data *conn = getconnection(L,1);
 
-	/* closed? */
-	if(conn->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "connection is closed");
-		return 2;
-	}
-
 	isc_commit_retaining(conn->env->status_vector, &conn->transaction);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
@@ -478,13 +464,6 @@ static int conn_commit(lua_State *L) {
 static int conn_rollback(lua_State *L) {
 	conn_data *conn = getconnection(L,1);
 
-	/* closed? */
-	if(conn->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "connection is closed");
-		return 2;
-	}
-
 	isc_rollback_retaining(conn->env->status_vector, &conn->transaction);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) )
 		return return_db_error(L, conn->env->status_vector);
@@ -501,13 +480,6 @@ static int conn_rollback(lua_State *L) {
 */
 static int conn_setautocommit(lua_State *L) {
 	conn_data *conn = getconnection(L,1);
-
-	/* closed? */
-	if(conn->closed != 0) {
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "connection is closed");
-		return 2;
-	}
 
 	if(lua_toboolean(L, 2))
 		conn->autocommit = 1;
@@ -718,13 +690,6 @@ static int cur_fetch (lua_State *L) {
 	int num = strchr(opts, 'n') != NULL;
 	int alpha = strchr(opts, 'a') != NULL;
 
-	/* closed? */
-	if(cur->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "cursor is closed");
-		return 2;
-	}
-
 	if ((fetch_stat = isc_dsql_fetch(cur->env->status_vector, &cur->stmt, 1, cur->out_sqlda)) == 0) {
 		if (lua_istable (L, 2)) {
 			/* remove the option string */
@@ -793,13 +758,6 @@ static int cur_colnames (lua_State *L) {
 	XSQLVAR *var;
 	cur_data *cur = getcursor(L,1);
 
-	/* closed? */
-	if(cur->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "cursor is closed");
-		return 2;
-	}
-
 	lua_newtable(L);
 
 	for (i=1, var = cur->out_sqlda->sqlvar; i <= cur->out_sqlda->sqld; i++, var++) {
@@ -821,13 +779,6 @@ static int cur_coltypes (lua_State *L) {
 	int i;
 	XSQLVAR *var;
 	cur_data *cur = getcursor(L,1);
-
-	/* closed? */
-	if(cur->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "cursor is closed");
-		return 2;
-	}
 
 	lua_newtable(L);
 
@@ -959,13 +910,6 @@ static int env_connect (lua_State *L) {
 	const char *username = luaL_optstring (L, 3, "");
 	const char *password = luaL_optstring (L, 4, "");
 
-	/* check for an open enviroment */
-	if(env->closed != 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "Enviroment is closed");
-	}
-
-	conn.closed = 0;
 	conn.env = env;
 	conn.db = 0L;
 	conn.transaction = 0L;
