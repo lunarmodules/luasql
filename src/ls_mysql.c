@@ -2,7 +2,7 @@
 ** LuaSQL, MySQL driver
 ** Authors:  Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_mysql.c,v 1.30 2008/08/25 18:13:09 carregal Exp $
+** $Id: ls_mysql.c,v 1.31 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -82,20 +82,6 @@ typedef struct {
 } cur_data;
 
 LUASQL_API int luaopen_luasql_mysql (lua_State *L);
-
-
-/*
-** Generates a driver error plus the error message from the database
-** The generated error message is preceded by LUASQL_PREFIX string
-*/
-static int luasql_failmessage(lua_State *L, const char *err, const char *m) {
-    lua_pushnil(L);
-	lua_pushstring(L, LUASQL_PREFIX);
-	lua_pushstring(L, err);
-    lua_pushstring(L, m);
-	lua_concat(L, 3);
-    return 2;
-}
 
 
 /*
@@ -389,7 +375,7 @@ static int conn_execute (lua_State *L) {
 	const char *statement = luaL_checklstring (L, 2, &st_len);
 	if (mysql_real_query(conn->my_conn, statement, st_len)) 
 		/* error executing query */
-		return luasql_failmessage(L, "Error executing query. MySQL: ", mysql_error(conn->my_conn));
+		return luasql_failmsg(L, "error executing query. MySQL: ", mysql_error(conn->my_conn));
 	else
 	{
 		MYSQL_RES *res = mysql_store_result(conn->my_conn);
@@ -405,7 +391,7 @@ static int conn_execute (lua_State *L) {
 				return 1;
         	}
 			else /* mysql_use_result() should have returned data */
-				return luasql_failmessage(L, "Error retrieving result. MySQL: ", mysql_error(conn->my_conn));
+				return luasql_failmsg(L, "error retrieving result. MySQL: ", mysql_error(conn->my_conn));
 		}
 	}
 }
@@ -490,7 +476,7 @@ static int env_connect (lua_State *L) {
 	/* Try to init the connection object. */
 	conn = mysql_init(NULL);
 	if (conn == NULL)
-		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting: Out of memory.");
+		return luasql_faildirect(L, "error connecting: Out of memory.");
 
 	if (!mysql_real_connect(conn, host, username, password, 
 		sourcename, port, NULL, 0))
@@ -498,7 +484,7 @@ static int env_connect (lua_State *L) {
 		char error_msg[100];
 		strncpy (error_msg,  mysql_error(conn), 99);
 		mysql_close (conn); /* Close conn if connect failed */
-		return luasql_failmessage (L, "Error connecting to database. MySQL: ", error_msg);
+		return luasql_failmsg (L, "error connecting to database. MySQL: ", error_msg);
 	}
 	return create_connection(L, 1, conn);
 }

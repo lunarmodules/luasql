@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Diego Nehab,
 ** Tomas Guisasola
 ** See Copyright Notice in license.html
-** $Id: ls_odbc.c,v 1.38 2008/05/04 02:46:17 tomas Exp $
+** $Id: ls_odbc.c,v 1.39 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -184,7 +184,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 	lua_rawgeti (L, -1, i);	/* typename of the column */
     tname = lua_tostring(L, -1);
     if (!tname)
-		return luasql_faildirect(L, LUASQL_PREFIX"Invalid type in table.");
+		return luasql_faildirect(L, "invalid type in table.");
     type = tname[1];
     lua_pop(L, 2);	/* pops type name and coltypes table */
 
@@ -595,7 +595,7 @@ static int env_connect (lua_State *L) {
 	/* tries to allocate connection handle */
 	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
 	if (error(ret))
-		return luasql_faildirect (L, LUASQL_PREFIX"connection allocation error.");
+		return luasql_faildirect (L, "connection allocation error.");
 
 	/* tries to connect handle */
 	ret = SQLConnect (hdbc, (char *) sourcename, SQL_NTS, 
@@ -676,12 +676,12 @@ static int create_environment (lua_State *L) {
 	SQLHENV henv;
 	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &henv);
 	if (error(ret))
-		return luasql_faildirect(L,LUASQL_PREFIX"error creating environment.");
+		return luasql_faildirect(L, "error creating environment.");
 
 	ret = SQLSetEnvAttr (henv, SQL_ATTR_ODBC_VERSION, 
 		(void*)SQL_OV_ODBC3, 0);
 	if (error(ret)) {
-		ret = luasql_faildirect (L, LUASQL_PREFIX"error setting SQL version.");
+		ret = luasql_faildirect (L, "error setting SQL version.");
 		SQLFreeHandle (hENV, henv);
 		return ret;
   }

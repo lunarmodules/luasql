@@ -2,7 +2,7 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.30 2009/02/07 22:47:49 tomas Exp $
+** $Id: ls_oci8.c,v 1.31 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -801,7 +801,7 @@ static int create_environment (lua_State *L) {
 			(void (*)(dvoid *, dvoid *)) 0,
 			(size_t) 0,
 			(dvoid **) 0))
-		luasql_faildirect (L, LUASQL_PREFIX"couldn't create environment");
+		luasql_faildirect (L, "couldn't create environment");
 	/* error handler */
 	ASSERT (L, OCIHandleAlloc((dvoid *) env->envhp,
 		(dvoid **) &(env->errhp), /* !!! */

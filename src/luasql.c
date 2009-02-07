@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.26 2008/07/12 15:11:46 carregal Exp $
+** $Id: luasql.c,v 1.27 2009/02/07 23:16:23 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -19,8 +19,25 @@
 */
 LUASQL_API int luasql_faildirect(lua_State *L, const char *err) {
     lua_pushnil(L);
+	lua_pushliteral(L, LUASQL_PREFIX);
     lua_pushstring(L, err);
+	lua_concat(L, 3);
     return 2;
+}
+
+
+/*
+** Database error with LuaSQL message
+** @param err LuaSQL error message.
+** @param m Driver error message.
+*/
+LUASQL_API int luasql_failmsg(lua_State *L, const char *err, const char *m) {
+	lua_pushnil(L);
+	lua_pushliteral(L, LUASQL_PREFIX);
+	lua_pushstring(L, err);
+	lua_pushstring(L, m);
+	lua_concat(L, 3);
+	return 2;
 }
 
 

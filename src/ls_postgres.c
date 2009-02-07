@@ -3,7 +3,7 @@
 ** Authors: Pedro Rabinovitch, Roberto Ierusalimschy, Carlos Cassino
 ** Tomas Guisasola, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_postgres.c,v 1.10 2008/05/04 02:46:17 tomas Exp $
+** $Id: ls_postgres.c,v 1.11 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -381,7 +381,7 @@ static int conn_escape (lua_State *L) {
 		lua_pushlstring (L, to, len);
 		return 1;
 	} else
-		return luasql_faildirect (L, PQerrorMessage (conn->pg_conn));
+		return luasql_failmsg (L, "cannot escape string. PostgreSQL: ", PQerrorMessage (conn->pg_conn));
 }
 
 
@@ -406,7 +406,7 @@ static int conn_execute (lua_State *L) {
 	else {
 		/* error */
 		PQclear (res);
-		return luasql_faildirect(L, PQerrorMessage(conn->pg_conn));
+		return luasql_failmsg(L, "error executing statement. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
 	}
 }
 
@@ -510,7 +510,7 @@ static int env_connect (lua_State *L) {
 	}
 
 	if (PQstatus(conn) == CONNECTION_BAD)
-		return luasql_faildirect(L, LUASQL_PREFIX"Error connecting to database.");
+		return luasql_failmsg(L, "error connecting to database. PostgreSQL: ", PQerrorMessage(conn));
 	PQsetNoticeProcessor(conn, notice_processor, NULL);
 	return create_connection(L, 1, conn);
 }

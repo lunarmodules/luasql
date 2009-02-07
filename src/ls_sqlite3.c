@@ -3,7 +3,7 @@
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
 
-** $Id: ls_sqlite3.c,v 1.14 2009/02/05 16:43:50 jasonsantos Exp $
+** $Id: ls_sqlite3.c,v 1.15 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <stdio.h>
@@ -97,11 +97,7 @@ static int finalize(lua_State *L, cur_data *cur) {
     {
       errmsg = sqlite3_errmsg(cur->conn_data->sql_conn);
       cur->sql_vm = NULL;
-      lua_pushnil(L);
-      lua_pushliteral(L, LUASQL_PREFIX);
-      lua_pushstring(L, errmsg);
-      lua_concat(L, 2);
-      return 2;
+      return luasql_faildirect(L, errmsg);
     }
   cur->sql_vm = NULL;
   lua_pushnil(L);
@@ -355,11 +351,7 @@ static int conn_execute(lua_State *L)
   if (res != SQLITE_OK)
     {
       errmsg = sqlite3_errmsg(conn->sql_conn);
-      lua_pushnil(L);
-      lua_pushliteral(L, LUASQL_PREFIX);
-      lua_pushstring(L, errmsg);
-      lua_concat(L, 2);
-      return 2;
+      return luasql_faildirect(L, errmsg);
     }
 
   /* process first result to retrive query information and type */
@@ -384,11 +376,7 @@ static int conn_execute(lua_State *L)
   /* error */
   errmsg = sqlite3_errmsg(conn->sql_conn);
   sqlite3_finalize(vm);
-  lua_pushnil(L);
-  lua_pushliteral(L, LUASQL_PREFIX);
-  lua_pushstring(L, errmsg);
-  lua_concat(L, 2);
-  return 2;
+  return luasql_faildirect(L, errmsg);
 }
 
 
@@ -525,10 +513,7 @@ static int env_connect(lua_State *L)
   if (res != SQLITE_OK)
     {
       errmsg = sqlite3_errmsg(conn);
-      lua_pushnil(L);
-      lua_pushliteral(L, LUASQL_PREFIX);
-      lua_pushstring(L, errmsg);
-      lua_concat(L, 2);
+      luasql_faildirect(L, errmsg);
       sqlite3_close(conn);
       return 2;
     }

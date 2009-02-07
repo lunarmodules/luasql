@@ -331,11 +331,7 @@ static int conn_execute (lua_State *L) {
 	/* an unsupported SQL statement (something like COMMIT) */
 	if(stmt_type > 5) {
 		free(cur.out_sqlda);
-
-		lua_pushnil(L);
-		lua_pushstring(L, "Unsupported SQL statement");
-
-		return 2;
+		return luasql_faildirect(L, "unsupported SQL statement");
 	}
 
 	/* resize the result set if needed */
@@ -539,11 +535,8 @@ static int conn_close (lua_State *L) {
 	}
 
 	/* are all related cursors closed? */
-	if(conn->lock > 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "There are still open cursors");
-		return 2;
-	}
+	if(conn->lock > 0)
+		return luasql_faildirect(L, "there are still open cursors");
 
 	if(conn->autocommit != 0)
 		isc_commit_transaction(conn->env->status_vector, &conn->transaction);
@@ -1045,11 +1038,8 @@ static int env_close (lua_State *L) {
 	}
 
 	/* check the lock */
-	if(env->lock > 0) {
-		lua_pushnil(L);
-		lua_pushstring(L, "There are still open connections");
-		return 2;
-	}
+	if(env->lock > 0)
+		return luasql_faildirect(L, "there are still open connections");
 
 	/* unregister */
 	lua_unregisterobj(L, env);
