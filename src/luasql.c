@@ -1,5 +1,5 @@
 /*
-** $Id: luasql.c,v 1.27 2009/02/07 23:16:23 tomas Exp $
+** $Id: luasql.c,v 1.28 2009/02/11 12:08:50 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
@@ -18,11 +18,11 @@
 ** Typical database error situation
 */
 LUASQL_API int luasql_faildirect(lua_State *L, const char *err) {
-    lua_pushnil(L);
+	lua_pushnil(L);
 	lua_pushliteral(L, LUASQL_PREFIX);
-    lua_pushstring(L, err);
-	lua_concat(L, 3);
-    return 2;
+	lua_pushstring(L, err);
+	lua_concat(L, 2);
+	return 2;
 }
 
 
