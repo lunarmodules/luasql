@@ -20,10 +20,6 @@ install:
 	IF NOT EXIST $(LUA_LIBDIR)\luasql mkdir $(LUA_LIBDIR)\luasql
 	copy src\$T.dll $(LUA_LIBDIR)\luasql
 
-jdbc_driver:
-	cd src\jdbc
-	nmake -f Makefile.win $@
-
 clean:
 	del src\$T.dll
 	del src\$T.exp
