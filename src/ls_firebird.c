@@ -957,6 +957,7 @@ static int env_connect (lua_State *L) {
 	res_conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_FIREBIRD);
 	memcpy(res_conn, &conn, sizeof(conn_data));
+	res_conn->closed = 0;	/* connect now officially open */
 
 	/* register the connection */
 	lua_registerobj(L, 1, env);
