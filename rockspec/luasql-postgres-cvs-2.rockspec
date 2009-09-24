@@ -1,8 +1,7 @@
 package = "LuaSQL-Postgres"
 version = "cvs-2"
 source = {
-   url = "cvs://:pserver:anonymous:@cvs.luaforge.net:/cvsroot/luasql",
-   cvs_tag = "HEAD",
+  url = "git://github.com/keplerproject/luasql.git"
 }
 description = {
    summary = "Database connectivity for Lua (Postgres driver)",
