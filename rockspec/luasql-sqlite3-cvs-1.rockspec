@@ -22,24 +22,13 @@ external_dependencies = {
    }
 }
 build = {
-   type = "make",
-   variables = {
-      T="sqlite3",
-      LIB_OPTION = "$(LIBFLAG) -L$(SQLITE_LIBDIR) -lsqlite3",
-      CFLAGS = "$(CFLAGS) -I$(LUA_INCDIR) -I$(SQLITE_INCDIR)"
-   },
-   build_variables = {
-      DRIVER_LIBS="",
-   },
-   install_variables = {
-      LUA_LIBDIR = "$(LIBDIR)",
-   },
-   platforms = {
-     win32 = {
-       variables = {
-         LIB_OPTION = "$(SQLITE_LIB) $(LUA_LIBDIR)\\lua5.1.lib",
-         CFLAGS = "$(CFLAGS) /I$(LUA_INCDIR) /I$(SQLITE_INCDIR)"
-       }
+   type = "builtin",
+   modules = {
+     ["luasql.sqlite3"] = {
+       sources = { "src/luasql.c", "src/ls_sqlite3.c" },
+       libraries = { "sqlite3" },
+       incdirs = { "$(SQLITE_INCDIR)" },
+       libdirs = { "$(SQLITE_LIBDIR)" }
      }
    }
 }

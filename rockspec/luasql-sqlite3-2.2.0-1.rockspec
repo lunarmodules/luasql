@@ -1,10 +1,10 @@
-package = "LuaSQL-MySQL"
-version = "cvs-1"
+package = "LuaSQL-SQLite3"
+version = "2.2.0-1"
 source = {
-  url = "git://github.com/keplerproject/luasql.git"
+  url = "http://cloud.github.com/downloads/keplerproject/luasql/luasql-2.2.0.tar.gz"
 }
 description = {
-   summary = "Database connectivity for Lua (MySQL driver)",
+   summary = "Database connectivity for Lua (SQLite3 driver)",
    detailed = [[
       LuaSQL is a simple interface from Lua to a DBMS. It enables a
       Lua program to connect to databases, execute arbitrary SQL statements
@@ -17,18 +17,18 @@ dependencies = {
    "lua >= 5.1"
 }
 external_dependencies = {
-   MYSQL = {
-      header = "mysql.h"
+   SQLITE = {
+      header = "sqlite3.h"
    }
 }
 build = {
    type = "builtin",
    modules = {
-     ["luasql.mysql"] = {
-       sources = { "src/luasql.c", "src/ls_mysql.c" },
-       libraries = { "mysqlclient" },
-       incdirs = { "$(MYSQL_INCDIR)" },
-       libdirs = { "$(MYSQL_LIBDIR)" }
+     ["luasql.sqlite3"] = {
+       sources = { "src/luasql.c", "src/ls_sqlite3.c" },
+       libraries = { "sqlite3" },
+       incdirs = { "$(SQLITE_INCDIR)" },
+       libdirs = { "$(SQLITE_LIBDIR)" }
      }
    }
 }

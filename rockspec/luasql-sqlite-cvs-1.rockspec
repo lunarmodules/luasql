@@ -22,16 +22,13 @@ external_dependencies = {
    }
 }
 build = {
-   type = "make",
-   variables = {
-      T="sqlite",
-      LIB_OPTION = "$(LIBFLAG) -L$(SQLITE_LIBDIR) -lsqlite",
-      CFLAGS = "$(CFLAGS) -I$(LUA_INCDIR) -I$(SQLITE_INCDIR)"
-   },
-   build_variables = {
-      DRIVER_LIBS="",
-   },
-   install_variables = {
-      LUA_LIBDIR = "$(LIBDIR)",
+   type = "builtin",
+   modules = {
+     ["luasql.sqlite"] = {
+       sources = { "src/luasql.c", "src/ls_sqlite.c" },
+       libraries = { "sqlite" },
+       incdirs = { "$(SQLITE_INCDIR)" },
+       libdirs = { "$(SQLITE_LIBDIR)" }
+     }
    }
 }
