@@ -58,8 +58,6 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
-LUASQL_API int luaopen_luasql_firebird(lua_State *L);
-
 /*
 ** Returns a standard database error message
 */
