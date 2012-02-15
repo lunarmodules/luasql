@@ -406,18 +406,21 @@ static int conn_execute (lua_State *L) {
 
 	/* what do we return? a cursor or a count */
 	if(cur.out_sqlda->sqld > 0) { /* a cursor */
-		cur_data* user_cur;
+		char cur_name[32];
+		cur_data* user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
+		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
+
+		sprintf(cur_name, "dyn_cursor_%p", user_cur);
+
 		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, "dyn_cursor", (unsigned short)NULL);
+		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, cur_name, (unsigned short)NULL);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
+			lua_pop(L, 1);	/* the userdata */
 			free_cur(&cur);
 			return return_db_error(L, conn->env->status_vector);
 		}
 
 		/* copy the cursor into a new lua userdata object */
-		user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
-		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
-
 		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
 		/* add cursor to the lock count */
@@ -561,7 +564,7 @@ static int conn_gc (lua_State *L) {
 static int conn_escape(lua_State *L) {
 	size_t len;
 	const char *from = luaL_checklstring (L, 2, &len);
-    char *res = malloc(len*sizeof(char)*2+1);
+	char *res = malloc(len*sizeof(char)*2+1);
 	char *to = res;
 
 	if(res) {
@@ -955,7 +958,7 @@ static int env_connect (lua_State *L) {
 	res_conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_FIREBIRD);
 	memcpy(res_conn, &conn, sizeof(conn_data));
-	res_conn->closed = 0;	/* connect now officially open */
+	res_conn->closed = 0;   /* connect now officially open */
 
 	/* register the connection */
 	lua_registerobj(L, 1, env);
