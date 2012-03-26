@@ -16,6 +16,11 @@ MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
 CHECK_GETCOL_INFO_TABLES = true
 
 ---------------------------------------------------------------------
+if not string.find(_VERSION, " 5.0") then
+	table.getn = assert((loadstring or load)[[return function (t) return #t end]])()
+end
+
+---------------------------------------------------------------------
 -- Creates a table that can handle differing capitalization of field
 -- names
 -- @return A table with altered metatable
@@ -645,7 +650,11 @@ tests = {
 	{ "close connection", close_conn },
 }
 
-require ("luasql."..driver)
+if string.find(_VERSION, " 5.0") then
+	luasql = assert(loadlib("./postgres.so", "luaopen_luasql_postgres"))()
+else
+	luasql = require ("luasql."..driver)
+end
 assert (luasql, "Could not load driver: no luasql table.")
 io.write (luasql._VERSION.." "..driver.." driver test.  "..luasql._COPYRIGHT.."\n")
 

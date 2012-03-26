@@ -7,12 +7,15 @@
 
 #include "lua.h"
 #include "lauxlib.h"
-#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
-#include "compat-5.1.h"
-#endif
 
 
 #include "luasql.h"
+
+#if !defined(lua_pushliteral)
+#define lua_pushliteral(L, s) \
+	lua_pushstring(L, "" s, (sizeof(s)/sizeof(char))-1)
+#endif
+
 
 /*
 ** Typical database error situation
@@ -41,6 +44,8 @@ LUASQL_API int luasql_failmsg(lua_State *L, const char *err, const char *m) {
 }
 
 
+typedef struct { short  closed; } pseudo_data;
+
 /*
 ** Return the name of the object's metatable.
 ** This function is used by `tostring'.
@@ -57,15 +62,33 @@ static int luasql_tostring (lua_State *L) {
 }
 
 
+#if !defined LUA_VERSION_NUM || LUA_VERSION_NUM==501
+/*
+** Adapted from Lua 5.2.0
+*/
+void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
+	luaL_checkstack(L, nup, "too many upvalues");
+	for (; l->name != NULL; l++) {	/* fill the table with given functions */
+		int i;
+		for (i = 0; i < nup; i++)	/* copy upvalues to the top */
+			lua_pushvalue(L, -nup);
+		lua_pushstring(L, l->name);
+		lua_pushcclosure(L, l->func, nup);	/* closure with those upvalues */
+		lua_settable(L, -(nup + 3));
+	}
+	lua_pop(L, nup);	/* remove upvalues */
+}
+#endif
+
 /*
 ** Create a metatable and leave it on top of the stack.
 */
-LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_reg *methods) {
+LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_Reg *methods) {
 	if (!luaL_newmetatable (L, name))
 		return 0;
 
 	/* define methods */
-	luaL_openlib (L, NULL, methods, 0);
+	luaL_setfuncs (L, methods, 0);
 
 	/* define metamethods */
 	lua_pushliteral (L, "__index");
@@ -99,12 +122,12 @@ LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 */
 LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "_COPYRIGHT");
-	lua_pushliteral (L, "Copyright (C) 2003-2008 Kepler Project");
+	lua_pushliteral (L, "Copyright (C) 2003-2012 Kepler Project");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "LuaSQL 2.1.2");
+	lua_pushliteral (L, "LuaSQL 2.3.0");
 	lua_settable (L, -3);
 }

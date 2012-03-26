@@ -16,9 +16,6 @@
 
 #include "lua.h"
 #include "lauxlib.h"
-#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
-#include "compat-5.1.h"
-#endif
 
 
 #include "luasql.h"
@@ -551,13 +548,13 @@ static int env_close (lua_State *L) {
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
-	struct luaL_reg environment_methods[] = {
+	struct luaL_Reg environment_methods[] = {
 		{"__gc",    env_gc},
 		{"close",   env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
-	struct luaL_reg connection_methods[] = {
+	struct luaL_Reg connection_methods[] = {
 		{"__gc",          conn_gc},
 		{"close",         conn_close},
 		{"escape",        conn_escape},
@@ -567,7 +564,7 @@ static void create_metatables (lua_State *L) {
 		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
 	};
-	struct luaL_reg cursor_methods[] = {
+	struct luaL_Reg cursor_methods[] = {
 		{"__gc",        cur_gc},
 		{"close",       cur_close},
 		{"getcolnames", cur_getcolnames},
@@ -600,12 +597,16 @@ static int create_environment (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luaopen_luasql_postgres (lua_State *L) {
-	struct luaL_reg driver[] = {
+	struct luaL_Reg driver[] = {
 		{"postgres", create_environment},
 		{NULL, NULL},
 	};
 	create_metatables (L);
-	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+
+	/* luaL_openlib (L, LUASQL_TABLENAME, driver, 0); */
+	lua_newtable(L);
+	luaL_setfuncs(L, driver, 0);
+
 	luasql_set_info (L);
 	return 1;
 }

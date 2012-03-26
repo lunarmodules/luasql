@@ -20,10 +20,6 @@
 
 #include "lua.h"
 #include "lauxlib.h"
-#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
-#include "compat-5.1.h"
-#endif
-
 
 #include "luasql.h"
 
@@ -185,6 +181,19 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 
 
 /*
+** Closes the cursos and nullify all structure fields.
+*/
+static int cur_nullify (lua_State *L, cur_data *cur) {
+	/* Nullify structure fields. */
+	cur->closed = 1;
+	mysql_free_result(cur->my_res);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+}
+
+	
+/*
 ** Get another row of the given cursor.
 */
 static int cur_fetch (lua_State *L) {
@@ -193,6 +202,7 @@ static int cur_fetch (lua_State *L) {
 	unsigned long *lengths;
 	MYSQL_ROW row = mysql_fetch_row(res);
 	if (row == NULL) {
+		cur_nullify (L, cur);
 		lua_pushnil(L);  /* no more results */
 		return 1;
 	}
@@ -239,6 +249,17 @@ static int cur_fetch (lua_State *L) {
 
 
 /*
+** Cursor object collector function
+*/
+static int cur_gc (lua_State *L) {
+	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_MYSQL);
+	if (cur != NULL && !(cur->closed))
+		cur_nullify (L, cur);
+	return 0;
+}
+
+
+/*
 ** Close the cursor on top of the stack.
 ** Return 1
 */
@@ -249,14 +270,7 @@ static int cur_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
-	/* Nullify structure fields. */
-	cur->closed = 1;
-	mysql_free_result(cur->my_res);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
-
+	cur_nullify (L, cur);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -328,6 +342,18 @@ static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols) {
 }
 
 
+static int conn_gc (lua_State *L) {
+	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
+	if (conn != NULL && !(conn->closed)) {
+		/* Nullify structure fields. */
+		conn->closed = 1;
+		luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+		mysql_close (conn->my_conn);
+	}
+	return 0;
+}
+
+
 /*
 ** Close a Connection object.
 */
@@ -338,11 +364,7 @@ static int conn_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
-	/* Nullify structure fields. */
-	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	mysql_close (conn->my_conn);
+	conn_gc (L);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -491,6 +513,16 @@ static int env_connect (lua_State *L) {
 
 
 /*
+**
+*/
+static int env_gc (lua_State *L) {
+	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);	if (env != NULL && !(env->closed))
+		env->closed = 1;
+	return 0;
+}
+
+
+/*
 ** Close environment object.
 */
 static int env_close (lua_State *L) {
@@ -500,7 +532,6 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-
 	env->closed = 1;
 	lua_pushboolean (L, 1);
 	return 1;
@@ -511,14 +542,14 @@ static int env_close (lua_State *L) {
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
-    struct luaL_reg environment_methods[] = {
-        {"__gc", env_close},
+    struct luaL_Reg environment_methods[] = {
+        {"__gc", env_gc},
         {"close", env_close},
         {"connect", env_connect},
 		{NULL, NULL},
 	};
-    struct luaL_reg connection_methods[] = {
-        {"__gc", conn_close},
+    struct luaL_Reg connection_methods[] = {
+        {"__gc", conn_gc},
         {"close", conn_close},
         {"escape", escape_string},
         {"execute", conn_execute},
@@ -528,8 +559,8 @@ static void create_metatables (lua_State *L) {
 		{"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
     };
-    struct luaL_reg cursor_methods[] = {
-        {"__gc", cur_close},
+    struct luaL_Reg cursor_methods[] = {
+        {"__gc", cur_gc},
         {"close", cur_close},
         {"getcolnames", cur_getcolnames},
         {"getcoltypes", cur_getcoltypes},
@@ -562,12 +593,16 @@ static int create_environment (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luaopen_luasql_mysql (lua_State *L) { 
-	struct luaL_reg driver[] = {
+	struct luaL_Reg driver[] = {
 		{"mysql", create_environment},
 		{NULL, NULL},
 	};
 	create_metatables (L);
-	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+
+	/* luaL_openlib (L, LUASQL_TABLENAME, driver, 0); */
+	lua_newtable(L);
+	luaL_setfuncs(L, driver, 0);
+
 	luasql_set_info (L);
     lua_pushliteral (L, "_MYSQLVERSION");
     lua_pushliteral (L, MYSQL_SERVER_VERSION);
