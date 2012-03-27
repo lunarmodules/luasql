@@ -141,49 +141,44 @@ described in this document unless otherwise stated.
 
 <p>
 A LuaSQL driver allows the use of the LuaSQL API with a database management system
-that corresponds to the driver. To use a driver you have to load it in the
-<code>luasql</code> table. The example below
+that corresponds to the driver. To use a driver you have to load it.
+The example below
 </p>
 
 <pre class="example">
-require "luasql.odbc"
+local driver = require "luasql.odbc"
 </pre>
 
 <p>
-loads the ODBC driver in the <code>luasql</code> table. Note that you can have more than one
+loads the ODBC driver and returns a table with an entry with the name of the
+driver (<code>odbc</code> in this case). Note that you can have more than one
 driver loaded at the same time doing something like:
 </p>
 
 <pre class="example">
-require "luasql.odbc"
-require "luasql.oci8"
+local odbc = require "luasql.odbc"
+local oci8 = require "luasql.oci8"
 </pre>
 
 <p>
 This example also shows that the driver name not always correspond to the
 Database name, but to the driver name in the file system. Since it refers to
-the OCI8 API, the Oracle driver has the name <code>oci8</code> instead of
-<code>oracle</code>.
-</p>
-
-<p>
-Some drivers, such as the MySQL, have libraries for a number of database versions that
-use the same file name (<code>mysql</code>). In this case it is not possible to
-load more than one version of the MySQL driver in the <code>luasql</code> table.
+the OCI8 API, the Oracle driver has the name <code>oci8</code>.
 </p>
 
 <h2><a name="environment_object"></a>Environment Objects</h2>
 
 <p>An environment object is created by calling the driver's initialization
-function that is stored in the <code>luasql</code> table, indexed with the same
-name as the driver (odbc, postgres etc). For example,
+function that is stored in the table returned when it was loaded, indexed
+with the same name as the driver (odbc, postgres etc). The following example,
+will try to create an environment object using the ODBC driver.
 </p>
 
 <pre class="example">
-env = luasql.odbc()
+local driver = require"luasql.odbc"
+local env = driver.odbc()
 </pre>
 
-<p>will try to create an environment object using the ODBC driver.</p>
 
 <h4>Methods</h4>
 

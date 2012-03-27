@@ -73,9 +73,9 @@ query.</p>
 <h3><a name="basic_use"></a>Basic use</h3>
 <pre class="example">
 -- load driver
-require "luasql.postgres"
+local driver = require "luasql.postgres"
 -- create environment object
-env = assert (luasql.postgres())
+env = assert (driver())
 -- connect to data source
 con = assert (env:connect("luasql-test"))
 -- reset our table
@@ -137,8 +137,7 @@ end
 <p>Here is how the iterator is used:</p>
  
 <pre class="example">
-require "luasql.mysql"
-env = assert (luasql.mysql())
+env = assert (require "luasql.mysql"())
 con = assert (env:connect"my_db")
 for id, name, address in rows (con, "select * from contacts") do
   print (string.format ("%s: %s", name, address))
