@@ -598,11 +598,8 @@ LUASQL_API int luaopen_luasql_mysql (lua_State *L) {
 		{NULL, NULL},
 	};
 	create_metatables (L);
-
-	/* luaL_openlib (L, LUASQL_TABLENAME, driver, 0); */
 	lua_newtable(L);
 	luaL_setfuncs(L, driver, 0);
-
 	luasql_set_info (L);
     lua_pushliteral (L, "_MYSQLVERSION");
     lua_pushliteral (L, MYSQL_SERVER_VERSION);

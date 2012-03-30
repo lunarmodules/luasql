@@ -602,11 +602,8 @@ LUASQL_API int luaopen_luasql_postgres (lua_State *L) {
 		{NULL, NULL},
 	};
 	create_metatables (L);
-
-	/* luaL_openlib (L, LUASQL_TABLENAME, driver, 0); */
-	lua_newtable(L);
-	luaL_setfuncs(L, driver, 0);
-
+	lua_newtable (L);
+	luaL_setfuncs (L, driver, 0);
 	luasql_set_info (L);
 	return 1;
 }
