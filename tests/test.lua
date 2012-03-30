@@ -620,7 +620,7 @@ password = arg[4] or nil
 
 -- Loading driver specific functions
 if arg[0] then
-	local path = string.gsub (arg[0], "^([^/]*%/).*$", "%1")
+	local path = string.gsub (arg[0], "^(.*%/)[^/]*$", "%1")
 	if path == "test.lua" then
 		path = ""
 	end
@@ -630,6 +630,7 @@ if arg[0] then
 		print ("LuaSQL test: couldn't find driver-specific test file ("..
 			file..").\nProceeding with general test")
 	else
+		print ("Loading driver-specific test file ("..file..").")
 		f ()
 	end
 end
@@ -651,7 +652,7 @@ tests = {
 }
 
 if string.find(_VERSION, " 5.0") then
-	luasql = assert(loadlib("./postgres.so", "luaopen_luasql_postgres"))()
+	luasql = assert(loadlib("./"..driver..".so", "luaopen_luasql_"..driver))()
 else
 	luasql = require ("luasql."..driver)
 end
