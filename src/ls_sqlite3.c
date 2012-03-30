@@ -15,9 +15,6 @@
 
 #include "lua.h"
 #include "lauxlib.h"
-#if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
-#include "compat-5.1.h"
-#endif
 
 
 #include "luasql.h"
@@ -88,6 +85,27 @@ static cur_data *getcursor(lua_State *L) {
 }
 
 /*
+** Closes the cursor and nullify all structure fields.
+*/
+static void cur_nullify(lua_State *L, cur_data *cur)
+{
+  conn_data *conn;
+
+  /* Nullify structure fields. */
+  cur->closed = 1;
+  cur->sql_vm = NULL;
+  /* Decrement cursor counter on connection object */
+  lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+  conn = lua_touserdata (L, -1);
+  conn->cur_counter--;
+
+  luaL_unref(L, LUA_REGISTRYINDEX, cur->conn);
+  luaL_unref(L, LUA_REGISTRYINDEX, cur->colnames);
+  luaL_unref(L, LUA_REGISTRYINDEX, cur->coltypes);
+}
+
+
+/*
 ** Finalizes the vm
 ** Return nil + errmsg or nil in case of sucess
 */
@@ -96,10 +114,10 @@ static int finalize(lua_State *L, cur_data *cur) {
   if (sqlite3_finalize(cur->sql_vm) != SQLITE_OK)
     {
       errmsg = sqlite3_errmsg(cur->conn_data->sql_conn);
-      cur->sql_vm = NULL;
+      cur_nullify(L, cur);
       return luasql_faildirect(L, errmsg);
     }
-  cur->sql_vm = NULL;
+  cur_nullify(L, cur);
   lua_pushnil(L);
   return 1;
 }
@@ -130,6 +148,7 @@ static void push_column(lua_State *L, sqlite3_stmt *vm, int column) {
   }
 }
 
+
 /*
 ** Get another row of the given cursor.
 */
@@ -157,24 +176,24 @@ static int cur_fetch (lua_State *L) {
 
       if (strchr(opts, 'n') != NULL)
         {
-	  /* Copy values to numerical indices */
-	  for (i = 0; i < cur->numcols;)
+        /* Copy values to numerical indices */
+          for (i = 0; i < cur->numcols;)
             {
-	      push_column(L, vm, i);
-	      lua_rawseti(L, 2, ++i);
-	    }
+              push_column(L, vm, i);
+              lua_rawseti(L, 2, ++i);
+            }
         }
       if (strchr(opts, 'a') != NULL)
         {
-	  /* Copy values to alphanumerical indices */
-	  lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
+          /* Copy values to alphanumerical indices */
+          lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
 
-	  for (i = 0; i < cur->numcols; i++)
+          for (i = 0; i < cur->numcols; i++)
             {
-	      lua_rawgeti(L, -1, i+1);
-	      push_column(L, vm, i);
-	      lua_rawset (L, 2);
-	    }
+              lua_rawgeti(L, -1, i+1);
+              push_column(L, vm, i);
+              lua_rawset (L, 2);
+            }
         }
       lua_pushvalue(L, 2);
       return 1; /* return table */
@@ -184,9 +203,24 @@ static int cur_fetch (lua_State *L) {
       int i;
       luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
       for (i = 0; i < cur->numcols; ++i)
-	push_column(L, vm, i);
+        push_column(L, vm, i);
       return cur->numcols; /* return #numcols values */
     }
+}
+
+
+/*
+** Cursor object collector function
+*/
+static int cur_gc(lua_State *L)
+{
+  cur_data *cur = (cur_data *)luaL_checkudata(L, 1, LUASQL_CURSOR_SQLITE);
+  if (cur != NULL && !(cur->closed))
+    {
+      sqlite3_finalize(cur->sql_vm);
+      cur_nullify(L, cur);
+    }
+  return 0;
 }
 
 
@@ -196,26 +230,14 @@ static int cur_fetch (lua_State *L) {
 */
 static int cur_close(lua_State *L)
 {
-  conn_data *conn;
   cur_data *cur = (cur_data *)luaL_checkudata(L, 1, LUASQL_CURSOR_SQLITE);
   luaL_argcheck(L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
   if (cur->closed) {
     lua_pushboolean(L, 0);
     return 1;
   }
-
-  /* Nullify structure fields. */
-  cur->closed = 1;
   sqlite3_finalize(cur->sql_vm);
-  /* Decrement cursor counter on connection object */
-  lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-  conn = lua_touserdata (L, -1);
-  conn->cur_counter--;
-
-  luaL_unref(L, LUA_REGISTRYINDEX, cur->conn);
-  luaL_unref(L, LUA_REGISTRYINDEX, cur->colnames);
-  luaL_unref(L, LUA_REGISTRYINDEX, cur->coltypes);
-
+  cur_nullify(L, cur);
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -293,6 +315,26 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 
 
 /*
+** Connection object collector function
+*/
+static int conn_gc(lua_State *L)
+{
+  conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
+  if (conn != NULL && !(conn->closed))
+    {
+      if (conn->cur_counter > 0)
+        return luaL_error (L, LUASQL_PREFIX"there are open cursors");
+
+      /* Nullify structure fields. */
+      conn->closed = 1;
+      luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+      sqlite3_close(conn->sql_conn);
+    }
+  return 0;
+}
+
+
+/*
 ** Close a Connection object.
 */
 static int conn_close(lua_State *L)
@@ -304,14 +346,7 @@ static int conn_close(lua_State *L)
       lua_pushboolean(L, 0);
       return 1;
     }
-
-  if (conn->cur_counter > 0)
-    return luaL_error (L, LUASQL_PREFIX"there are open cursors");
-
-  /* Nullify structure fields. */
-  conn->closed = 1;
-  luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
-  sqlite3_close(conn->sql_conn);
+  conn_gc(L);
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -527,6 +562,18 @@ static int env_connect(lua_State *L)
 
 
 /*
+** Environment object collector function.
+*/
+static int env_gc (lua_State *L)
+{
+  env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_SQLITE);
+  if (env != NULL && !(env->closed))
+    env->closed = 1;
+  return 0;
+}
+
+
+/*
 ** Close environment object.
 */
 static int env_close (lua_State *L)
@@ -537,8 +584,7 @@ static int env_close (lua_State *L)
     lua_pushboolean(L, 0);
     return 1;
   }
-
-  env->closed = 1;
+  env_gc(L);
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -560,14 +606,14 @@ static int opts_settimeout  (lua_State *L)
 */
 static void create_metatables (lua_State *L)
 {
-  struct luaL_reg environment_methods[] = {
-    {"__gc", env_close},
+  struct luaL_Reg environment_methods[] = {
+    {"__gc", env_gc},
     {"close", env_close},
     {"connect", env_connect},
     {NULL, NULL},
   };
-  struct luaL_reg connection_methods[] = {
-    {"__gc", conn_close},
+  struct luaL_Reg connection_methods[] = {
+    {"__gc", conn_gc},
     {"close", conn_close},
     {"escape", conn_escape},
     {"execute", conn_execute},
@@ -577,8 +623,8 @@ static void create_metatables (lua_State *L)
     {"getlastautoid", conn_getlastautoid},
     {NULL, NULL},
   };
-  struct luaL_reg cursor_methods[] = {
-    {"__gc", cur_close},
+  struct luaL_Reg cursor_methods[] = {
+    {"__gc", cur_gc},
     {"close", cur_close},
     {"getcolnames", cur_getcolnames},
     {"getcoltypes", cur_getcoltypes},
@@ -611,12 +657,14 @@ static int create_environment (lua_State *L)
 */
 LUASQL_API int luaopen_luasql_sqlite3(lua_State *L)
 {
-  struct luaL_reg driver[] = {
+  struct luaL_Reg driver[] = {
     {"sqlite3", create_environment},
     {NULL, NULL},
   };
   create_metatables (L);
-  luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+  /* luaL_openlib (L, LUASQL_TABLENAME, driver, 0); */
+  lua_newtable(L);
+  luaL_setfuncs(L, driver, 0);
   luasql_set_info (L);
   return 1;
 }
