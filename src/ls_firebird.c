@@ -58,6 +58,8 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
+LUASQL_API int luaopen_luasql_firebird (lua_State *L);
+
 /*
 ** Returns a standard database error message
 */
@@ -292,7 +294,7 @@ static int conn_execute (lua_State *L) {
 	cur.closed = 0;
 	cur.env = conn->env;
 	cur.conn = conn;
-	cur.stmt = NULL;
+	cur.stmt = 0;
 
 	cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(CURSOR_PREALLOC));
 	cur.out_sqlda->version = SQLDA_VERSION1;
@@ -410,10 +412,10 @@ static int conn_execute (lua_State *L) {
 		cur_data* user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
 
-		sprintf(cur_name, "dyn_cursor_%p", user_cur);
+		sprintf(cur_name, "dyn_cursor_%p", (void *)user_cur);
 
 		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, cur_name, (unsigned short)NULL);
+		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, cur_name, 0);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 			lua_pop(L, 1);	/* the userdata */
 			free_cur(&cur);
@@ -594,7 +596,7 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 	struct tm timevar;
 	char timestr[256];
 	ISC_STATUS blob_stat;
-	isc_blob_handle blob_handle = NULL;
+	isc_blob_handle blob_handle = 0;
 	ISC_QUAD blob_id;
 	luaL_Buffer b;
 	char *buffer;
@@ -666,7 +668,7 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 
 			/* finnished, close the BLOB */
 			isc_close_blob(cur->env->status_vector, &blob_handle);
-			blob_handle = NULL;
+			blob_handle = 0;
 
 			luaL_pushresult(&b);
 			break;
@@ -1009,13 +1011,13 @@ static int env_gc (lua_State *L) {
 ** Create metatables for each class of object.
 */
 static void create_metatables (lua_State *L) {
-	struct luaL_reg environment_methods[] = {
+	struct luaL_Reg environment_methods[] = {
 		{"__gc", env_gc},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
-	struct luaL_reg connection_methods[] = {
+	struct luaL_Reg connection_methods[] = {
 		{"__gc", conn_gc},
 		{"close", conn_close},
 		{"execute", conn_execute},
@@ -1025,7 +1027,7 @@ static void create_metatables (lua_State *L) {
 		{"escape", conn_escape},
 		{NULL, NULL},
 	};
-	struct luaL_reg cursor_methods[] = {
+	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
@@ -1044,12 +1046,13 @@ static void create_metatables (lua_State *L) {
 ** driver open method.
 */
 LUASQL_API int luaopen_luasql_firebird (lua_State *L) {
-	struct luaL_reg driver[] = {
+	struct luaL_Reg driver[] = {
 		{"firebird", create_environment},
 		{NULL, NULL},
 	};
 	create_metatables (L);
-	luaL_openlib (L, LUASQL_TABLENAME, driver, 0);
+	lua_newtable (L);
+	luaL_setfuncs (L, driver, 0);
 	luasql_set_info (L);
 	return 1;
 } 
