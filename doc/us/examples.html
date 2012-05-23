@@ -75,7 +75,7 @@ query.</p>
 -- load driver
 local driver = require "luasql.postgres"
 -- create environment object
-env = assert (driver())
+env = assert (driver.postgres())
 -- connect to data source
 con = assert (env:connect("luasql-test"))
 -- reset our table
@@ -108,7 +108,7 @@ while row do
   row = cur:fetch (row, "a")
 end
 -- close everything
-cur:close()
+cur:close() -- already closed because all the result set was consumed
 con:close()
 env:close()
 </pre>
@@ -122,7 +122,7 @@ Name: Maria das Dores, E-mail: maria@dores.com
 </pre>
 
 
-<h3><a name="iterator_example"></a>Iterator use</h3>
+<h3><a name="iterator_example"></a>Iterator</h3>
 <p>It may be useful to offer an iterator for the resulting rows:</p>
 
 <pre class="example">
@@ -137,18 +137,14 @@ end
 <p>Here is how the iterator is used:</p>
  
 <pre class="example">
-env = assert (require "luasql.mysql"())
+env = assert (require"luasql.mysql".mysql())
 con = assert (env:connect"my_db")
 for id, name, address in rows (con, "select * from contacts") do
   print (string.format ("%s: %s", name, address))
 end
 </pre>
 
-<p>The above implementation relies on the garbage collector to close
-the cursor. It could be improved to give better error messages
-(including the SQL statement)
-or to explicitly close the cursor
-(by checking whether there are no more rows).</p>
+<p>Obviously, the code above only works if there is a table called contacts with the columns id, name and address in this order. At the end of the loop the cursor will be automatically closed by the driver.</p>
 
 </div> <!-- id="content" -->
 

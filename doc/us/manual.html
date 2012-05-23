@@ -156,8 +156,8 @@ driver loaded at the same time doing something like:
 </p>
 
 <pre class="example">
-local odbc = require "luasql.odbc"
-local oci8 = require "luasql.oci8"
+local odbc_driver = require "luasql.odbc"
+local oci8_driver = require "luasql.oci8"
 </pre>
 
 <p>
@@ -413,6 +413,13 @@ the SQLite3 driver also offers this extra feature:</p>
     that indicate the amount of milisseconds to wait for a write lock if one cannot be obtained immediately.<br/>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
+
+  <dt><strong><code>conn:escape(str)</code></strong></dt>
+  <dd>Escape especial characters in the given string according to the
+    connection's character set.<br/>
+    See also: Official documentation of function <a href="http://www.sqlite.org/c3ref/mprintf.html">sqlite3_mprintf</a><br/>
+    Returns: the escaped string.
+  </dd>
 
 </div> <!-- id="content" -->
 
