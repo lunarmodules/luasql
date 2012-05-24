@@ -1,11 +1,11 @@
-package = "LuaSQL-MySQL"
+package = "LuaSQL-ODBC"
 version = "2.3.0-1"
 source = {
   url = "git://github.com/keplerproject/luasql.git",
   branch = "v2.3.0",
 }
 description = {
-   summary = "Database connectivity for Lua (MySQL driver)",
+   summary = "Database connectivity for Lua (ODBC driver)",
    detailed = [[
       LuaSQL is a simple interface from Lua to a DBMS. It enables a
       Lua program to connect to databases, execute arbitrary SQL statements
@@ -18,18 +18,18 @@ dependencies = {
    "lua >= 5.1"
 }
 external_dependencies = {
-   MYSQL = {
-      header = "mysql.h"
+   ODBC = {
+      header = "sql.h"
    }
 }
 build = {
    type = "builtin",
    modules = {
-     ["luasql.mysql"] = {
-       sources = { "src/luasql.c", "src/ls_mysql.c" },
-       libraries = { "mysqlclient" },
-       incdirs = { "$(MYSQL_INCDIR)" },
-       libdirs = { "$(MYSQL_LIBDIR)" }
+     ["luasql.odbc"] = {
+       sources = { "src/luasql.c", "src/ls_odbc.c" },
+       libraries = { "odbc" },
+       incdirs = { "$(ODBC_INCDIR)" },
+       libdirs = { "$(ODBC_LIBDIR)" }
      }
    }
 }

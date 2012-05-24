@@ -1,7 +1,8 @@
 package = "LuaSQL-Postgres"
 version = "2.3.0-1"
 source = {
-  url = "git://github.com/keplerproject/luasql.git"
+  url = "git://github.com/keplerproject/luasql.git",
+  branch = "v2.3.0",
 }
 description = {
    summary = "Database connectivity for Lua (Postgres driver)",
