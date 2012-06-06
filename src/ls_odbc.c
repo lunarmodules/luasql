@@ -130,7 +130,7 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
                 sizeof(Msg), &MsgSize);
         if (ret == SQL_NO_DATA) break;
         luaL_addlstring(&b, Msg, MsgSize);
-        luaL_putchar(&b, '\n');
+        luaL_addchar(&b, '\n');
         i++;
     } 
     luaL_pushresult(&b);
