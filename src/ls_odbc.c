@@ -190,7 +190,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
         /* nUmber */
         case 'u': { 
 			double num;
-			SQLINTEGER got;
+			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
 			if (error(rc))
 				return fail(L, hSTMT, hstmt);
@@ -203,7 +203,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
                   /* bOol */
         case 'o': { 
 			char b;
-			SQLINTEGER got;
+			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
 			if (error(rc))
 				return fail(L, hSTMT, hstmt);
@@ -218,7 +218,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
         /* bInary */
         case 'i': { 
 			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
-			SQLINTEGER got;
+			SQLLEN got;
 			char *buffer;
 			luaL_Buffer b;
 			SQLRETURN rc;
