@@ -382,7 +382,7 @@ static int conn_execute(lua_State *L)
   int numcols;
   const char *tail;
 
-  res = sqlite3_prepare(conn->sql_conn, statement, -1, &vm, &tail);
+  res = sqlite3_prepare_v2(conn->sql_conn, statement, -1, &vm, &tail);
   if (res != SQLITE_OK)
     {
       errmsg = sqlite3_errmsg(conn->sql_conn);
