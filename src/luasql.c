@@ -80,23 +80,6 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
 }
 #endif
 
-#if !defined(LUA_VERSION_NUM)
-/*
-** Adapted from Lua 5.2.0
-*/
-LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
-	luaL_getmetatable(L, tname);  /* try to get metatable */
-	if (!lua_isnil(L, -1))  /* name already in use? */
-		return 0;  /* leave previous value on top, but return 0 */
-	lua_pop(L, 1);
-	lua_newtable(L);  /* create metatable */
-	lua_pushstring(L, tname);
-	lua_pushvalue(L, -1);
-	lua_settable(L, LUA_REGISTRYINDEX);
-	return 1;
-}
-#endif
-
 /*
 ** Create a metatable and leave it on top of the stack.
 */
