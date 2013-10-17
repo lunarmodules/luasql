@@ -492,6 +492,8 @@ static int env_connect (lua_State *L) {
 	const char *password = luaL_optstring(L, 4, NULL);
 	const char *host = luaL_optstring(L, 5, NULL);
 	const int port = luaL_optint(L, 6, 0);
+	const char *unix_socket = luaL_optstring(L, 7, NULL);
+	const long client_flag = luaL_optlong(L, 8, 0);
 	MYSQL *conn;
 	getenvironment(L); /* validade environment */
 
@@ -501,7 +503,7 @@ static int env_connect (lua_State *L) {
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
 	if (!mysql_real_connect(conn, host, username, password, 
-		sourcename, port, NULL, 0))
+		sourcename, port, unix_socket, client_flag))
 	{
 		char error_msg[100];
 		strncpy (error_msg,  mysql_error(conn), 99);
