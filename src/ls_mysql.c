@@ -17,6 +17,7 @@
 #endif
 
 #include "mysql.h"
+#include "errmsg.h"
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -369,6 +370,27 @@ static int conn_close (lua_State *L) {
 	return 1;
 }
 
+/*
+** Ping connection.
+*/
+static int conn_ping (lua_State *L) {
+	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
+	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
+	if (conn->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+	if (mysql_ping (conn->my_conn) == 0) {
+		lua_pushboolean (L, 1);
+		return 1;
+	} else if (mysql_errno (conn->my_conn) == CR_SERVER_GONE_ERROR) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+	luaL_error(L, mysql_error(conn->my_conn));
+	return 0;
+}
+
 
 static int escape_string (lua_State *L) {
   size_t size, new_size;
@@ -553,6 +575,7 @@ static void create_metatables (lua_State *L) {
     struct luaL_Reg connection_methods[] = {
         {"__gc", conn_gc},
         {"close", conn_close},
+        {"ping", conn_ping},
         {"escape", escape_string},
         {"execute", conn_execute},
         {"commit", conn_commit},
