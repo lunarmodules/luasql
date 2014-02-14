@@ -13,7 +13,7 @@ table.insert (EXTENSIONS, numrows)
 ---------------------------------------------------------------------
 local _define_table = define_table
 function define_table (n)
-	return _define_table(n) .. " TYPE = InnoDB;"
+	return _define_table(n) .. " ENGINE = InnoDB;"
 end
 
 ---------------------------------------------------------------------
