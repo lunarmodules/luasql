@@ -490,7 +490,7 @@ static int conn_execute (lua_State *L) {
 		return create_cursor (L, 1, conn, hstmt, numcols);
 	else {
 		/* if action has no results (e.g., UPDATE) */
-		SQLINTEGER numrows;
+		SQLLEN numrows;
 		ret = SQLRowCount(hstmt, &numrows);
 		if (error(ret)) {
 			ret = fail(L, hSTMT, hstmt);
