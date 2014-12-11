@@ -50,10 +50,9 @@
 		</li>
 		<li><a href="examples.html">Examples</a></li>
 		<li><a href="history.html">History</a></li>
-        <li><a href="http://luaforge.net/projects/luasql/">Project</a>
+        <li><a href="http://github.com/keplerproject/luasql/">Project</a>
             <ul>
-                <li><a href="http://luaforge.net/tracker/?group_id=12">Bug Tracker</a></li>
-                <li><a href="http://luaforge.net/scm/?group_id=12">CVS</a></li>
+                <li><a href="http://github.com/keplerproject/luasql/issues">Issues</a></li>
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -89,10 +88,19 @@ For more details on the features list please check the product
 
 <h2><a name="download"></a>Download</h2>
 <p>
-Source code for LuaSQL can be downloaded from the <a href=
-"http://luaforge.net/project/showfiles.php?group_id=12">LuaForge</a> page.  If you are using
-<a href="http://luaforge.net/projects/luabinaries/">LuaBinaries</a> a Windows binary
-version of LuaSQL can be found at the same LuaForge page. 
+LuaSQL can be installed via <a href="http://luarocks.org">LuaRocks</a>, using the 
+driver for your database of choice:
+
+<pre>
+luarocks install luasql-sqlite3
+luarocks install luasql-postgres
+luarocks install luasql-mysql
+luarocks install luasql-sqlite
+luarocks install luasql-odbc
+</pre>
+
+Source code for LuaSQL can be downloaded from its <a href=
+"http://github.com/keplerproject/luasql">GitHub</a> repository.
 </p>
 
 <h2><a name="credits"></a>Credits</h2>
@@ -102,7 +110,7 @@ version of LuaSQL can be found at the same LuaForge page.
 Version 2.3 is just an adaptation of the code to work with Lua 5.0, 5.1 and 5.2.
 </p>
 <p>
-Version 2.2 started a distributed development, with all project discussions happenign through the <a href="http://luaforge.net/mail/?group_id=104">Kepler's mailing list</a>.
+Version 2.2 started a distributed development, with all project discussions happenign through the <a href="https://groups.google.com/forum/#!forum/kepler-project">Kepler's mailing list</a>.
 New developers: Hisham Muhammad, Ignacio Burgue&ntilde;o, Luis Eduardo Jason Santos, Marc Nijdam, Mauricio Bomfim and Scott Morgan.
 <p>
 Version 2.1 and 2.0 were redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
@@ -128,7 +136,7 @@ Carlos Cassino, Tom&aacute;s Guisasola and Eduardo Quint&atilde;o (PostgreSQL).<
 Comments are welcome!</p>
 
 <p>You can also reach other Kepler developers and users on the Kepler Project
-<a href="http://luaforge.net/mail/?group_id=104">mailing list</a>.</p>
+<a href="https://groups.google.com/forum/#!forum/kepler-project">mailing list</a>.</p>
 
 </div> <!-- id="content" -->
 
