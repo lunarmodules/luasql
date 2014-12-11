@@ -1,4 +1,0 @@
-LIBRARY		oci8.dll
-DESCRIPTION "LuaSQL driver for oci8 (Oracle)"
-EXPORTS
-luaopen_luasqloci8
