@@ -58,6 +58,12 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
+#if LUA_VERSION_NUM>=503
+#define luasql_pushinteger lua_pushinteger
+#else
+#define luasql_pushinteger lua_pushnumber
+#endif
+
 LUASQL_API int luaopen_luasql_firebird (lua_State *L);
 
 /*
@@ -616,13 +622,13 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata, cur->out_sqlda->sqlvar[i].sqllen);
 			break;
 		case SQL_SHORT:
-			lua_pushnumber(L, *(short*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(short*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_LONG:
-			lua_pushnumber(L, *(long*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(long*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_INT64:
-			lua_pushnumber(L, (lua_Number)*(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_FLOAT:
 			lua_pushnumber(L, *(float*)(cur->out_sqlda->sqlvar[i].sqldata));
@@ -799,6 +805,10 @@ static int cur_coltypes (lua_State *L) {
 		case SQL_SHORT:
 		case SQL_LONG:
 		case SQL_INT64:
+#if LUA_VERSION_NUM>=503
+            lua_pushstring(L, "integer");
+			break;
+#endif
 		case SQL_FLOAT:
 		case SQL_DOUBLE:
             lua_pushstring(L, "number");
