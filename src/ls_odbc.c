@@ -148,8 +148,12 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
         case SQL_LONGVARCHAR:
         case SQL_WCHAR: case SQL_WVARCHAR: case SQL_WLONGVARCHAR:
             return "string";
-        case SQL_BIGINT: case SQL_TINYINT: case SQL_NUMERIC: 
-        case SQL_DECIMAL: case SQL_INTEGER: case SQL_SMALLINT: 
+        case SQL_BIGINT: case SQL_TINYINT: 
+        case SQL_INTEGER: case SQL_SMALLINT: 
+#if LUA_VERSION_NUM>=503
+			return "integer";
+#endif
+		case SQL_NUMERIC: case SQL_DECIMAL: 
         case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
             return "number";
         case SQL_BINARY: case SQL_VARBINARY: case SQL_LONGVARBINARY:
@@ -200,7 +204,22 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				lua_pushnumber(L, num);
 			return 0;
 		}
-                  /* bOol */
+#if LUA_VERSION_NUM>=503
+		/* iNteger */
+		case 'n': {
+			long int num;
+			SQLLEN got;
+			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
+			if (error(rc))
+				return fail(L, hSTMT, hstmt);
+			if (got == SQL_NULL_DATA)
+				lua_pushnil(L);
+			else
+				lua_pushinteger(L, num);
+			return 0;
+		}
+#endif
+		/* bOol */
         case 'o': { 
 			char b;
 			SQLLEN got;
