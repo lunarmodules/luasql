@@ -158,3 +158,31 @@ LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* 
 
 	return lua_isnumber(L, -1) ? res : def;
 }
+
+/*
+** Finds a pre-existing LuaSQL table, or creates a new one.
+*/
+LUASQL_API void luasql_find_driver_table (lua_State *L) {
+	lua_getglobal(L, "package");
+	if(lua_istable(L, -1)) {
+		lua_getfield(L, -1, "loaded");
+		lua_remove(L, -2);
+
+		lua_pushnil(L);
+		while(lua_next(L, -2) != 0) {
+			const char *key = lua_tostring(L, -2);
+			if(strncmp(key, LUASQL_TABLENAME, strlen(LUASQL_TABLENAME)) == 0) {
+				lua_remove(L, -2);
+				lua_remove(L, -2);
+				return;
+			}
+
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 2);
+	} else {
+		lua_pop(L, 1);
+	}
+
+	lua_newtable (L);
+}

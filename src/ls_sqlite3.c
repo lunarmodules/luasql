@@ -670,7 +670,7 @@ LUASQL_API int luaopen_luasql_sqlite3(lua_State *L)
     {NULL, NULL},
   };
   create_metatables (L);
-  lua_newtable (L);
+  luasql_find_driver_table (L);
   luaL_setfuncs (L, driver, 0);
   luasql_set_info (L);
   return 1;
