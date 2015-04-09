@@ -8,6 +8,7 @@
 #include <time.h>	/* For managing time values */
 #include <malloc.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Lua API */
 #include <lua.h>
@@ -64,7 +65,11 @@ typedef struct {
 #define luasql_pushinteger lua_pushnumber
 #endif
 
-LUASQL_API int luaopen_luasql_firebird (lua_State *L);
+/* MSVC still doesn't support C99 properly until 2015 */ 
+#if defined(_MSC_VER) && _MSC_VER<1900
+#pragma warning(disable:4996)	/* and complains if you try to work around it */
+#define snprintf _snprintf
+#endif
 
 /*
 ** Returns a standard database error message
@@ -414,11 +419,11 @@ static int conn_execute (lua_State *L) {
 
 	/* what do we return? a cursor or a count */
 	if(cur.out_sqlda->sqld > 0) { /* a cursor */
-		char cur_name[32];
+		char cur_name[64];
 		cur_data* user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
 
-		sprintf(cur_name, "dyn_cursor_%p", (void *)user_cur);
+		snprintf(cur_name, sizeof(cur_name), "dyn_cursor_%p", (void *)user_cur);
 
 		/* open the cursor ready for fetch cycles */
 		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, cur_name, 0);
@@ -442,7 +447,7 @@ static int conn_execute (lua_State *L) {
 
 		lua_pushnumber(L, count);
 
-		/* totaly finnished with the cursor */
+		/* totaly finished with the cursor */
 		isc_dsql_free_statement(conn->env->status_vector, &cur.stmt, DSQL_drop);
 		free(cur.out_sqlda);
 	}
@@ -902,8 +907,42 @@ static int create_environment (lua_State *L) {
 }
 
 /*
+** Reforms old connection style to new one
+** Lua Input: source, [user, [pass]]
+**   source: data source
+**   user, pass: data source authentication information
+** Lua Returns:
+**   new connection details table
+*/
+static void env_connect_fix_old (lua_State *L) {
+	if(lua_isstring(L, 2)) {
+		/* convert to new table format */
+		int n = lua_gettop(L);
+
+		const char *sourcename = luaL_checkstring (L, 2);
+		const char *username = luaL_optstring (L, 3, "");
+		const char *password = luaL_optstring (L, 4, "");
+
+		lua_newtable(L);
+		lua_pushstring(L, "source");
+		lua_pushstring(L, sourcename);
+		lua_settable(L, -3);
+		lua_pushstring(L, "user");
+		lua_pushstring(L, username);
+		lua_settable(L, -3);
+		lua_pushstring(L, "password");
+		lua_pushstring(L, password);
+		lua_settable(L, -3);
+
+		while(n > 1) {
+			lua_remove(L, n--);
+		}
+	}
+}
+
+/*
 ** Creates and returns a connection object
-** Lua Input: source, user, pass
+** Lua Input: { source, user, password, ... }
 **   source: data source
 **   user, pass: data source authentication information
 ** Lua Returns:
@@ -917,11 +956,25 @@ static int env_connect (lua_State *L) {
 								isc_tpb_write		};
 	conn_data conn;
 	conn_data* res_conn;
+	const char *sourcename, *username, *password;
 
 	env_data *env = (env_data *) getenvironment (L, 1);
-	const char *sourcename = luaL_checkstring (L, 2);
-	const char *username = luaL_optstring (L, 3, "");
-	const char *password = luaL_optstring (L, 4, "");
+
+	if(lua_gettop(L) < 2) {
+		return luasql_faildirect(L, "No connection details provided");
+	}
+
+	if(!lua_istable(L, 2)) {
+		env_connect_fix_old(L);
+	}
+
+	sourcename = luasql_table_optstring(L, 2, "source", NULL);
+	username = luasql_table_optstring(L, 2, "user", "");
+	password = luasql_table_optstring(L, 2, "password", "");
+
+	if(sourcename == NULL) {
+		return luasql_faildirect(L, "connection details table missing 'source'");
+	}
 
 	conn.env = env;
 	conn.db = 0L;
