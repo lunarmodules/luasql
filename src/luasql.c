@@ -51,13 +51,14 @@ typedef struct { short  closed; } pseudo_data;
 ** This function is used by `tostring'.
 */
 static int luasql_tostring (lua_State *L) {
-	char buff[100];
 	pseudo_data *obj = (pseudo_data *)lua_touserdata (L, 1);
-	if (obj->closed)
-		strcpy (buff, "closed");
-	else
-		sprintf (buff, "%p", (void *)obj);
-	lua_pushfstring (L, "%s (%s)", lua_tostring(L,lua_upvalueindex(1)), buff);
+
+	if (obj->closed) {
+		lua_pushfstring (L, "%s (closed)", lua_tostring(L,lua_upvalueindex(1)));
+	} else {
+		lua_pushfstring (L, "%s (%p)", lua_tostring(L,lua_upvalueindex(1)), (void *)obj);
+	}
+
 	return 1;
 }
 
