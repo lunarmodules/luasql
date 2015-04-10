@@ -22,27 +22,27 @@
 
 typedef struct {
 	short closed;
-	ISC_STATUS status_vector[20];	/* for error results */
-	int lock;						/* lock count for open connections */
+	ISC_STATUS status_vector[20];     /* for error results */
+	int lock;                         /* lock count for open connections */
 } env_data;
 
 typedef struct {
 	short			closed;
-	env_data*		env;			/* the DB enviroment this is in */
-	isc_db_handle	db;				/* the database handle */
-	char			dpb_buffer[256];/* holds the database paramet buffer */
-	short			dpb_length;		/* the used amount of the dpb */
-	isc_tr_handle	transaction;	/* the transaction handle */
-	int				lock;			/* lock count for open cursors */
-	int				autocommit;		/* should each statement be commited */
+	env_data*		env;              /* the DB enviroment this is in */
+	isc_db_handle	db;               /* the database handle */
+	char			dpb_buffer[1024]; /* holds the database paramet buffer */
+	short			dpb_length;       /* the used amount of the dpb */
+	isc_tr_handle	transaction;      /* the transaction handle */
+	int				lock;             /* lock count for open cursors */
+	int				autocommit;       /* should each statement be commited */
 } conn_data;
 
 typedef struct {
 	short			closed;
-	env_data*		env;			/* the DB enviroment this is in */
-	conn_data*		conn;			/* the DB connection this cursor is from */
-	isc_stmt_handle stmt;			/* the statement handle */
-	XSQLDA			*out_sqlda;		/* the cursor data array */
+	env_data*		env;              /* the DB enviroment this is in */
+	conn_data*		conn;             /* the DB connection this cursor is from */
+	isc_stmt_handle stmt;             /* the statement handle */
+	XSQLDA			*out_sqlda;       /* the cursor data array */
 } cur_data;
 
 /* How many fields to pre-alloc to the cursor */
@@ -940,6 +940,20 @@ static void env_connect_fix_old (lua_State *L) {
 	}
 }
 
+static char* add_dpb_string(char* dpb, char item, const char* str)
+{
+	size_t len = strlen(str);
+	size_t i;
+
+	*dpb++ = item;
+    *dpb++ = (char)len;
+	for(i=0; i<len; i++) {
+		*dpb++ = str[i];
+	}
+
+	return dpb;
+}
+
 /*
 ** Creates and returns a connection object
 ** Lua Input: { source, user, password, ... }
@@ -951,12 +965,14 @@ static void env_connect_fix_old (lua_State *L) {
 */
 static int env_connect (lua_State *L) {
 	char *dpb;
-	int i;
-	static char isc_tpb[] = {	isc_tpb_version3,
-								isc_tpb_write		};
+	static char isc_tpb[] = {
+		isc_tpb_version3,
+		isc_tpb_write
+	};
+
 	conn_data conn;
 	conn_data* res_conn;
-	const char *sourcename, *username, *password;
+	const char *sourcename;
 
 	env_data *env = (env_data *) getenvironment (L, 1);
 
@@ -969,8 +985,6 @@ static int env_connect (lua_State *L) {
 	}
 
 	sourcename = luasql_table_optstring(L, 2, "source", NULL);
-	username = luasql_table_optstring(L, 2, "user", "");
-	password = luasql_table_optstring(L, 2, "password", "");
 
 	if(sourcename == NULL) {
 		return luasql_faildirect(L, "connection details table missing 'source'");
@@ -982,7 +996,7 @@ static int env_connect (lua_State *L) {
 	conn.lock = 0;
 	conn.autocommit = 0;
 
-	/* Construct a database parameter buffer. */
+	/* construct a database parameter buffer. */
 	dpb = conn.dpb_buffer;
 	*dpb++ = isc_dpb_version1;
 	*dpb++ = isc_dpb_num_buffers;
@@ -990,14 +1004,11 @@ static int env_connect (lua_State *L) {
 	*dpb++ = 90;
 
 	/* add the user name and password */
-	*dpb++ = isc_dpb_user_name;
-    *dpb++ = (char)strlen(username);
-	for(i=0; i<(int)strlen(username); i++)
-		*dpb++ = username[i];
-	*dpb++ = isc_dpb_password;
-    *dpb++ = (char)strlen(password);
-	for(i=0; i<(int)strlen(password); i++)
-		*dpb++ = password[i];
+	dpb = add_dpb_string(dpb, isc_dpb_user_name, luasql_table_optstring(L, 2, "user", ""));
+	dpb = add_dpb_string(dpb, isc_dpb_password, luasql_table_optstring(L, 2, "password", ""));
+
+	/* other database parameters */
+	dpb = add_dpb_string(dpb, isc_dpb_lc_ctype, luasql_table_optstring(L, 2, "charset", "UTF8"));
 
 	/* the length of the dpb */
 	conn.dpb_length = (short)(dpb - conn.dpb_buffer);
@@ -1015,7 +1026,7 @@ static int env_connect (lua_State *L) {
 							&conn.db, (unsigned short)sizeof(isc_tpb),
 							isc_tpb );
 
-	/* return NULL on error */
+	/* an error? */
 	if ( CHECK_DB_ERROR(conn.env->status_vector) )
 		return return_db_error(L, conn.env->status_vector);
 
