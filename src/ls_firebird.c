@@ -93,7 +93,7 @@ static int return_db_error(lua_State *L, const ISC_STATUS *pvector)
 /*
 ** Registers a given C object in the registry to avoid GC
 */
-static void lua_registerobj(lua_State *L, int index, void *obj)
+static void luasql_registerobj(lua_State *L, int index, void *obj)
 {
 	lua_pushvalue(L, index);
 	lua_pushlightuserdata(L, obj);
@@ -105,7 +105,7 @@ static void lua_registerobj(lua_State *L, int index, void *obj)
 /*
 ** Unregisters a given C object from the registry
 */
-static void lua_unregisterobj(lua_State *L, void *obj)
+static void luasql_unregisterobj(lua_State *L, void *obj)
 {
 	lua_pushlightuserdata(L, obj);
 	lua_pushnil(L);
@@ -437,7 +437,7 @@ static int conn_execute (lua_State *L) {
 		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
 		/* add cursor to the lock count */
-		lua_registerobj(L, 1, conn);
+		luasql_registerobj(L, 1, conn);
 		++conn->lock;
 	} else { /* a count */
 		if( (count = count_rows_affected(&cur)) < 0 ) {
@@ -540,7 +540,7 @@ static int conn_close (lua_State *L) {
 
 	/* check environment can be GC'd */
 	if(conn->env->lock == 0)
-		lua_unregisterobj(L, conn->env);
+		luasql_unregisterobj(L, conn->env);
 
 	lua_pushboolean(L, 1);
 	return 1;
@@ -565,7 +565,7 @@ static int conn_gc (lua_State *L) {
 
 		/* check environment can be GC'd */
 		if(conn->env->lock == 0)
-			lua_unregisterobj(L, conn->env);
+			luasql_unregisterobj(L, conn->env);
 	}
 
 	return 0;
@@ -852,7 +852,7 @@ static int cur_close (lua_State *L) {
 
 		/* check if connection can be unregistered */
 		if(cur->conn->lock == 0)
-			lua_unregisterobj(L, cur->conn);
+			luasql_unregisterobj(L, cur->conn);
 
 		/* return sucsess */
 		lua_pushboolean(L, 1);
@@ -882,7 +882,7 @@ static int cur_gc (lua_State *L) {
 
 		/* check if connection can be unregistered */
 		if(cur->conn->lock == 0)
-			lua_unregisterobj(L, cur->conn);
+			luasql_unregisterobj(L, cur->conn);
 	}
 
 	return 0;
@@ -1040,7 +1040,7 @@ static int env_connect (lua_State *L) {
 	res_conn->closed = 0;   /* connect now officially open */
 
 	/* register the connection */
-	lua_registerobj(L, 1, env);
+	luasql_registerobj(L, 1, env);
 	++env->lock;
 
 	return 1;
@@ -1067,7 +1067,7 @@ static int env_close (lua_State *L) {
 		return luasql_faildirect(L, "there are still open connections");
 
 	/* unregister */
-	lua_unregisterobj(L, env);
+	luasql_unregisterobj(L, env);
 
 	/* mark as closed */
 	env->closed = 1;
