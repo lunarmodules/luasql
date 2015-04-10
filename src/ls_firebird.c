@@ -956,9 +956,12 @@ static char* add_dpb_string(char* dpb, char item, const char* str)
 
 /*
 ** Creates and returns a connection object
-** Lua Input: { source, user, password, ... }
-**   source: data source
-**   user, pass: data source authentication information
+** Lua Input: {
+**    source = <database source/path>,
+**    user = <user name>,
+**    password = <user password>,
+**   [charset = <connection charset (UTF8)>,]
+** }
 ** Lua Returns:
 **   connection object if successfull
 **   nil and error message otherwise.
