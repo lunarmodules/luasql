@@ -28,14 +28,18 @@ typedef struct {
 } env_data;
 
 typedef struct {
-	short			closed;
+	/* general */
 	env_data*		env;              /* the DB enviroment this is in */
+	short			closed;
+	int				lock;             /* lock count for open cursors */
+	int				autocommit;       /* should each statement be commited */
+	/* implimentation */
 	isc_db_handle	db;               /* the database handle */
 	char			dpb_buffer[1024]; /* holds the database paramet buffer */
 	short			dpb_length;       /* the used amount of the dpb */
 	isc_tr_handle	transaction;      /* the transaction handle */
-	int				lock;             /* lock count for open cursors */
-	int				autocommit;       /* should each statement be commited */
+	/* config */
+	unsigned short  dialect;          /* dialect of SQL used */
 } conn_data;
 
 typedef struct {
@@ -425,7 +429,7 @@ static int count_rows_affected(env_data *env, cur_data *cur)
 /*
 ** Prepares a SQL statement.
 ** Lua input:
-**   SQL statement[, SQL dialect]
+**   SQL statement
 ** Returns
 **   statement object ready for setting parameters
 **   nil and error message otherwise.
@@ -433,7 +437,6 @@ static int count_rows_affected(env_data *env, cur_data *cur)
 static int conn_prepare (lua_State *L) {
 	conn_data *conn = getconnection(L,1);
 	const char *statement = luaL_checkstring(L, 2);
-	int dialect = (int)luaL_optnumber(L, 3, 3);
 
 	stmt_data* user_stmt;
 
@@ -454,7 +457,7 @@ static int conn_prepare (lua_State *L) {
 	}
 
 	/* process the SQL ready to run the query */
-	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &stmt.handle, 0, (char*)statement, dialect, NULL);
+	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &stmt.handle, 0, (char*)statement, conn->dialect, NULL);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 		free_stmt(&stmt);
 		return return_db_error(L, conn->env->status_vector);
@@ -597,7 +600,7 @@ static int raw_execute (lua_State *L, stmt_data *stmt)
 /*
 ** Executes a SQL statement.
 ** Lua input:
-**   SQL statement[, SQL dialect]
+**   SQL statement
 ** Returns
 **   cursor object: if there are results or
 **   row count: number of rows affected by statement if no results
@@ -1141,6 +1144,7 @@ static char* add_dpb_string(char* dpb, char item, const char* str)
 **    user = <user name>,
 **    password = <user password>,
 **   [charset = <connection charset (UTF8)>,]
+**   [dialect = <SQL dialect to use (3)>,]
 ** }
 ** Lua Returns:
 **   connection object if successfull
@@ -1192,6 +1196,7 @@ static int env_connect (lua_State *L) {
 
 	/* other database parameters */
 	dpb = add_dpb_string(dpb, isc_dpb_lc_ctype, luasql_table_optstring(L, 2, "charset", "UTF8"));
+	conn.dialect = (unsigned short)luasql_table_optnumber(L, 2, "dialect", 3);
 
 	/* the length of the dpb */
 	conn.dpb_length = (short)(dpb - conn.dpb_buffer);
