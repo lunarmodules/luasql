@@ -1123,15 +1123,17 @@ static void env_connect_fix_old (lua_State *L) {
 	}
 }
 
-static char* add_dpb_string(char* dpb, char item, const char* str)
+static char* add_dpb_string(char* dpb, char* dpb_end, char item, const char* str)
 {
 	size_t len = strlen(str);
 	size_t i;
 
-	*dpb++ = item;
-    *dpb++ = (char)len;
-	for(i=0; i<len; i++) {
-		*dpb++ = str[i];
+	if(dpb+2 < dpb_end) {
+		*dpb++ = item;
+		*dpb++ = (char)len;
+		for(i=0; dpb<dpb_end && i<len; i++) {
+			*dpb++ = str[i];
+		}
 	}
 
 	return dpb;
@@ -1151,7 +1153,7 @@ static char* add_dpb_string(char* dpb, char item, const char* str)
 **   nil and error message otherwise.
 */
 static int env_connect (lua_State *L) {
-	char *dpb;
+	char *dpb, *dpb_end;
 	static char isc_tpb[] = {
 		isc_tpb_version3,
 		isc_tpb_write
@@ -1185,17 +1187,18 @@ static int env_connect (lua_State *L) {
 
 	/* construct a database parameter buffer. */
 	dpb = conn.dpb_buffer;
+	dpb_end = conn.dpb_buffer + sizeof(conn.dpb_buffer);
 	*dpb++ = isc_dpb_version1;
 	*dpb++ = isc_dpb_num_buffers;
 	*dpb++ = 1;
 	*dpb++ = 90;
 
 	/* add the user name and password */
-	dpb = add_dpb_string(dpb, isc_dpb_user_name, luasql_table_optstring(L, 2, "user", ""));
-	dpb = add_dpb_string(dpb, isc_dpb_password, luasql_table_optstring(L, 2, "password", ""));
+	dpb = add_dpb_string(dpb, dpb_end, isc_dpb_user_name, luasql_table_optstring(L, 2, "user", ""));
+	dpb = add_dpb_string(dpb, dpb_end, isc_dpb_password, luasql_table_optstring(L, 2, "password", ""));
 
 	/* other database parameters */
-	dpb = add_dpb_string(dpb, isc_dpb_lc_ctype, luasql_table_optstring(L, 2, "charset", "UTF8"));
+	dpb = add_dpb_string(dpb, dpb_end, isc_dpb_lc_ctype, luasql_table_optstring(L, 2, "charset", "UTF8"));
 	conn.dialect = (unsigned short)luasql_table_optnumber(L, 2, "dialect", 3);
 
 	/* the length of the dpb */
