@@ -209,6 +209,23 @@ static void free_stmt(stmt_data* stmt)
 	free(stmt->in_sqlda);
 }
 
+static int stmt_shut(lua_State *L, stmt_data* stmt)
+{
+	isc_dsql_free_statement(stmt->env->status_vector, &stmt->handle, DSQL_drop);
+	if ( CHECK_DB_ERROR(stmt->env->status_vector) ) {
+		return return_db_error(L, stmt->env->status_vector);
+	}
+
+	free_stmt(stmt);
+
+	/* remove statement from lock count and check if connection can be unregistered */
+	stmt->closed = 1;
+	if(--stmt->conn->lock == 0)
+		luasql_unregisterobj(L, stmt->conn);
+
+	return 0;
+}
+
 /*
 ** Free's up the memory alloc'd to the cursor data
 */
@@ -234,7 +251,7 @@ static int cur_shut(lua_State *L, cur_data *cur)
 	/* free the cursor data */
 	free_cur(cur);
 
-	/* remove cursor from lock count and check if connection can be unregistered */
+	/* remove cursor from lock count and check if statment can be unregistered */
 	cur->closed = 1;
 	if(--cur->stmt->lock == 0)
 		luasql_unregisterobj(L, cur->stmt);
@@ -807,9 +824,9 @@ static int conn_close (lua_State *L) {
 		return 1;
 	}
 
-	/* are all related cursors closed? */
+	/* are all related statements closed? */
 	if(conn->lock > 0)
-		return luasql_faildirect(L, "there are still open cursors");
+		return luasql_faildirect(L, "there are still open statements/cursors");
 
 	if(conn->autocommit != 0)
 		isc_commit_transaction(conn->env->status_vector, &conn->transaction);
@@ -1007,6 +1024,35 @@ static int stmt_execute (lua_State *L) {
 }
 
 /*
+** Closes a statement object
+** Lua Returns:
+**   true if close was sucsessful, false if already closed
+**   nil and error message otherwise.
+*/
+static int stmt_close (lua_State *L) {
+	stmt_data *stmt = (stmt_data *)luaL_checkudata(L,1,LUASQL_STATEMENT_FIREBIRD);
+	luaL_argcheck (L, stmt != NULL, 1, "statement expected");
+
+	if(stmt->lock > 0) {
+		return luasql_faildirect(L, "there are still open cursors");
+	}
+
+	if(stmt->closed == 0) {
+		int res = stmt_shut(L, stmt);
+		if(res != 0) {
+			return res;
+		}
+
+		/* return sucsess */
+		lua_pushboolean(L, 1);
+		return 1;
+	}
+
+	lua_pushboolean(L, 0);
+	return 1;
+}
+
+/*
 ** Frees up memory alloc'd to a statement
 */
 static int stmt_gc (lua_State *L) {
@@ -1014,18 +1060,9 @@ static int stmt_gc (lua_State *L) {
 	luaL_argcheck (L, stmt != NULL, 1, "statement expected");
 
 	if(stmt->closed == 0) {
-		isc_dsql_free_statement(stmt->env->status_vector, &stmt->handle, DSQL_drop);
-
-		/* free the cursor data */
-		free_stmt(stmt);
-
-		/* remove cursor from lock count */
-		stmt->closed = 1;
-		--stmt->conn->lock;
-
-		/* check if connection can be unregistered */
-		if(stmt->conn->lock == 0)
-			luasql_unregisterobj(L, stmt->conn);
+		if(stmt_shut(L, stmt) != 0) {
+			return 1;
+		}
 	}
 
 	return 0;
@@ -1126,7 +1163,7 @@ static int cur_coltypes (lua_State *L) {
 /*
 ** Closes a cursor object
 ** Lua Returns:
-**   1 if close was sucsessful, 0 if already closed
+**   true if close was sucsessful, false if already closed
 **   nil and error message otherwise.
 */
 static int cur_close (lua_State *L) {
@@ -1388,7 +1425,8 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_Reg statement_methods[] = {
 		{"__gc", stmt_gc},
-		{"list_params", stmt_get_params},
+		{"close", stmt_close},
+		{"getparamtypes", stmt_get_params},
 		{"execute", stmt_execute},
 		{NULL, NULL},
 	};
