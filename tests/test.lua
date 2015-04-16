@@ -174,6 +174,9 @@ function create_table ()
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
+	print()
+	print(cmd)
+	print()
 	assert2 (CREATE_TABLE_RETURN_VALUE, CONN:execute (cmd))
 end
 

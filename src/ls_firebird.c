@@ -383,7 +383,7 @@ static int count_rows_affected(env_data *env, cur_data *cur)
 
 	pres = res_buffer;
 
-	isc_dsql_sql_info( env->status_vector, cur->stmt->handle,
+	isc_dsql_sql_info( env->status_vector, &cur->stmt->handle,
 						sizeof(type_item), type_item,
 						sizeof(res_buffer), res_buffer );
 	if (cur->env->status_vector[0] == 1 && cur->env->status_vector[1] > 0)
@@ -653,9 +653,8 @@ static int raw_execute (lua_State *L, int stmt_indx)
 	cur.env = stmt->env;
 
 	/* if it's a SELECT statment, allocate a cursor */
-	if(stmt->type == 1) {
+	if(stmt->type == isc_info_sql_stmt_select) {
 		char cur_name[64];
-
 		snprintf(cur_name, sizeof(cur_name), "dyn_cursor_%p", (void *)stmt);
 
 		/* open the cursor ready for fetch cycles */
@@ -701,7 +700,7 @@ static int raw_execute (lua_State *L, int stmt_indx)
 		/* copy the cursor into a new lua userdata object */
 		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
-		/* add statement to the lock count */
+		/* add cursor to the lock count */
 		luasql_registerobj(L, stmt_indx, user_cur->stmt);
 		++user_cur->stmt->lock;
 	} else { /* a count */
@@ -719,10 +718,10 @@ static int raw_execute (lua_State *L, int stmt_indx)
 			return return_db_error(L, cur.env->status_vector);
 		}
 
-		lua_pushnumber(L, count);
+		luasql_pushinteger(L, count);
 
 		/* totaly finished with the cursor */
-		isc_dsql_free_statement(cur.env->status_vector, &cur.stmt->handle, DSQL_drop);
+		isc_dsql_free_statement(cur.env->status_vector, &cur.stmt->handle, DSQL_close);
 		free_cur(&cur);
 	}
 
@@ -742,6 +741,7 @@ static int raw_execute (lua_State *L, int stmt_indx)
 
 static int conn_execute (lua_State *L) {
 	int ret;
+	stmt_data *stmt;
 
 	/* prepare the statement */
 	if( (ret = conn_prepare(L)) != 1) {
@@ -749,11 +749,19 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* execute and check result */
-	ret = raw_execute(L, -1);
-	lua_remove(L, -(ret+1)); /* for neatness, remove stmt from stack */
-
-	if(ret != 1) {
+	if((ret = raw_execute(L, -1)) != 1) {
 		return ret;
+	}
+
+	/* for neatness, remove stmt from stack */
+	stmt = getstatement(L, -(ret+1));
+	lua_remove(L, -(ret+1));
+
+	/* if statement doesn't return a cursor, close it */
+	if(stmt->type != isc_info_sql_stmt_select) {
+		if((ret = stmt_shut(L, stmt)) != 0) {
+			return ret;
+		}
 	}
 
 	return 1;
