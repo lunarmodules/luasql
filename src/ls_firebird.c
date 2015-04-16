@@ -55,7 +55,6 @@ typedef struct {
 typedef struct {
 	short			closed;
 	env_data*		env;              /* the DB enviroment this is in */
-//	conn_data*		conn;             /* the DB connection this cursor is from */
 	stmt_data*		stmt;             /* the DB statment this cursor is from */
 	XSQLDA			*out_sqlda;       /* the cursor data array */
 } cur_data;
@@ -168,10 +167,11 @@ static void free_sqlda_vars(XSQLDA *sqlda) {
 	int i;
 	XSQLVAR *var;
 
-	/* prep the result set ready to handle the data */
-	for (i=0, var = sqlda->sqlvar; i < sqlda->sqld; i++, var++) {
-		free(var->sqldata);
-		free(var->sqlind);
+	if(sqlda != NULL) {
+		for (i=0, var = sqlda->sqlvar; i < sqlda->sqld; i++, var++) {
+			free(var->sqldata);
+			free(var->sqlind);
+		}
 	}
 }
 
@@ -426,10 +426,83 @@ static int count_rows_affected(env_data *env, cur_data *cur)
 	return res;
 }
 
+static void parse_params(lua_State *L, stmt_data* stmt, int params)
+{
+	int i;
+	for(i=0; i<stmt->in_sqlda->sqln; i++) {
+		XSQLVAR *var;
+		const char* str;
+
+		lua_pushnumber(L, i+1);
+		lua_gettable(L, params);
+
+		var = &stmt->in_sqlda->sqlvar[i];
+		if(var->sqlind == NULL) {
+			var->sqlind = (ISC_SHORT *)malloc(sizeof(ISC_SHORT));
+		}
+
+		if(lua_isnil(L, -1)) {
+			// nil -> NULL
+			*var->sqlind = -1;
+		} else {
+			switch(var->sqltype & ~1) {
+			case SQL_VARYING:
+			case SQL_VARYING+1:
+			case SQL_BLOB:
+			case SQL_TEXT:
+			case SQL_TEXT+1:
+			case SQL_TIMESTAMP:
+			case SQL_TYPE_TIME:
+			case SQL_TYPE_DATE:
+				if(var->sqldata != NULL) {
+					free(var->sqldata);
+				}
+				var->sqltype = SQL_TEXT+1;
+				*var->sqlind = 0;
+
+				str = lua_tostring(L, -1);
+				var->sqllen = strlen(str);
+				var->sqldata = (ISC_SCHAR *)malloc(var->sqllen+1);
+				strncpy(var->sqldata, str, var->sqllen);
+				break;
+
+			case SQL_INT64:
+			case SQL_LONG:
+			case SQL_SHORT:
+				var->sqltype = SQL_INT64;
+				*var->sqlind = 0;
+				if(var->sqldata != NULL) {
+					free(var->sqldata);
+				}
+				var->sqldata = (ISC_SCHAR *)malloc(sizeof(ISC_INT64));
+				*(ISC_INT64 *)var->sqldata = (ISC_INT64)lua_tonumber(L, -1);
+				var->sqllen = sizeof(ISC_INT64);
+				break;
+
+			case SQL_DOUBLE:
+			case SQL_D_FLOAT:
+			case SQL_FLOAT:
+				var->sqltype = SQL_DOUBLE;
+				*var->sqlind = 0;
+				if(var->sqldata != NULL) {
+					free(var->sqldata);
+				}
+				var->sqldata = (ISC_SCHAR *)malloc(sizeof(double));
+				*(double *)var->sqldata = lua_tonumber(L, -1);
+				var->sqllen = sizeof(double);
+				break;
+			}
+		}
+
+		lua_pop(L,1);  /* param value */
+	}
+}
+
 /*
 ** Prepares a SQL statement.
 ** Lua input:
 **   SQL statement
+**  [parmeter table]
 ** Returns
 **   statement object ready for setting parameters
 **   nil and error message otherwise.
@@ -491,6 +564,7 @@ static int conn_prepare (lua_State *L) {
 		short n = stmt.in_sqlda->sqld;
 		free(stmt.in_sqlda);
 		stmt.in_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
+		memset(stmt.in_sqlda, 0, XSQLDA_LENGTH(n));
 		stmt.in_sqlda->sqln = n;
 		stmt.in_sqlda->version = SQLDA_VERSION1;
 		isc_dsql_describe_bind(conn->env->status_vector, &stmt.handle, 1, stmt.in_sqlda);
@@ -500,6 +574,11 @@ static int conn_prepare (lua_State *L) {
 		}
 	}
 	malloc_sqlda_vars(stmt.in_sqlda);
+
+	/* is there a parameter table to use */
+	if(lua_istable(L, 3)) {
+		parse_params(L, &stmt, 3);
+	}
 
 	/* copy the statement into a new lua userdata object */
 	user_stmt = (stmt_data*)lua_newuserdata(L, sizeof(stmt_data));
@@ -525,7 +604,7 @@ static int raw_execute (lua_State *L, stmt_data *stmt)
 	cur.env = stmt->env;
 
 	/* run the query */
-	isc_dsql_execute(stmt->env->status_vector, &stmt->conn->transaction, &stmt->handle, 1, NULL);
+	isc_dsql_execute(stmt->env->status_vector, &stmt->conn->transaction, &stmt->handle, 1, stmt->in_sqlda);
 	if ( CHECK_DB_ERROR(stmt->env->status_vector) ) {
 		free_cur(&cur);
 		return return_db_error(L, cur.env->status_vector);
@@ -601,6 +680,7 @@ static int raw_execute (lua_State *L, stmt_data *stmt)
 ** Executes a SQL statement.
 ** Lua input:
 **   SQL statement
+**  [parameter table]
 ** Returns
 **   cursor object: if there are results or
 **   row count: number of rows affected by statement if no results
@@ -880,7 +960,14 @@ static int stmt_get_params (lua_State *L) {
 **   nil and error message otherwise.
 */
 static int stmt_execute (lua_State *L) {
-	return raw_execute(L, getstatement(L,1));
+	stmt_data *stmt = getstatement(L,1);
+
+	/* is there a parameter table to use */
+	if(lua_istable(L, 2)) {
+		parse_params(L, stmt, 2);
+	}
+
+	return raw_execute(L, stmt);
 }
 
 /*
