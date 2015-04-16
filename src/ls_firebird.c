@@ -222,6 +222,27 @@ static void free_cur(cur_data* cur)
 }
 
 /*
+** Shuts down a cursor
+*/
+static int cur_shut(lua_State *L, cur_data *cur)
+{
+	isc_dsql_free_statement(cur->env->status_vector, &cur->stmt->handle, DSQL_close);
+	if ( CHECK_DB_ERROR(cur->env->status_vector) ) {
+		return return_db_error(L, cur->env->status_vector);
+	}
+
+	/* free the cursor data */
+	free_cur(cur);
+
+	/* remove cursor from lock count and check if connection can be unregistered */
+	cur->closed = 1;
+	if(--cur->stmt->lock == 0)
+		luasql_unregisterobj(L, cur->stmt);
+
+	return 0;
+}
+
+/*
 ** Check for valid environment.
 */
 static env_data *getenvironment (lua_State *L, int i) {
@@ -592,16 +613,42 @@ static int conn_prepare (lua_State *L) {
 	return 1;
 }
 
-static int raw_execute (lua_State *L, stmt_data *stmt)
+static int raw_execute (lua_State *L, int stmt_indx)
 {
 	int count;
 	cur_data cur;
+	stmt_data *stmt;
+
+	if(stmt_indx < 0) {
+		stmt_indx = lua_gettop(L) + stmt_indx + 1;
+	}
+
+	stmt = getstatement(L,stmt_indx);
+
+	/* is there already a cursor open */
+	if(stmt->lock > 0) {
+		return luasql_faildirect(L, "statement already has an open cursor");
+	}
 
 	memset(&cur, 0, sizeof(cur_data));
-
 	cur.closed = 0;
 	cur.stmt = stmt;
 	cur.env = stmt->env;
+
+	/* if it's a SELECT statment, allocate a cursor */
+	if(stmt->type == 1) {
+		char cur_name[64];
+
+		snprintf(cur_name, sizeof(cur_name), "dyn_cursor_%p", (void *)stmt);
+
+		/* open the cursor ready for fetch cycles */
+		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt->handle, cur_name, 0);
+		if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
+			lua_pop(L, 1);	/* the userdata */
+			free_cur(&cur);
+			return return_db_error(L, cur.env->status_vector);
+		}
+	}
 
 	/* run the query */
 	isc_dsql_execute(stmt->env->status_vector, &stmt->conn->transaction, &stmt->handle, 1, stmt->in_sqlda);
@@ -631,25 +678,14 @@ static int raw_execute (lua_State *L, stmt_data *stmt)
 
 	/* what do we return? a cursor or a count */
 	if(cur.out_sqlda->sqld > 0) { /* a cursor */
-		char cur_name[64];
 		cur_data* user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
-
-		snprintf(cur_name, sizeof(cur_name), "dyn_cursor_%p", (void *)user_cur);
-
-		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt->handle, cur_name, 0);
-		if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
-			lua_pop(L, 1);	/* the userdata */
-			free_cur(&cur);
-			return return_db_error(L, cur.env->status_vector);
-		}
 
 		/* copy the cursor into a new lua userdata object */
 		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
 
 		/* add statement to the lock count */
-		luasql_registerobj(L, -2, user_cur->stmt);
+		luasql_registerobj(L, stmt_indx, user_cur->stmt);
 		++user_cur->stmt->lock;
 	} else { /* a count */
 		/* if autocommit is set, commit change */
@@ -696,7 +732,7 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* execute and check result */
-	ret = raw_execute(L, getstatement(L,-1));
+	ret = raw_execute(L, -1);
 	lua_remove(L, -(ret+1)); /* for neatness, remove stmt from stack */
 
 	if(ret != 1) {
@@ -967,7 +1003,7 @@ static int stmt_execute (lua_State *L) {
 		parse_params(L, stmt, 2);
 	}
 
-	return raw_execute(L, stmt);
+	return raw_execute(L, 1);
 }
 
 /*
@@ -1049,22 +1085,8 @@ static int cur_fetch (lua_State *L) {
 	if (fetch_stat != 100L)
 		return return_db_error(L, cur->env->status_vector);
 
-	/* last row has been fetched, close cursor */
-	isc_dsql_free_statement(cur->env->status_vector, &cur->stmt->handle, DSQL_drop);
-	if ( CHECK_DB_ERROR(cur->env->status_vector) )
-		return return_db_error(L, cur->env->status_vector);
-
-	/* free the cursor data */
-	free_cur(cur);
-
-	cur->closed = 1;
-
-	/* remove cursor from lock count and check if connection can be unregistered */
-	if(--cur->stmt->lock == 0)
-		luasql_unregisterobj(L, cur->stmt);
-
-	/* return sucsess */
-	return 0;
+	/* shut cursor */
+	return cur_shut(L, cur);
 }
 
 /*
@@ -1112,17 +1134,10 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
 
 	if(cur->closed == 0) {
-		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt->handle, DSQL_drop);
-		if ( CHECK_DB_ERROR(cur->env->status_vector) )
-			return return_db_error(L, cur->env->status_vector);
-
-		/* free the cursor data */
-		free_cur(cur);
-
-		/* remove cursor from lock count and check if connection can be unregistered */
-		cur->closed = 1;
-		if(--cur->stmt->lock == 0)
-			luasql_unregisterobj(L, cur->stmt);
+		int res = cur_shut(L, cur);
+		if(res != 0) {
+			return res;
+		}
 
 		/* return sucsess */
 		lua_pushboolean(L, 1);
@@ -1141,18 +1156,9 @@ static int cur_gc (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
 
 	if(cur->closed == 0) {
-		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt->handle, DSQL_drop);
-
-		/* free the cursor data */
-		free_cur(cur);
-
-		/* remove cursor from lock count */
-		cur->closed = 1;
-		--cur->stmt->lock;
-
-		/* check if connection can be unregistered */
-		if(cur->stmt->lock == 0)
-			luasql_unregisterobj(L, cur->stmt);
+		if(cur_shut(L, cur) != 0) {
+			return 1;
+		}
 	}
 
 	return 0;
