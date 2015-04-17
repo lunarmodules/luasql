@@ -22,15 +22,15 @@
 #define LUASQL_CURSOR_FIREBIRD "Firebird cursor"
 
 typedef struct {
-	short closed;
-	ISC_STATUS status_vector[20];     /* for error results */
-	int lock;                         /* lock count for open connections */
+	unsigned char   closed;
+	ISC_STATUS      status_vector[20];/* for error results */
+	int             lock;             /* lock count for open connections */
 } env_data;
 
 typedef struct {
 	/* general */
+	unsigned char   closed;
 	env_data*		env;              /* the DB enviroment this is in */
-	short			closed;
 	int				lock;             /* lock count for open cursors */
 	int				autocommit;       /* should each statement be commited */
 	/* implimentation */
@@ -43,21 +43,21 @@ typedef struct {
 } conn_data;
 
 typedef struct {
-	short			closed;
-	env_data*		env;              /* the DB enviroment this is in */
-	conn_data*		conn;             /* the DB connection this cursor is from */
-	XSQLDA			*in_sqlda;        /* the parameter data array */
+	unsigned char   closed;
+	env_data*       env;              /* the DB enviroment this is in */
+	conn_data*      conn;             /* the DB connection this cursor is from */
+	XSQLDA          *in_sqlda;        /* the parameter data array */
 	isc_stmt_handle handle;           /* the statement handle */
 	int             type;             /* the statment's type (SELECT, UPDATE, etc...) */
-	int				lock;             /* lock count for open statements */
+	int             lock;             /* lock count for open statements */
 	unsigned char   hidden;           /* statement was used interally i.e. from a direct con:execute */
 } stmt_data;
 
 typedef struct {
-	short			closed;
-	env_data*		env;              /* the DB enviroment this is in */
-	stmt_data*		stmt;             /* the DB statment this cursor is from */
-	XSQLDA			*out_sqlda;       /* the cursor data array */
+	unsigned char   closed;
+	env_data*       env;              /* the DB enviroment this is in */
+	stmt_data*      stmt;             /* the DB statment this cursor is from */
+	XSQLDA          *out_sqlda;       /* the cursor data array */
 } cur_data;
 
 /* How many fields to pre-alloc to the cursor */
