@@ -75,8 +75,10 @@ typedef struct {
 
 #if LUA_VERSION_NUM>=503
 #define luasql_pushinteger lua_pushinteger
+#define luasql_isinteger lua_isinteger
 #else
 #define luasql_pushinteger lua_pushnumber
+#define luasql_isinteger lua_isnumber
 #endif
 
 /* MSVC still doesn't support C99 properly until 2015 */ 
@@ -485,13 +487,8 @@ static void parse_params(lua_State *L, stmt_data* stmt, int params)
 		} else {
 			switch(var->sqltype & ~1) {
 			case SQL_VARYING:
-			case SQL_VARYING+1:
 			case SQL_BLOB:
 			case SQL_TEXT:
-			case SQL_TEXT+1:
-			case SQL_TIMESTAMP:
-			case SQL_TYPE_TIME:
-			case SQL_TYPE_DATE:
 				if(var->sqldata != NULL) {
 					free(var->sqldata);
 				}
@@ -528,6 +525,55 @@ static void parse_params(lua_State *L, stmt_data* stmt, int params)
 				var->sqldata = (ISC_SCHAR *)malloc(sizeof(double));
 				*(double *)var->sqldata = lua_tonumber(L, -1);
 				var->sqllen = sizeof(double);
+				break;
+
+			case SQL_TIMESTAMP:
+			case SQL_TYPE_TIME:
+			case SQL_TYPE_DATE:
+				switch(lua_type(L, -1)) {
+				case LUA_TNUMBER: {
+					/* os.time type value passed */
+					time_t t_time = (time_t)lua_tointeger(L,-1);
+					struct tm *tm_time = localtime(&t_time);
+
+					if(var->sqldata != NULL) {
+						free(var->sqldata);
+					}
+					var->sqltype = SQL_TIMESTAMP+1;
+					*var->sqlind = 0;
+
+					var->sqldata = (ISC_SCHAR *)malloc(sizeof(ISC_TIMESTAMP));
+					isc_encode_timestamp(tm_time, (ISC_TIMESTAMP *)var->sqldata);
+				}	break;
+
+				case LUA_TSTRING: {
+					/* date/time string passed */
+					if(var->sqldata != NULL) {
+						free(var->sqldata);
+					}
+					var->sqltype = SQL_TEXT+1;
+					*var->sqlind = 0;
+
+					str = lua_tostring(L, -1);
+
+					var->sqllen = strlen(str);
+					var->sqldata = (ISC_SCHAR *)malloc(var->sqllen+1);
+					strncpy(var->sqldata, str, var->sqllen);
+				}	break;
+				}
+
+				default: {
+					/* unknown pass empty string, which should error out */
+					if(var->sqldata != NULL) {
+						free(var->sqldata);
+					}
+					var->sqltype = SQL_TEXT+1;
+					*var->sqlind = 0;
+
+					var->sqllen = 0;
+					var->sqldata = (ISC_SCHAR *)malloc(1);
+					*var->sqldata = '\0';
+				}
 				break;
 			}
 		}
