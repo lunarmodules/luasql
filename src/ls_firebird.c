@@ -466,12 +466,31 @@ static int count_rows_affected(env_data *env, cur_data *cur)
 	return res;
 }
 
+static void fill_param(XSQLVAR *var, ISC_SHORT type, ISC_SCHAR *data, ISC_SHORT len)
+{
+	var->sqltype = type;
+	*var->sqlind = 0;
+	var->sqllen = len;
+
+	if((type & ~1) == SQL_TEXT) {
+		--var->sqllen;
+	}
+
+	if(var->sqldata != NULL) {
+		free(var->sqldata);
+	}
+	var->sqldata = (ISC_SCHAR *)malloc(len);
+	memcpy(var->sqldata, data, len);
+}
+
 static void parse_params(lua_State *L, stmt_data* stmt, int params)
 {
 	int i;
 	for(i=0; i<stmt->in_sqlda->sqln; i++) {
 		XSQLVAR *var;
 		const char* str;
+		ISC_INT64 inum;
+		double fnum;
 
 		lua_pushnumber(L, i+1);
 		lua_gettable(L, params);
@@ -489,42 +508,22 @@ static void parse_params(lua_State *L, stmt_data* stmt, int params)
 			case SQL_VARYING:
 			case SQL_BLOB:
 			case SQL_TEXT:
-				if(var->sqldata != NULL) {
-					free(var->sqldata);
-				}
-				var->sqltype = SQL_TEXT+1;
-				*var->sqlind = 0;
-
 				str = lua_tostring(L, -1);
-				var->sqllen = strlen(str);
-				var->sqldata = (ISC_SCHAR *)malloc(var->sqllen+1);
-				strncpy(var->sqldata, str, var->sqllen);
+				fill_param(var, SQL_TEXT+1, (ISC_SCHAR *)str, strlen(str)+1);
 				break;
 
 			case SQL_INT64:
 			case SQL_LONG:
 			case SQL_SHORT:
-				var->sqltype = SQL_INT64;
-				*var->sqlind = 0;
-				if(var->sqldata != NULL) {
-					free(var->sqldata);
-				}
-				var->sqldata = (ISC_SCHAR *)malloc(sizeof(ISC_INT64));
-				*(ISC_INT64 *)var->sqldata = (ISC_INT64)lua_tonumber(L, -1);
-				var->sqllen = sizeof(ISC_INT64);
+				inum = (ISC_INT64)lua_tonumber(L, -1);
+				fill_param(var, SQL_INT64+1, (ISC_SCHAR *)&inum, sizeof(ISC_INT64));
 				break;
 
 			case SQL_DOUBLE:
 			case SQL_D_FLOAT:
 			case SQL_FLOAT:
-				var->sqltype = SQL_DOUBLE;
-				*var->sqlind = 0;
-				if(var->sqldata != NULL) {
-					free(var->sqldata);
-				}
-				var->sqldata = (ISC_SCHAR *)malloc(sizeof(double));
-				*(double *)var->sqldata = lua_tonumber(L, -1);
-				var->sqllen = sizeof(double);
+				fnum = (double)lua_tonumber(L, -1);
+				fill_param(var, SQL_DOUBLE+1, (ISC_SCHAR *)&fnum, sizeof(double));
 				break;
 
 			case SQL_TIMESTAMP:
@@ -535,44 +534,23 @@ static void parse_params(lua_State *L, stmt_data* stmt, int params)
 					/* os.time type value passed */
 					time_t t_time = (time_t)lua_tointeger(L,-1);
 					struct tm *tm_time = localtime(&t_time);
+					ISC_TIMESTAMP isc_ts;
+					isc_encode_timestamp(tm_time, &isc_ts);
 
-					if(var->sqldata != NULL) {
-						free(var->sqldata);
-					}
-					var->sqltype = SQL_TIMESTAMP+1;
-					*var->sqlind = 0;
-
-					var->sqldata = (ISC_SCHAR *)malloc(sizeof(ISC_TIMESTAMP));
-					isc_encode_timestamp(tm_time, (ISC_TIMESTAMP *)var->sqldata);
+					fill_param(var, SQL_TIMESTAMP+1, (ISC_SCHAR *)&isc_ts, sizeof(ISC_TIMESTAMP));
 				}	break;
 
 				case LUA_TSTRING: {
 					/* date/time string passed */
-					if(var->sqldata != NULL) {
-						free(var->sqldata);
-					}
-					var->sqltype = SQL_TEXT+1;
-					*var->sqlind = 0;
-
 					str = lua_tostring(L, -1);
-
-					var->sqllen = strlen(str);
-					var->sqldata = (ISC_SCHAR *)malloc(var->sqllen+1);
-					strncpy(var->sqldata, str, var->sqllen);
+					fill_param(var, SQL_TEXT+1, (ISC_SCHAR *)str, strlen(str)+1);
 				}	break;
-				}
 
 				default: {
 					/* unknown pass empty string, which should error out */
-					if(var->sqldata != NULL) {
-						free(var->sqldata);
-					}
-					var->sqltype = SQL_TEXT+1;
-					*var->sqlind = 0;
-
-					var->sqllen = 0;
-					var->sqldata = (ISC_SCHAR *)malloc(1);
-					*var->sqldata = '\0';
+					str = lua_tostring(L, -1);
+					fill_param(var, SQL_TEXT+1, (ISC_SCHAR *)"", 1);
+				}	break;
 				}
 				break;
 			}
