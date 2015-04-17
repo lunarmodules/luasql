@@ -108,6 +108,20 @@ static int return_db_error(lua_State *L, const ISC_STATUS *pvector)
 }
 
 /*
+** Allocates and initialises an XSQLDA struct
+*/
+static XSQLDA* malloc_xsqlda(ISC_SHORT len)
+{
+	XSQLDA *res = (XSQLDA*)malloc(XSQLDA_LENGTH(len));
+
+	memset(res, 0, XSQLDA_LENGTH(len));
+	res->version = SQLDA_VERSION1;
+	res->sqln = len;
+
+	return res;
+}
+
+/*
 ** Allocate memory for XSQLDA data
 */
 static void malloc_sqlda_vars(XSQLDA *sqlda)
@@ -179,6 +193,15 @@ static void free_sqlda_vars(XSQLDA *sqlda) {
 }
 
 /*
+** Frees all XSQLDA data
+*/
+static void free_xsqlda(XSQLDA *sqlda)
+{
+	free_sqlda_vars(sqlda);
+	free(sqlda);
+}
+
+/*
 ** Registers a given C object in the registry to avoid GC
 */
 static void luasql_registerobj(lua_State *L, int index, void *obj)
@@ -205,11 +228,8 @@ static void luasql_unregisterobj(lua_State *L, void *obj)
 */
 static void free_stmt(stmt_data* stmt)
 {
-	/* free the field memory blocks */
-	free_sqlda_vars(stmt->in_sqlda);
-
-	/* free the data array */
-	free(stmt->in_sqlda);
+	/* free the input DA */
+	free_xsqlda(stmt->in_sqlda);
 }
 
 static int stmt_shut(lua_State *L, stmt_data* stmt)
@@ -235,11 +255,8 @@ static int stmt_shut(lua_State *L, stmt_data* stmt)
 */
 static void free_cur(cur_data* cur)
 {
-	/* free the field memory blocks */
-	free_sqlda_vars(cur->out_sqlda);
-
-	/* free the data array */
-	free(cur->out_sqlda);
+	/* free the output DA */
+	free_xsqlda(cur->out_sqlda);
 }
 
 /*
@@ -620,9 +637,7 @@ static int conn_prepare (lua_State *L) {
 	}
 
 	/* bind the input parameters */
-	stmt.in_sqlda = (XSQLDA*)malloc(XSQLDA_LENGTH(1));
-	stmt.in_sqlda->version = SQLDA_VERSION1;
-	stmt.in_sqlda->sqln = 1;
+	stmt.in_sqlda = malloc_xsqlda(1);
 	isc_dsql_describe_bind(conn->env->status_vector, &stmt.handle, 1, stmt.in_sqlda);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 		free_stmt(&stmt);
@@ -631,12 +646,9 @@ static int conn_prepare (lua_State *L) {
 	/* resize the parameter set if needed */
 	if (stmt.in_sqlda->sqld > stmt.in_sqlda->sqln)
 	{
-		short n = stmt.in_sqlda->sqld;
-		free(stmt.in_sqlda);
-		stmt.in_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
-		memset(stmt.in_sqlda, 0, XSQLDA_LENGTH(n));
-		stmt.in_sqlda->sqln = n;
-		stmt.in_sqlda->version = SQLDA_VERSION1;
+		ISC_SHORT n = stmt.in_sqlda->sqld;
+		free_xsqlda(stmt.in_sqlda);
+		stmt.in_sqlda = malloc_xsqlda(n);
 		isc_dsql_describe_bind(conn->env->status_vector, &stmt.handle, 1, stmt.in_sqlda);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 			free_stmt(&stmt);
@@ -706,16 +718,12 @@ static int raw_execute (lua_State *L, int stmt_indx)
 	}
 
 	/* size the result, set if needed */
-	cur.out_sqlda = (XSQLDA*)malloc(XSQLDA_LENGTH(1));
-	cur.out_sqlda->version = SQLDA_VERSION1;
-	cur.out_sqlda->sqln = 1;
+	cur.out_sqlda = malloc_xsqlda(1);
 	isc_dsql_describe(cur.env->status_vector, &cur.stmt->handle, 1, cur.out_sqlda);
 	if (cur.out_sqlda->sqld > cur.out_sqlda->sqln) {
-		short n = cur.out_sqlda->sqld;
-		free(cur.out_sqlda);
-		cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
-		cur.out_sqlda->sqln = n;
-		cur.out_sqlda->version = SQLDA_VERSION1;
+		ISC_SHORT n = cur.out_sqlda->sqld;
+		free_xsqlda(cur.out_sqlda);
+		cur.out_sqlda = malloc_xsqlda(n);
 		isc_dsql_describe(cur.env->status_vector, &cur.stmt->handle, 1, cur.out_sqlda);
 		if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
 			free_cur(&cur);
