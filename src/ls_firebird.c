@@ -22,14 +22,14 @@
 #define LUASQL_CURSOR_FIREBIRD "Firebird cursor"
 
 typedef struct {
-	unsigned char   closed;
+	short           closed;
 	ISC_STATUS      status_vector[20];/* for error results */
 	int             lock;             /* lock count for open connections */
 } env_data;
 
 typedef struct {
 	/* general */
-	unsigned char   closed;
+	short           closed;
 	env_data*		env;              /* the DB enviroment this is in */
 	int				lock;             /* lock count for open cursors */
 	int				autocommit;       /* should each statement be commited */
@@ -43,7 +43,7 @@ typedef struct {
 } conn_data;
 
 typedef struct {
-	unsigned char   closed;
+	short           closed;
 	env_data*       env;              /* the DB enviroment this is in */
 	conn_data*      conn;             /* the DB connection this cursor is from */
 	XSQLDA          *in_sqlda;        /* the parameter data array */
@@ -54,7 +54,7 @@ typedef struct {
 } stmt_data;
 
 typedef struct {
-	unsigned char   closed;
+	short           closed;
 	env_data*       env;              /* the DB enviroment this is in */
 	stmt_data*      stmt;             /* the DB statment this cursor is from */
 	XSQLDA          *out_sqlda;       /* the cursor data array */
