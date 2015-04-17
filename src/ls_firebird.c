@@ -50,6 +50,7 @@ typedef struct {
 	isc_stmt_handle handle;           /* the statement handle */
 	int             type;             /* the statment's type (SELECT, UPDATE, etc...) */
 	int				lock;             /* lock count for open statements */
+	unsigned char   hidden;           /* statement was used interally i.e. from a direct con:execute */
 } stmt_data;
 
 typedef struct {
@@ -222,8 +223,9 @@ static int stmt_shut(lua_State *L, stmt_data* stmt)
 
 	/* remove statement from lock count and check if connection can be unregistered */
 	stmt->closed = 1;
-	if(--stmt->conn->lock == 0)
+	if(--stmt->conn->lock == 0) {
 		luasql_unregisterobj(L, stmt->conn);
+	}
 
 	return 0;
 }
@@ -255,8 +257,14 @@ static int cur_shut(lua_State *L, cur_data *cur)
 
 	/* remove cursor from lock count and check if statment can be unregistered */
 	cur->closed = 1;
-	if(--cur->stmt->lock == 0)
+	if(--cur->stmt->lock == 0) {
 		luasql_unregisterobj(L, cur->stmt);
+
+		/* hidden statement, needs closing now */
+		if(cur->stmt->hidden) {
+			return stmt_shut(L, cur->stmt);
+		}
+	}
 
 	return 0;
 }
@@ -780,6 +788,9 @@ static int conn_execute (lua_State *L) {
 	/* for neatness, remove stmt from stack */
 	stmt = getstatement(L, -(ret+1));
 	lua_remove(L, -(ret+1));
+
+	/* this will be an internal, hidden statment */
+	stmt->hidden = 1;
 
 	/* if statement doesn't return a cursor, close it */
 	if(stmt->type != isc_info_sql_stmt_select) {
