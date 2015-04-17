@@ -960,12 +960,12 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 			break;
 		case SQL_TYPE_DATE:
 			isc_decode_sql_date((ISC_DATE*)(cur->out_sqlda->sqlvar[i].sqldata), &timevar);
-			strftime(timestr, 255, "%x", &timevar);
+			strftime(timestr, 255, "%Y-%m-%d", &timevar);
 			lua_pushstring(L, timestr);
 			break;
 		case SQL_TIMESTAMP:
 			isc_decode_timestamp((ISC_TIMESTAMP*)(cur->out_sqlda->sqlvar[i].sqldata), &timevar);
-			strftime(timestr, 255, "%x %X", &timevar);
+			strftime(timestr, 255, "%Y-%m-%d %X", &timevar);
 			lua_pushstring(L, timestr);
 			break;
 		case SQL_BLOB:
