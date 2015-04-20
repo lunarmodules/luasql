@@ -40,31 +40,33 @@ typedef struct {
 } obj_data;
 
 typedef struct {
-	short      closed;
-	int        lock;               /* lock count for open connections */
-	SQLHENV    henv;               /* environment handle */
+	short         closed;
+	int           lock;               /* lock count for open connections */
+	SQLHENV       henv;               /* environment handle */
 } env_data;
 
 typedef struct {
-	short      closed;
-	int        lock;               /* lock count for open statements */
-	env_data   *env;               /* the connection's environment */
-	SQLHDBC    hdbc;               /* database connection handle */
+	short         closed;
+	int           lock;               /* lock count for open statements */
+	env_data      *env;               /* the connection's environment */
+	SQLHDBC       hdbc;               /* database connection handle */
 } conn_data;
 
 typedef struct {
-	short      closed;
-	int        lock;               /* lock count for open cursors */
-	conn_data  *conn;              /* the statement's connection */
+	short         closed;
+	int           lock;               /* lock count for open cursors */
+	unsigned char hidden;             /* these statement was created indirectly */
+	conn_data     *conn;              /* the statement's connection */
+	SQLHSTMT      hstmt;              /* statement handle */
 } stmt_data;
 
 typedef struct {
-	short      closed;
-	stmt_data  *stmt;              /* the cursor's statement */
-	conn_data  *conn;              /* the connection (to be replaced with the statement soon) */
-	int        numcols;            /* number of columns */
-	int        coltypes, colnames; /* reference to column information tables */
-	SQLHSTMT   hstmt;              /* statement handle */
+	short         closed;
+	stmt_data     *stmt;              /* the cursor's statement */
+	conn_data     *conn;              /* the connection (to be replaced with the statement soon) */
+	int           numcols;            /* number of columns */
+	int           coltypes, colnames; /* reference to column information tables */
+	SQLHSTMT      hstmt;              /* statement handle */
 } cur_data;
 
 
@@ -477,8 +479,6 @@ static int create_cursor (lua_State *L, int o, conn_data *conn,
 	cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
-	conn->lock++;
-
 	/* fill in structure */
 	cur->closed = 0;
 	cur->conn = conn;
@@ -498,11 +498,39 @@ static int create_cursor (lua_State *L, int o, conn_data *conn,
 	return 1;
 }
 
+static int stmt_close(lua_State *L)
+{
+	SQLRETURN ret;
+
+	stmt_data *stmt = getstatement(L);
+	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
+	luaL_argcheck (L, stmt->lock > 0, 1, LUASQL_PREFIX"there are still open cursors");
+
+	if (stmt->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+
+	unlock_obj(L, stmt->conn);
+
+	ret = SQLCloseCursor(stmt->hstmt);
+	if (error(ret)) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
+	if (error(ret)) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+
+	lua_pushboolean(L, 1);
+	return 1;
+}
 
 /*
 ** Closes a connection.
 */
-static int conn_close (lua_State *L) {
+static int conn_close (lua_State *L)
+{
 	SQLRETURN ret;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
@@ -532,6 +560,41 @@ static int conn_close (lua_State *L) {
 	return pass(L);
 }
 
+static int conn_prepare(lua_State *L)
+{
+	conn_data *conn = (conn_data *) getconnection (L);
+	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
+	SQLHDBC hdbc = conn->hdbc;
+	SQLHSTMT hstmt;
+	SQLRETURN ret;
+
+	stmt_data *stmt;
+
+	ret = SQLAllocHandle(hSTMT, hdbc, &hstmt);
+	if (error(ret)) {
+		return fail(L, hDBC, hdbc);
+	}
+
+	ret = SQLPrepare(hstmt, statement, SQL_NTS);
+	if (error(ret)) {
+		ret = fail(L, hSTMT, hstmt);
+		SQLFreeHandle(hSTMT, hstmt);
+		return ret;
+	}
+
+	stmt = (stmt_data *) lua_newuserdata(L, sizeof(stmt_data));
+	luasql_setmeta (L, LUASQL_STATEMENT_ODBC);
+	
+	stmt->closed = 0;
+	stmt->hidden = 0;
+	stmt->conn = conn;
+	stmt->lock = 0;
+	stmt->hstmt = hstmt;
+
+	lock_obj(L, 1, conn);
+
+	return 1;
+}
 
 /*
 ** Executes a SQL statement.
@@ -539,7 +602,8 @@ static int conn_close (lua_State *L) {
 **   cursor object: if there are results or
 **   row count: number of rows affected by statement if no results
 */
-static int conn_execute (lua_State *L) {
+static int conn_execute (lua_State *L)
+{
 	conn_data *conn = (conn_data *) getconnection (L);
 	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
 	SQLHDBC hdbc = conn->hdbc;
@@ -847,6 +911,7 @@ static void create_metatables (lua_State *L) {
 	struct luaL_Reg connection_methods[] = {
 		{"__gc", conn_close}, /* Should this method be changed? */
 		{"close", conn_close},
+		{"prepare", conn_prepare},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
@@ -854,6 +919,8 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_Reg statement_methods[] = {
+		{"__gc", stmt_close}, /* Should this method be changed? */
+		{"close", stmt_close},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
