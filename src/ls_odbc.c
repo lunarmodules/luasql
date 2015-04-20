@@ -601,34 +601,42 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) 
 	return 1;
 }
 
+/*
+** Uses a DSN string to connect to a ODBC source dynamically
+** Lua Input: {
+**    dsn = <DSN string>,
+** }
+** Lua Returns:
+**   connection object if successfull
+**   nil and error message otherwise.
+*/
 static int env_table_connect_DSN (lua_State *L) {
 	env_data *env = (env_data *) getenvironment (L);
-	SQLCHAR *sourcename = (SQLCHAR*)luaL_checkstring (L, -1);
+	SQLCHAR *sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "dsn", NULL);
 	SQLHDBC hdbc;
 	SQLCHAR sqlOutBuf[4097];
 	SQLSMALLINT sqlOutLen;
 	SQLRETURN ret;
 
-	lua_pop(L, 1);
-
-	ret = SQLSetEnvAttr (env->henv, SQL_ATTR_ODBC_VERSION, 
-		(void*)SQL_OV_ODBC3, 0);
-	if (error(ret))
+	ret = SQLSetEnvAttr (env->henv, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+	if (error(ret)) {
 		return luasql_faildirect (L, "error setting SQL version.");
+	}
+
 	/* tries to allocate connection handle */
 	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
-	if (error(ret))
+	if (error(ret)) {
 		return luasql_faildirect (L, "connection allocation error.");
+	}
+
 	/* tries to connect handle */
-	ret = SQLDriverConnect (hdbc, NULL,
-		sourcename, SQL_NTS, 
-		sqlOutBuf, 4096, &sqlOutLen,
-		SQL_DRIVER_NOPROMPT);
+	ret = SQLDriverConnect (hdbc, NULL, sourcename, SQL_NTS, sqlOutBuf, 4096, &sqlOutLen, SQL_DRIVER_NOPROMPT);
 	if (error(ret)) {
 		ret = fail(L, hDBC, hdbc);
 		SQLFreeHandle(hDBC, hdbc);
 		return ret;
 	}
+
 	/* success, return connection object */
 	ret = create_connection (L, 1, env, hdbc);
 	if(ret == 1) {
@@ -636,127 +644,103 @@ static int env_table_connect_DSN (lua_State *L) {
 		lua_pushlstring(L, (char*)sqlOutBuf, sqlOutLen);
 		return 2;
 	}
+
 	return ret;
 }
 
-static int env_table_connect_standard (lua_State *L) {
-	env_data *env = (env_data *) getenvironment (L);
-	SQLCHAR *sourcename = (SQLCHAR*)luaL_checkstring (L, -1);
-	SQLCHAR *username = NULL;
-	SQLCHAR *password = NULL;
-	SQLHDBC hdbc;
-	SQLRETURN ret;
-
-	lua_pop(L, 1);
-
-	/* get user */
-	lua_getfield(L, 2, "user");
-	if(lua_isstring(L, -1))
-		username = (SQLCHAR*)luaL_checkstring(L, -1);
-	lua_pop(L, 1);
-
-	/* get password */
-	lua_getfield(L, 2, "password");
-	if(lua_isstring(L, -1))
-		password = (SQLCHAR*)luaL_checkstring(L, -1);
-	lua_pop(L, 1);
-
-	/* tries to allocate connection handle */
-	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
-	if (error(ret))
-		return luasql_faildirect (L, "connection allocation error.");
-
-	/* tries to connect handle */
-	ret = SQLConnect (hdbc, sourcename, SQL_NTS, 
-		username, SQL_NTS, password, SQL_NTS);
-	if (error(ret)) {
-		ret = fail(L, hDBC, hdbc);
-		SQLFreeHandle(hDBC, hdbc);
-		return ret;
-	}
-	/* success, return connection object */
-	return create_connection (L, 1, env, hdbc);
-}
-
 /*
-** Creates and returns a connection object
-** Lua Input: tab
-**   tab: table of connection parameters
-**        "dsn" : A custom DSN
-**      or
-**        "source" : The ODBC source DSN
-**        "user" : The connecting user
-**        "password" : The connecting user's password
-**      general params
-**        "" : ?
-** Lua Returns:
-**   connection object if successfull
-**   nil and error message otherwise.
-*/
-static int env_table_connect (lua_State *L) {
-	lua_getfield(L, 2, "dsn");
-	if(lua_isstring(L, -1))
-		return env_table_connect_DSN(L);		/* use the custom DSN string */
-	lua_pop(L, 1);
-
-	lua_getfield(L, 2, "source");
-	if(lua_isstring(L, -1))
-		return env_table_connect_standard(L);	/* standard source [user, password] */
-	lua_pop(L, 1);
-
-	/* failed to get any meaningful connection info*/
-	return luasql_faildirect (L, "no meaningful connection info given");
-}
-
-/*
-** Creates and returns a connection object
-** Lua Input: source [, user [, pass]]
+** Reforms old connection style to new one
+** Lua Input: source, [user, [pass]]
 **   source: data source
 **   user, pass: data source authentication information
 ** Lua Returns:
-**   connection object if successfull
-**   nil and error message otherwise.
+**   new connection details table
 */
-static int env_std_connect (lua_State *L) {
-	env_data *env = (env_data *) getenvironment (L);
-	SQLCHAR *sourcename = (SQLCHAR*)luaL_checkstring (L, 2);
-	SQLCHAR *username = (SQLCHAR*)luaL_optstring (L, 3, NULL);
-	SQLCHAR *password = (SQLCHAR*)luaL_optstring (L, 4, NULL);
-	SQLHDBC hdbc;
-	SQLRETURN ret;
+static void env_connect_fix_old (lua_State *L) {
+	if(lua_isstring(L, 2)) {
+		/* convert to new table format */
+		int n = lua_gettop(L);
 
-	/* tries to allocate connection handle */
-	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
-	if (error(ret))
-		return luasql_faildirect (L, "connection allocation error.");
+		const char *sourcename = luaL_checkstring (L, 2);
+		const char *username = luaL_optstring (L, 3, NULL);
+		const char *password = luaL_optstring (L, 4, NULL);
 
-	/* tries to connect handle */
-	ret = SQLConnect (hdbc, sourcename, SQL_NTS, 
-		username, SQL_NTS, password, SQL_NTS);
-	if (error(ret)) {
-		ret = fail(L, hDBC, hdbc);
-		SQLFreeHandle(hDBC, hdbc);
-		return ret;
+		lua_newtable(L);
+		lua_pushstring(L, "source");
+		lua_pushstring(L, sourcename);
+		lua_settable(L, -3);
+		if(username != NULL) {
+			lua_pushstring(L, "user");
+			lua_pushstring(L, username);
+			lua_settable(L, -3);
+		}
+		if(password != NULL) {
+			lua_pushstring(L, "password");
+			lua_pushstring(L, password);
+			lua_settable(L, -3);
+		}
+
+		while(n > 1) {
+			lua_remove(L, n--);
+		}
 	}
-
-	/* success, return connection object */
-	return create_connection (L, 1, env, hdbc);
 }
 
 /*
 ** Creates and returns a connection object
-** Lua Input: see env_std_connect and env_table_connect
+** Lua Input: {
+**    source = <database source/path>,
+**    user = <user name>,
+**    password = <user password>,
+** or
+**    dsn = <DSN string>,
+** }
 ** Lua Returns:
 **   connection object if successfull
 **   nil and error message otherwise.
 */
 static int env_connect (lua_State *L) {
-	/* have we been given a connection paramater list */
-	if(lua_istable(L, 2))
-		return env_table_connect(L);
+	env_data *env = (env_data *) getenvironment (L);
+	SQLCHAR *sourcename = NULL;
+	SQLCHAR *username = NULL;
+	SQLCHAR *password = NULL;
+	SQLHDBC hdbc = NULL;
+	SQLRETURN ret = 0;
 
-	/* just use the standard conection arguments */
-	return env_std_connect(L);
+	if(lua_gettop(L) < 2) {
+		return luasql_faildirect(L, "No connection details provided");
+	}
+
+	if(!lua_istable(L, 2)) {
+		env_connect_fix_old(L);
+	}
+
+	/* check for the custom DSN connection string */
+	if(luasql_table_optstring(L, 2, "dsn", NULL) != NULL) {
+		return env_table_connect_DSN(L);
+	}
+
+	/* get the standard connection details */
+	sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "source", NULL);
+	username = (SQLCHAR*)luasql_table_optstring(L, 2, "user", NULL);
+	password = (SQLCHAR*)luasql_table_optstring(L, 2, "password", NULL);
+
+	/* tries to allocate connection handle */
+	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
+	if (error(ret)) {
+		return luasql_faildirect (L, "connection allocation error.");
+	}
+
+	/* tries to connect handle */
+	ret = SQLConnect (hdbc, sourcename, SQL_NTS, username, SQL_NTS, password, SQL_NTS);
+	if (error(ret)) {
+		ret = fail(L, hDBC, hdbc);
+		SQLFreeHandle(hDBC, hdbc);
+		return ret;
+	}
+
+	/* success, return connection object */
+	return create_connection (L, 1, env, hdbc);
 }
 
 /*
