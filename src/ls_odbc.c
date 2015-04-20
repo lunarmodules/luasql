@@ -502,9 +502,9 @@ static int stmt_close(lua_State *L)
 {
 	SQLRETURN ret;
 
-	stmt_data *stmt = getstatement(L);
+	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
 	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
-	luaL_argcheck (L, stmt->lock > 0, 1, LUASQL_PREFIX"there are still open cursors");
+	luaL_argcheck (L, stmt->lock == 0, 1, LUASQL_PREFIX"there are still open cursors");
 
 	if (stmt->closed) {
 		lua_pushboolean (L, 0);
@@ -512,11 +512,8 @@ static int stmt_close(lua_State *L)
 	}
 
 	unlock_obj(L, stmt->conn);
+	stmt->closed = 1;
 
-	ret = SQLCloseCursor(stmt->hstmt);
-	if (error(ret)) {
-		return fail(L, hSTMT, stmt->hstmt);
-	}
 	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
 	if (error(ret)) {
 		return fail(L, hSTMT, stmt->hstmt);
@@ -586,9 +583,9 @@ static int conn_prepare(lua_State *L)
 	luasql_setmeta (L, LUASQL_STATEMENT_ODBC);
 	
 	stmt->closed = 0;
+	stmt->lock = 0;
 	stmt->hidden = 0;
 	stmt->conn = conn;
-	stmt->lock = 0;
 	stmt->hstmt = hstmt;
 
 	lock_obj(L, 1, conn);
@@ -723,7 +720,6 @@ static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
 	conn->lock = 0;
 	conn->env = env;
 	conn->hdbc = hdbc;
-	lua_pushvalue (L, o);
 	
 	lock_obj(L, 1, env);
 
