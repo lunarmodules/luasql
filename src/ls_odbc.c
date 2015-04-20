@@ -30,6 +30,7 @@
 
 #define LUASQL_ENVIRONMENT_ODBC "ODBC environment"
 #define LUASQL_CONNECTION_ODBC "ODBC connection"
+#define LUASQL_STATEMENT_ODBC "ODBC statement"
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
 
@@ -47,6 +48,9 @@ typedef struct {
 	SQLHDBC    hdbc;               /* database connection handle */
 } conn_data;
 
+typedef struct {
+	short      closed;
+} stmt_data;
 
 typedef struct {
 	short      closed;
@@ -786,6 +790,9 @@ static void create_metatables (lua_State *L) {
 		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
 	};
+	struct luaL_Reg statement_methods[] = {
+		{NULL, NULL},
+	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_close}, /* Should this method be changed? */
 		{"close", cur_close},
@@ -796,8 +803,9 @@ static void create_metatables (lua_State *L) {
 	};
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_ODBC, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_ODBC, connection_methods);
+	luasql_createmeta (L, LUASQL_STATEMENT_ODBC, statement_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_ODBC, cursor_methods);
-	lua_pop (L, 3);
+	lua_pop (L, 4);
 }
 
 
