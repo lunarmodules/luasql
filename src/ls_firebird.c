@@ -202,28 +202,6 @@ static void free_xsqlda(XSQLDA *sqlda)
 }
 
 /*
-** Registers a given C object in the registry to avoid GC
-*/
-static void luasql_registerobj(lua_State *L, int index, void *obj)
-{
-	lua_pushvalue(L, index);
-	lua_pushlightuserdata(L, obj);
-	lua_pushvalue(L, -2);
-	lua_settable(L, LUA_REGISTRYINDEX);
-	lua_pop(L, 1);
-}
-
-/*
-** Unregisters a given C object from the registry
-*/
-static void luasql_unregisterobj(lua_State *L, void *obj)
-{
-	lua_pushlightuserdata(L, obj);
-	lua_pushnil(L);
-	lua_settable(L, LUA_REGISTRYINDEX);
-}
-
-/*
 ** Free's up the memory alloc'd to the statement data
 */
 static void free_stmt(stmt_data* stmt)

@@ -35,6 +35,9 @@ LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* 
 
 LUASQL_API void luasql_find_driver_table (lua_State *L);
 
+void luasql_registerobj(lua_State *L, int index, void *obj);
+void luasql_unregisterobj(lua_State *L, void *obj);
+
 #if !defined LUA_VERSION_NUM || LUA_VERSION_NUM==501
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
 #endif

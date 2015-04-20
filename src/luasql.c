@@ -186,3 +186,25 @@ LUASQL_API void luasql_find_driver_table (lua_State *L) {
 
 	lua_newtable (L);
 }
+
+/*
+** Registers a given C object in the registry to avoid GC
+*/
+void luasql_registerobj(lua_State *L, int index, void *obj)
+{
+	lua_pushvalue(L, index);
+	lua_pushlightuserdata(L, obj);
+	lua_pushvalue(L, -2);
+	lua_settable(L, LUA_REGISTRYINDEX);
+	lua_pop(L, 1);
+}
+
+/*
+** Unregisters a given C object from the registry
+*/
+void luasql_unregisterobj(lua_State *L, void *obj)
+{
+	lua_pushlightuserdata(L, obj);
+	lua_pushnil(L);
+	lua_settable(L, LUA_REGISTRYINDEX);
+}
