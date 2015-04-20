@@ -35,26 +35,33 @@
 
 
 typedef struct {
-	short      closed;
-	int        conn_counter;
-	SQLHENV    henv;               /* environment handle */
-} env_data;
-
+	short closed;
+	int lock;
+} obj_data;
 
 typedef struct {
 	short      closed;
-	int        cur_counter;
-	int        env;                /* reference to environment */
+	int        lock;               /* lock count for open connections */
+	SQLHENV    henv;               /* environment handle */
+} env_data;
+
+typedef struct {
+	short      closed;
+	int        lock;               /* lock count for open statements */
+	env_data   *env;               /* the connection's environment */
 	SQLHDBC    hdbc;               /* database connection handle */
 } conn_data;
 
 typedef struct {
 	short      closed;
+	int        lock;               /* lock count for open cursors */
+	conn_data  *conn;              /* the statement's connection */
 } stmt_data;
 
 typedef struct {
 	short      closed;
-	int        conn;               /* reference to connection */
+	stmt_data  *stmt;              /* the cursor's statement */
+	conn_data  *conn;              /* the connection (to be replaced with the statement soon) */
 	int        numcols;            /* number of columns */
 	int        coltypes, colnames; /* reference to column information tables */
 	SQLHSTMT   hstmt;              /* statement handle */
@@ -70,6 +77,25 @@ typedef struct {
 
 LUASQL_API int luaopen_luasql_odbc (lua_State *L);
 
+static int lock_obj(lua_State *L, int indx, void *ptr)
+{
+	obj_data *obj = (obj_data *)ptr;
+
+	luasql_registerobj(L, indx, obj);
+	return ++obj->lock;
+}
+
+static int unlock_obj(lua_State *L, void *ptr)
+{
+	obj_data *obj = (obj_data *)ptr;
+
+	if(--obj->lock == 0) {
+		luasql_unregisterobj(L, obj);
+	}
+
+	return obj->lock;
+}
+
 /*
 ** Check for valid environment.
 */
@@ -79,7 +105,6 @@ static env_data *getenvironment (lua_State *L) {
 	luaL_argcheck (L, !env->closed, 1, LUASQL_PREFIX"environment is closed");
 	return env;
 }
-
 
 /*
 ** Check for valid connection.
@@ -91,6 +116,15 @@ static conn_data *getconnection (lua_State *L) {
 	return conn;
 }
 
+/*
+** Check for valid connection.
+*/
+static stmt_data *getstatement (lua_State *L) {
+	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
+	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
+	luaL_argcheck (L, !stmt->closed, 1, LUASQL_PREFIX"statement is closed");
+	return stmt;
+}
 
 /*
 ** Check for valid cursor.
@@ -354,7 +388,6 @@ static int cur_fetch (lua_State *L) {
 ** Closes a cursor.
 */
 static int cur_close (lua_State *L) {
-	conn_data *conn;
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
 	SQLRETURN ret;
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
@@ -373,11 +406,9 @@ static int cur_close (lua_State *L) {
 	if (error(ret)) {
 		return fail(L, hSTMT, cur->hstmt);
 	}
+
 	/* Decrement cursor counter on connection object */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
-	conn = lua_touserdata (L, -1);
-	conn->cur_counter--;
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	unlock_obj(L, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 	return pass(L);
@@ -446,17 +477,17 @@ static int create_cursor (lua_State *L, int o, conn_data *conn,
 	cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
-	conn->cur_counter++;
+	conn->lock++;
 
 	/* fill in structure */
 	cur->closed = 0;
-	cur->conn = LUA_NOREF;
+	cur->conn = conn;
 	cur->numcols = numcols;
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
 	cur->hstmt = hstmt;
-	lua_pushvalue (L, o);
-	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+
+	lock_obj(L, o, conn);
 
 	/* make and store column information table */
 	if(create_colinfo (L, cur) < 0) {
@@ -473,24 +504,21 @@ static int create_cursor (lua_State *L, int o, conn_data *conn,
 */
 static int conn_close (lua_State *L) {
 	SQLRETURN ret;
-	env_data *env;
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-	if (conn->cur_counter > 0) {
+	if (conn->lock > 0) {
 		return luaL_error (L, LUASQL_PREFIX"there are open cursors");
 	}
 
 	/* Decrement connection counter on environment object */
-	lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
-	env = (env_data *)lua_touserdata (L, -1);
-	env->conn_counter--;
+	unlock_obj(L, conn->env);
+
 	/* Nullify structure fields. */
 	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
 	ret = SQLDisconnect(conn->hdbc);
 	if (error(ret)) {
 		return fail(L, hDBC, conn->hdbc);
@@ -614,8 +642,10 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) {
+static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
+	env_data *env = (env_data *) getenvironment (L);
 	conn_data *conn = (conn_data *) lua_newuserdata(L, sizeof(conn_data));
+
 	/* set auto commit mode */
 	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
 	if (error(ret)) {
@@ -626,12 +656,13 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) 
 
 	/* fill in structure */
 	conn->closed = 0;
-	conn->cur_counter = 0;
-	conn->env = LUA_NOREF;
+	conn->lock = 0;
+	conn->env = env;
 	conn->hdbc = hdbc;
 	lua_pushvalue (L, o);
-	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
-	env->conn_counter++;
+	
+	lock_obj(L, 1, env);
+
 	return 1;
 }
 
@@ -647,6 +678,7 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) 
 static int env_table_connect_DSN (lua_State *L) {
 	env_data *env = (env_data *) getenvironment (L);
 	SQLCHAR *sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "dsn", NULL);
+
 	SQLHDBC hdbc;
 	SQLCHAR sqlOutBuf[4097];
 	SQLSMALLINT sqlOutLen;
@@ -672,7 +704,7 @@ static int env_table_connect_DSN (lua_State *L) {
 	}
 
 	/* success, return connection object */
-	ret = create_connection (L, 1, env, hdbc);
+	ret = create_connection (L, 1, hdbc);
 	if(ret == 1) {
 		/* Add the sqlOutBuf string to the results, for diagnostics */
 		lua_pushlstring(L, (char*)sqlOutBuf, sqlOutLen);
@@ -774,7 +806,7 @@ static int env_connect (lua_State *L) {
 	}
 
 	/* success, return connection object */
-	return create_connection (L, 1, env, hdbc);
+	return create_connection (L, 1, hdbc);
 }
 
 /*
@@ -788,8 +820,9 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-	if (env->conn_counter > 0)
+	if (env->lock > 0) {
 		return luaL_error (L, LUASQL_PREFIX"there are open connections");
+	}
 
 	env->closed = 1;
 	ret = SQLFreeHandle (hENV, env->henv);
@@ -861,7 +894,7 @@ static int create_environment (lua_State *L) {
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
 	/* fill in structure */
 	env->closed = 0;
-	env->conn_counter = 0;
+	env->lock = 0;
 	env->henv = henv;
 	return 1;
 }
