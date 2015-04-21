@@ -570,11 +570,46 @@ static int conn_close (lua_State *L)
 	return pass(L);
 }
 
+/*
+** Executes the given statement
+** Takes:
+**  * istmt : location of the statement object on the stack
+*/
+static int raw_execute(lua_State *L, int istmt)
+{
+	SQLSMALLINT numcols;
+
+	stmt_data *stmt = getstatement(L, istmt);
+
+	/* execute the statement */
+	if (error(SQLExecute(stmt->hstmt))) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+
+	/* determine the number of results */
+	if (error(SQLNumResultCols(stmt->hstmt, &numcols))) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+
+	if (numcols > 0) {
+		/* if there is a results table (e.g., SELECT) */
+		int res = create_cursor(L, -1, stmt, numcols);
+		return res;
+	} else {
+		/* if action has no results (e.g., UPDATE) */
+		SQLLEN numrows;
+		if(error(SQLRowCount(stmt->hstmt, &numrows))) {
+			return fail(L, hSTMT, stmt->hstmt);
+		}
+
+		lua_pushnumber(L, numrows);
+		return 1;
+	}
+}
+
 static int stmt_execute(lua_State *L)
 {
-	stmt_data *stmt = getstatement(L, 1);
-
-	return 0;
+	return raw_execute(L, 1);
 }
 
 static int conn_prepare(lua_State *L)
@@ -611,38 +646,6 @@ static int conn_prepare(lua_State *L)
 	lock_obj(L, 1, conn);
 
 	return 1;
-}
-
-static int raw_execute(lua_State *L, int istmt)
-{
-	SQLSMALLINT numcols;
-
-	stmt_data *stmt = getstatement(L, istmt);
-
-	/* execute the statement */
-	if (error(SQLExecute(stmt->hstmt))) {
-		return fail(L, hSTMT, stmt->hstmt);
-	}
-
-	/* determine the number of results */
-	if (error(SQLNumResultCols(stmt->hstmt, &numcols))) {
-		return fail(L, hSTMT, stmt->hstmt);
-	}
-
-	if (numcols > 0) {
-		/* if there is a results table (e.g., SELECT) */
-		int res = create_cursor(L, -1, stmt, numcols);
-		return res;
-	} else {
-		/* if action has no results (e.g., UPDATE) */
-		SQLLEN numrows;
-		if(error(SQLRowCount(stmt->hstmt, &numrows))) {
-			return fail(L, hSTMT, stmt->hstmt);
-		}
-
-		lua_pushnumber(L, numrows);
-		return 1;
-	}
 }
 
 /*
