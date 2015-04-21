@@ -63,10 +63,8 @@ typedef struct {
 typedef struct {
 	short         closed;
 	stmt_data     *stmt;              /* the cursor's statement */
-	conn_data     *conn;              /* the connection (to be replaced with the statement soon) */
 	int           numcols;            /* number of columns */
 	int           coltypes, colnames; /* reference to column information tables */
-	SQLHSTMT      hstmt;              /* statement handle */
 } cur_data;
 
 
@@ -101,40 +99,40 @@ static int unlock_obj(lua_State *L, void *ptr)
 /*
 ** Check for valid environment.
 */
-static env_data *getenvironment (lua_State *L) {
-	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_ODBC);
-	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
-	luaL_argcheck (L, !env->closed, 1, LUASQL_PREFIX"environment is closed");
+static env_data *getenvironment (lua_State *L, int i) {
+	env_data *env = (env_data *)luaL_checkudata (L, i, LUASQL_ENVIRONMENT_ODBC);
+	luaL_argcheck (L, env != NULL, i, LUASQL_PREFIX"environment expected");
+	luaL_argcheck (L, !env->closed, i, LUASQL_PREFIX"environment is closed");
 	return env;
 }
 
 /*
 ** Check for valid connection.
 */
-static conn_data *getconnection (lua_State *L) {
-	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_ODBC);
-	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	luaL_argcheck (L, !conn->closed, 1, LUASQL_PREFIX"connection is closed");
+static conn_data *getconnection (lua_State *L, int i) {
+	conn_data *conn = (conn_data *)luaL_checkudata (L, i, LUASQL_CONNECTION_ODBC);
+	luaL_argcheck (L, conn != NULL, i, LUASQL_PREFIX"connection expected");
+	luaL_argcheck (L, !conn->closed, i, LUASQL_PREFIX"connection is closed");
 	return conn;
 }
 
 /*
 ** Check for valid connection.
 */
-static stmt_data *getstatement (lua_State *L) {
-	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
-	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
-	luaL_argcheck (L, !stmt->closed, 1, LUASQL_PREFIX"statement is closed");
+static stmt_data *getstatement (lua_State *L, int i) {
+	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, i, LUASQL_STATEMENT_ODBC);
+	luaL_argcheck (L, stmt != NULL, i, LUASQL_PREFIX"statement expected");
+	luaL_argcheck (L, !stmt->closed, i, LUASQL_PREFIX"statement is closed");
 	return stmt;
 }
 
 /*
 ** Check for valid cursor.
 */
-static cur_data *getcursor (lua_State *L) {
-	cur_data *cursor = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
-	luaL_argcheck (L, cursor != NULL, 1, LUASQL_PREFIX"cursor expected");
-	luaL_argcheck (L, !cursor->closed, 1, LUASQL_PREFIX"cursor is closed");
+static cur_data *getcursor (lua_State *L, int i) {
+	cur_data *cursor = (cur_data *)luaL_checkudata (L, i, LUASQL_CURSOR_ODBC);
+	luaL_argcheck (L, cursor != NULL, i, LUASQL_PREFIX"cursor expected");
+	luaL_argcheck (L, !cursor->closed, i, LUASQL_PREFIX"cursor is closed");
 	return cursor;
 }
 
@@ -146,7 +144,6 @@ static int pass(lua_State *L) {
 	lua_pushboolean (L, 1);
 	return 1;
 }
-
 
 /*
 ** Fails with error message from ODBC
@@ -176,6 +173,25 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
 	} 
 	luaL_pushresult(&b);
 	return 2;
+}
+
+/*
+** Shuts a statement
+** Returns non-zero on error
+*/
+static int stmt_shut(lua_State *L, stmt_data *stmt)
+{
+	SQLRETURN ret;
+
+	unlock_obj(L, stmt->conn);
+	stmt->closed = 1;
+
+	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
+	if (error(ret)) {
+		return 1;
+	}
+
+	return 0;
 }
 
 /*
@@ -335,10 +351,10 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 ** Get another row of the given cursor.
 */
 static int cur_fetch (lua_State *L) {
-	cur_data *cur = (cur_data *) getcursor (L);
-	SQLHSTMT hstmt = cur->hstmt;
+	cur_data *cur = getcursor (L, 1);
+	SQLHSTMT hstmt = cur->stmt->hstmt;
 	int ret; 
-	SQLRETURN rc = SQLFetch(cur->hstmt); 
+	SQLRETURN rc = SQLFetch(hstmt); 
 	if (rc == SQL_NO_DATA) {
 		lua_pushnil(L);
 		return 1;
@@ -400,19 +416,22 @@ static int cur_close (lua_State *L) {
 
 	/* Nullify structure fields. */
 	cur->closed = 1;
-	ret = SQLCloseCursor(cur->hstmt);
+	ret = SQLCloseCursor(cur->stmt->hstmt);
 	if (error(ret)) {
-		return fail(L, hSTMT, cur->hstmt);
-	}
-	ret = SQLFreeHandle(hSTMT, cur->hstmt);
-	if (error(ret)) {
-		return fail(L, hSTMT, cur->hstmt);
+		return fail(L, hSTMT, cur->stmt->hstmt);
 	}
 
-	/* Decrement cursor counter on connection object */
-	unlock_obj(L, cur->conn);
+	/* release col tables */
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+
+	/* release statement and, if hidden, shut it */
+	if(unlock_obj(L, cur->stmt) == 0) {
+		if(cur->stmt->hidden) {
+			stmt_shut(L, cur->stmt);
+		}
+	}
+
 	return pass(L);
 }
 
@@ -421,7 +440,7 @@ static int cur_close (lua_State *L) {
 ** Returns the table with column names.
 */
 static int cur_colnames (lua_State *L) {
-	cur_data *cur = (cur_data *) getcursor (L);
+	cur_data *cur = getcursor (L, 1);
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
 	return 1;
 }
@@ -431,7 +450,7 @@ static int cur_colnames (lua_State *L) {
 ** Returns the table with column types.
 */
 static int cur_coltypes (lua_State *L) {
-	cur_data *cur = (cur_data *) getcursor (L);
+	cur_data *cur = getcursor (L, 1);
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
 	return 1;
 }
@@ -451,7 +470,7 @@ static int create_colinfo (lua_State *L, cur_data *cur) {
 	lua_newtable(L);
 	names = lua_gettop (L);
 	for (i = 1; i <= cur->numcols; i++) {
-		ret = SQLDescribeCol(cur->hstmt, i, buffer, sizeof(buffer), 
+		ret = SQLDescribeCol(cur->stmt->hstmt, i, buffer, sizeof(buffer), 
 			&namelen, &datatype, NULL, NULL, NULL);
 		if (ret == SQL_ERROR) {
 			lua_pop(L, 2);
@@ -473,26 +492,26 @@ static int create_colinfo (lua_State *L, cur_data *cur) {
 /*
 ** Creates a cursor table and leave it on the top of the stack.
 */
-static int create_cursor (lua_State *L, int o, conn_data *conn, 
-	const SQLHSTMT hstmt, const SQLSMALLINT numcols)
+static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt, const SQLSMALLINT numcols)
 {
-	cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
+	cur_data *cur;
+
+	lock_obj(L, stmt_i, stmt);
+
+	cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
 	/* fill in structure */
 	cur->closed = 0;
-	cur->conn = conn;
+	cur->stmt = stmt;
 	cur->numcols = numcols;
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
-	cur->hstmt = hstmt;
-
-	lock_obj(L, o, conn);
 
 	/* make and store column information table */
 	if(create_colinfo (L, cur) < 0) {
 		lua_pop(L, 1);
-		return fail(L, hSTMT, cur->hstmt);
+		return fail(L, hSTMT, cur->stmt->hstmt);
 	}
 
 	return 1;
@@ -500,8 +519,6 @@ static int create_cursor (lua_State *L, int o, conn_data *conn,
 
 static int stmt_close(lua_State *L)
 {
-	SQLRETURN ret;
-
 	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
 	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
 	luaL_argcheck (L, stmt->lock == 0, 1, LUASQL_PREFIX"there are still open cursors");
@@ -511,11 +528,7 @@ static int stmt_close(lua_State *L)
 		return 1;
 	}
 
-	unlock_obj(L, stmt->conn);
-	stmt->closed = 1;
-
-	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
-	if (error(ret)) {
+	if(stmt_shut(L, stmt)) {
 		return fail(L, hSTMT, stmt->hstmt);
 	}
 
@@ -536,7 +549,7 @@ static int conn_close (lua_State *L)
 		return 1;
 	}
 	if (conn->lock > 0) {
-		return luaL_error (L, LUASQL_PREFIX"there are open cursors");
+		return luaL_error (L, LUASQL_PREFIX"there are open statements/cursors");
 	}
 
 	/* Decrement connection counter on environment object */
@@ -557,9 +570,16 @@ static int conn_close (lua_State *L)
 	return pass(L);
 }
 
+static int stmt_execute(lua_State *L)
+{
+	stmt_data *stmt = getstatement(L, 1);
+
+	return 0;
+}
+
 static int conn_prepare(lua_State *L)
 {
-	conn_data *conn = (conn_data *) getconnection (L);
+	conn_data *conn = getconnection(L, 1);
 	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
 	SQLHDBC hdbc = conn->hdbc;
 	SQLHSTMT hstmt;
@@ -593,6 +613,38 @@ static int conn_prepare(lua_State *L)
 	return 1;
 }
 
+static int raw_execute(lua_State *L, int istmt)
+{
+	SQLSMALLINT numcols;
+
+	stmt_data *stmt = getstatement(L, istmt);
+
+	/* execute the statement */
+	if (error(SQLExecute(stmt->hstmt))) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+
+	/* determine the number of results */
+	if (error(SQLNumResultCols(stmt->hstmt, &numcols))) {
+		return fail(L, hSTMT, stmt->hstmt);
+	}
+
+	if (numcols > 0) {
+		/* if there is a results table (e.g., SELECT) */
+		int res = create_cursor(L, -1, stmt, numcols);
+		return res;
+	} else {
+		/* if action has no results (e.g., UPDATE) */
+		SQLLEN numrows;
+		if(error(SQLRowCount(stmt->hstmt, &numrows))) {
+			return fail(L, hSTMT, stmt->hstmt);
+		}
+
+		lua_pushnumber(L, numrows);
+		return 1;
+	}
+}
+
 /*
 ** Executes a SQL statement.
 ** Returns
@@ -601,63 +653,39 @@ static int conn_prepare(lua_State *L)
 */
 static int conn_execute (lua_State *L)
 {
-	conn_data *conn = (conn_data *) getconnection (L);
-	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
-	SQLHDBC hdbc = conn->hdbc;
-	SQLHSTMT hstmt;
-	SQLSMALLINT numcols;
+	stmt_data *stmt;
 	SQLRETURN ret;
-	ret = SQLAllocHandle(hSTMT, hdbc, &hstmt);
-	if (error(ret)) {
-		return fail(L, hDBC, hdbc);
-	}
+	int res, istmt;
 
-	ret = SQLPrepare(hstmt, statement, SQL_NTS);
-	if (error(ret)) {
-		ret = fail(L, hSTMT, hstmt);
-		SQLFreeHandle(hSTMT, hstmt);
+	/* prepare statement */
+	if ((ret = conn_prepare(L)) != 1) {
 		return ret;
 	}
+	istmt = lua_gettop(L);
+	stmt = getstatement(L, istmt);
 
-	/* execute the statement */
-	ret = SQLExecute (hstmt);
-	if (error(ret)) {
-		ret = fail(L, hSTMT, hstmt);
-		SQLFreeHandle(hSTMT, hstmt);
-		return ret;
+	/* because this is a direct execute, statement is hidden from user */
+	stmt->hidden = 1;
+
+	/* do it */
+	res = raw_execute(L, istmt);
+
+	/* anything but cursor, close the statement directly */
+	if(!lua_isuserdata(L, -res)) {
+		stmt_shut(L, getstatement(L, istmt));
 	}
 
-	/* determine the number of results */
-	ret = SQLNumResultCols (hstmt, &numcols);
-	if (error(ret)) {
-		ret = fail(L, hSTMT, hstmt);
-		SQLFreeHandle(hSTMT, hstmt);
-		return ret;
-	}
+	/* tidy up */
+	lua_remove(L, istmt);
 
-	if (numcols > 0) {
-		/* if there is a results table (e.g., SELECT) */
-		return create_cursor (L, 1, conn, hstmt, numcols);
-	} else {
-		/* if action has no results (e.g., UPDATE) */
-		SQLLEN numrows;
-		ret = SQLRowCount(hstmt, &numrows);
-		if (error(ret)) {
-			ret = fail(L, hSTMT, hstmt);
-			SQLFreeHandle(hSTMT, hstmt);
-			return ret;
-		}
-		lua_pushnumber(L, numrows);
-		SQLFreeHandle(hSTMT, hstmt);
-		return 1;
-	}
+	return res;
 }
 
 /*
 ** Rolls back a transaction. 
 */
 static int conn_commit (lua_State *L) {
-	conn_data *conn = (conn_data *) getconnection (L);
+	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret = SQLEndTran(hDBC, conn->hdbc, SQL_COMMIT);
 	if (error(ret)) {
 		return fail(L, hSTMT, conn->hdbc);
@@ -670,7 +698,7 @@ static int conn_commit (lua_State *L) {
 ** Rollback the current transaction. 
 */
 static int conn_rollback (lua_State *L) {
-	conn_data *conn = (conn_data *) getconnection (L);
+	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret = SQLEndTran(hDBC, conn->hdbc, SQL_ROLLBACK);
 	if (error(ret)) {
 		return fail(L, hSTMT, conn->hdbc);
@@ -683,7 +711,7 @@ static int conn_rollback (lua_State *L) {
 ** Sets the auto commit mode
 */
 static int conn_setautocommit (lua_State *L) {
-	conn_data *conn = (conn_data *) getconnection (L);
+	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret;
 	if (lua_toboolean (L, 2)) {
 		ret = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
@@ -704,8 +732,8 @@ static int conn_setautocommit (lua_State *L) {
 ** Create a new Connection object and push it on top of the stack.
 */
 static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
-	env_data *env = (env_data *) getenvironment (L);
-	conn_data *conn = (conn_data *) lua_newuserdata(L, sizeof(conn_data));
+	env_data *env = getenvironment(L, 1);
+	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
 
 	/* set auto commit mode */
 	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
@@ -736,7 +764,7 @@ static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
 **   nil and error message otherwise.
 */
 static int env_table_connect_DSN (lua_State *L) {
-	env_data *env = (env_data *) getenvironment (L);
+	env_data *env = getenvironment (L, 1);
 	SQLCHAR *sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "dsn", NULL);
 
 	SQLHDBC hdbc;
@@ -826,7 +854,7 @@ static void env_connect_fix_old (lua_State *L) {
 **   nil and error message otherwise.
 */
 static int env_connect (lua_State *L) {
-	env_data *env = (env_data *) getenvironment (L);
+	env_data *env = getenvironment (L, 1);
 	SQLCHAR *sourcename = NULL;
 	SQLCHAR *username = NULL;
 	SQLCHAR *password = NULL;
@@ -917,6 +945,7 @@ static void create_metatables (lua_State *L) {
 	struct luaL_Reg statement_methods[] = {
 		{"__gc", stmt_close}, /* Should this method be changed? */
 		{"close", stmt_close},
+		{"execute", stmt_execute},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
