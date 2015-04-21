@@ -58,6 +58,8 @@ typedef struct {
 	unsigned char hidden;             /* these statement was created indirectly */
 	conn_data     *conn;              /* the statement's connection */
 	SQLHSTMT      hstmt;              /* statement handle */
+	SQLSMALLINT   numparams;          /* number of input parameters */
+	int           paramtypes;         /* reference to param type table */
 } stmt_data;
 
 typedef struct {
@@ -72,8 +74,11 @@ typedef struct {
 #define hENV SQL_HANDLE_ENV
 #define hSTMT SQL_HANDLE_STMT
 #define hDBC SQL_HANDLE_DBC
-#define error(a) ((a) != SQL_SUCCESS && (a) != SQL_SUCCESS_WITH_INFO) 
 
+static int error(SQLRETURN a)
+{
+	return (a != SQL_SUCCESS) && (a != SQL_SUCCESS_WITH_INFO);
+}
 
 LUASQL_API int luaopen_luasql_odbc (lua_State *L);
 
@@ -185,6 +190,9 @@ static int stmt_shut(lua_State *L, stmt_data *stmt)
 
 	unlock_obj(L, stmt->conn);
 	stmt->closed = 1;
+
+	luaL_unref (L, LUA_REGISTRYINDEX, stmt->paramtypes);
+	stmt->paramtypes = LUA_NOREF;
 
 	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
 	if (error(ret)) {
@@ -517,6 +525,15 @@ static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt, const SQLSM
 	return 1;
 }
 
+/*
+** Returns the table with statement params.
+*/
+static int stmt_paramtypes (lua_State *L) {
+	stmt_data *stmt = getstatement(L, 1);
+	lua_rawgeti (L, LUA_REGISTRYINDEX, stmt->paramtypes);
+	return 1;
+}
+
 static int stmt_close(lua_State *L)
 {
 	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
@@ -607,9 +624,38 @@ static int raw_execute(lua_State *L, int istmt)
 	}
 }
 
+/*
+** executes the prepared statement
+*/
 static int stmt_execute(lua_State *L)
 {
 	return raw_execute(L, 1);
+}
+
+/*
+** creates a table of parameter types (maybe)
+** Returns: the reference key of the table
+*/
+static int desc_params(lua_State *L, stmt_data *stmt)
+{
+	SQLSMALLINT i;
+
+	lua_newtable(L);
+	for(i=1; i <= stmt->numparams; ++i) {
+		SQLSMALLINT type, digits, nullable;
+		SQLULEN len;
+
+		/* fun fact: most ODBC drivers don't support this function (MS Access for example), so we can't get a param type table */
+		if(error(SQLDescribeParam(stmt->hstmt, i, &type, &len, &digits, &nullable))) {
+			lua_pop(L,1);
+			return LUA_NOREF;
+		}
+
+		lua_pushstring(L, sqltypetolua(type));
+		lua_rawseti(L, -2, i);
+	}
+
+	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 static int conn_prepare(lua_State *L)
@@ -642,6 +688,14 @@ static int conn_prepare(lua_State *L)
 	stmt->hidden = 0;
 	stmt->conn = conn;
 	stmt->hstmt = hstmt;
+	if(error(SQLNumParams(hstmt, &stmt->numparams))) {
+		int res;
+		lua_pop(L, 1);
+		res = fail(L, hSTMT, stmt->hstmt);
+		SQLFreeHandle(hSTMT, hstmt);
+		return res;
+	}
+	stmt->paramtypes = desc_params(L, stmt);
 
 	lock_obj(L, 1, conn);
 
@@ -949,6 +1003,7 @@ static void create_metatables (lua_State *L) {
 		{"__gc", stmt_close}, /* Should this method be changed? */
 		{"close", stmt_close},
 		{"execute", stmt_execute},
+		{"getparamtypes", stmt_paramtypes},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
