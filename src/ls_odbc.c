@@ -603,18 +603,17 @@ static int raw_execute(lua_State *L, int istmt)
 		return fail(L, hSTMT, stmt->hstmt);
 	}
 
-	/* determine the number of results */
+	/* determine the number of result columns */
 	if (error(SQLNumResultCols(stmt->hstmt, &numcols))) {
 		return fail(L, hSTMT, stmt->hstmt);
 	}
 
 	if (numcols > 0) {
 		/* if there is a results table (e.g., SELECT) */
-		int res = create_cursor(L, -1, stmt, numcols);
-		return res;
+		return create_cursor(L, -1, stmt, numcols);
 	} else {
 		/* if action has no results (e.g., UPDATE) */
-		SQLLEN numrows;
+		SQLINTEGER numrows;
 		if(error(SQLRowCount(stmt->hstmt, &numrows))) {
 			return fail(L, hSTMT, stmt->hstmt);
 		}
@@ -625,7 +624,12 @@ static int raw_execute(lua_State *L, int istmt)
 }
 
 /*
-** executes the prepared statement
+** Executes the prepared statement
+** Lua Input: [params]
+**   params: A table of parameters to use in the statement
+** Lua Returns
+**   cursor object: if there are results or
+**   row count: number of rows affected by statement if no results
 */
 static int stmt_execute(lua_State *L)
 {
@@ -634,7 +638,7 @@ static int stmt_execute(lua_State *L)
 
 /*
 ** creates a table of parameter types (maybe)
-** Returns: the reference key of the table
+** Returns: the reference key of the table (noref if unable to build the table)
 */
 static int desc_params(lua_State *L, stmt_data *stmt)
 {
@@ -658,6 +662,13 @@ static int desc_params(lua_State *L, stmt_data *stmt)
 	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
+/*
+** Prepares a statement
+** Lua Input: sql
+**   sql: The SQL statement to prepare
+** Lua Returns:
+**   Statement object
+*/
 static int conn_prepare(lua_State *L)
 {
 	conn_data *conn = getconnection(L, 1);
@@ -680,8 +691,7 @@ static int conn_prepare(lua_State *L)
 		return ret;
 	}
 
-	stmt = (stmt_data *) lua_newuserdata(L, sizeof(stmt_data));
-	luasql_setmeta (L, LUASQL_STATEMENT_ODBC);
+	stmt = (stmt_data *)lua_newuserdata(L, sizeof(stmt_data));
 	
 	stmt->closed = 0;
 	stmt->lock = 0;
@@ -691,32 +701,36 @@ static int conn_prepare(lua_State *L)
 	if(error(SQLNumParams(hstmt, &stmt->numparams))) {
 		int res;
 		lua_pop(L, 1);
-		res = fail(L, hSTMT, stmt->hstmt);
+		res = fail(L, hSTMT, hstmt);
 		SQLFreeHandle(hSTMT, hstmt);
 		return res;
 	}
 	stmt->paramtypes = desc_params(L, stmt);
 
+	/* activate statement object */
+	luasql_setmeta(L, LUASQL_STATEMENT_ODBC);
 	lock_obj(L, 1, conn);
 
 	return 1;
 }
 
 /*
-** Executes a SQL statement.
-** Returns
+** Executes a SQL statement directly
+** Lua Input: sql, [params]
+**   sql: The SQL statement to execute
+**   params: A table of parameters to use in the SQL
+** Lua Returns
 **   cursor object: if there are results or
 **   row count: number of rows affected by statement if no results
 */
 static int conn_execute (lua_State *L)
 {
 	stmt_data *stmt;
-	SQLRETURN ret;
 	int res, istmt;
 
 	/* prepare statement */
-	if ((ret = conn_prepare(L)) != 1) {
-		return ret;
+	if((res = conn_prepare(L)) != 1) {
+		return res;
 	}
 	istmt = lua_gettop(L);
 	stmt = getstatement(L, istmt);
@@ -727,9 +741,9 @@ static int conn_execute (lua_State *L)
 	/* do it */
 	res = raw_execute(L, istmt);
 
-	/* anything but cursor, close the statement directly */
+	/* anything but a cursor, close the statement directly */
 	if(!lua_isuserdata(L, -res)) {
-		stmt_shut(L, getstatement(L, istmt));
+		stmt_shut(L, stmt);
 	}
 
 	/* tidy up */
@@ -739,7 +753,7 @@ static int conn_execute (lua_State *L)
 }
 
 /*
-** Rolls back a transaction. 
+** Commits a transaction. 
 */
 static int conn_commit (lua_State *L) {
 	conn_data *conn = getconnection (L, 1);
@@ -783,7 +797,6 @@ static int conn_setautocommit (lua_State *L) {
 		return pass(L);
 	}
 }
-
 
 /*
 ** Create a new Connection object and push it on top of the stack.
