@@ -33,10 +33,17 @@
 #define LUASQL_STATEMENT_ODBC "ODBC statement"
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
+/* holds data for paramter binding */
+typedef struct {
+	SQLPOINTER buf;
+	SQLINTEGER len;
+	SQLINTEGER type;
+} param_data;
 
+/* general form of the driver objects */
 typedef struct {
 	short closed;
-	int lock;
+	int   lock;
 } obj_data;
 
 typedef struct {
@@ -60,6 +67,7 @@ typedef struct {
 	SQLHSTMT      hstmt;              /* statement handle */
 	SQLSMALLINT   numparams;          /* number of input parameters */
 	int           paramtypes;         /* reference to param type table */
+	param_data    *params;            /* array of parater data */
 } stmt_data;
 
 typedef struct {
@@ -180,6 +188,29 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
 	return 2;
 }
 
+static param_data *malloc_stmt_params(SQLSMALLINT c)
+{
+	param_data *p = (param_data *)malloc(sizeof(param_data)*c);
+	memset(p, 0, sizeof(param_data)*c);
+
+	return p;
+}
+
+static param_data *free_stmt_params(param_data *data, SQLSMALLINT c)
+{
+
+	if(data != NULL) {
+		param_data *p = data;
+
+		for(; c>0; ++p, --c) {
+			free(p->buf);
+		}
+		free(data);
+	}
+
+	return NULL;
+}
+
 /*
 ** Shuts a statement
 ** Returns non-zero on error
@@ -193,6 +224,7 @@ static int stmt_shut(lua_State *L, stmt_data *stmt)
 
 	luaL_unref (L, LUA_REGISTRYINDEX, stmt->paramtypes);
 	stmt->paramtypes = LUA_NOREF;
+	stmt->params = free_stmt_params(stmt->params, stmt->numparams);
 
 	ret = SQLFreeHandle(hSTMT, stmt->hstmt);
 	if (error(ret)) {
@@ -624,6 +656,71 @@ static int raw_execute(lua_State *L, int istmt)
 }
 
 /*
+** Reads a param table into a statement
+*/
+static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
+{
+	static SQLINTEGER cbNull = SQL_NULL_DATA;
+	SQLSMALLINT i;
+	param_data *data;
+
+	free_stmt_params(stmt->params, stmt->numparams);
+	stmt->params = malloc_stmt_params(stmt->numparams);
+	data = stmt->params;
+
+	for(i=1; i<=stmt->numparams; ++i, ++data) {
+		lua_pushnumber(L, i);      /* not using lua_geti for backwards compat with Lua 5.1/LuaJIT */
+		lua_gettable(L, iparams);
+
+		switch(lua_type(L, -1)) {
+		case LUA_TNIL: {
+			lua_pop(L, 1);
+
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT, SQL_UNKNOWN_TYPE, 0, 0, NULL, 0, &cbNull))) {
+				return fail(L, hSTMT, stmt->hstmt);
+			}
+		}	break;
+
+		case LUA_TNUMBER: {
+			data->buf = malloc(sizeof(double));
+			*(double *)data->buf = (double)lua_tonumber(L, -1);
+			data->len = sizeof(double);
+			data->type = 0;
+
+			lua_pop(L, 1);
+
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, data->buf, data->len, &data->type))) {
+				return fail(L, hSTMT, stmt->hstmt);
+			}
+		}	break;
+
+		case LUA_TSTRING: {
+			const char* str = lua_tostring(L, -1);
+			size_t len = strlen(str);
+
+			data->buf = malloc(len+1);
+			memcpy((char *)data->buf, str, len+1);
+			data->len = len;
+			data->type = SQL_NTS;
+
+			lua_pop(L, 1);
+
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, data->buf, data->len, &data->type))) {
+				return fail(L, hSTMT, stmt->hstmt);
+			}
+		}	break;
+
+		default:
+			lua_pop(L, 1);
+			return luasql_faildirect(L, "unsupported parameter type");
+			break;
+		}
+	}
+
+	return 0;
+}
+
+/*
 ** Executes the prepared statement
 ** Lua Input: [params]
 **   params: A table of parameters to use in the statement
@@ -633,6 +730,15 @@ static int raw_execute(lua_State *L, int istmt)
 */
 static int stmt_execute(lua_State *L)
 {
+	/* any parameters to use */
+	if(lua_gettop(L) > 1) {
+		stmt_data *stmt = getstatement(L, 1);
+		int res = raw_readparams(L, stmt, 2);
+		if(res != 0) {
+			return res;
+		}
+	}
+
 	return raw_execute(L, 1);
 }
 
@@ -692,6 +798,7 @@ static int conn_prepare(lua_State *L)
 	}
 
 	stmt = (stmt_data *)lua_newuserdata(L, sizeof(stmt_data));
+	memset(stmt, 0, sizeof(stmt_data));
 	
 	stmt->closed = 0;
 	stmt->lock = 0;
@@ -706,6 +813,7 @@ static int conn_prepare(lua_State *L)
 		return res;
 	}
 	stmt->paramtypes = desc_params(L, stmt);
+	stmt->params = NULL;
 
 	/* activate statement object */
 	luasql_setmeta(L, LUASQL_STATEMENT_ODBC);
