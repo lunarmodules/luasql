@@ -396,6 +396,11 @@ static int cur_fetch (lua_State *L) {
 	int ret; 
 	SQLRETURN rc = SQLFetch(hstmt); 
 	if (rc == SQL_NO_DATA) {
+		/* automatically close cursor when end of resultset is reached */
+		if((ret = cur_shut(L, cur)) != 0) {
+			return ret;
+		}
+
 		lua_pushnil(L);
 		return 1;
 	} else {
@@ -443,21 +448,14 @@ static int cur_fetch (lua_State *L) {
 }
 
 /*
-** Closes a cursor.
+** Closes a cursor directly
+** Returns non-zero on error
 */
-static int cur_close (lua_State *L) {
-	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
-	SQLRETURN ret;
-	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
-	if (cur->closed) {
-		lua_pushboolean (L, 0);
-		return 1;
-	}
-
+static int cur_shut(lua_State *L, cur_data *cur)
+{
 	/* Nullify structure fields. */
 	cur->closed = 1;
-	ret = SQLCloseCursor(cur->stmt->hstmt);
-	if (error(ret)) {
+	if (error(SQLCloseCursor(cur->stmt->hstmt))) {
 		return fail(L, hSTMT, cur->stmt->hstmt);
 	}
 
@@ -468,13 +466,32 @@ static int cur_close (lua_State *L) {
 	/* release statement and, if hidden, shut it */
 	if(unlock_obj(L, cur->stmt) == 0) {
 		if(cur->stmt->hidden) {
-			stmt_shut(L, cur->stmt);
+			return stmt_shut(L, cur->stmt);
 		}
+	}
+
+	return 0;
+}
+
+/*
+** Closes a cursor.
+*/
+static int cur_close (lua_State *L) {
+	int res;
+	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
+	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
+
+	if (cur->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+
+	if((res = cur_shut(L, cur)) != 0) {
+		return res;
 	}
 
 	return pass(L);
 }
-
 
 /*
 ** Returns the table with column names.
