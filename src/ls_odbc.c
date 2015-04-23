@@ -650,7 +650,7 @@ static int raw_execute(lua_State *L, int istmt)
 			return fail(L, hSTMT, stmt->hstmt);
 		}
 
-		lua_pushnumber(L, numrows);
+		luasql_pushinteger(L, numrows);
 		return 1;
 	}
 }
