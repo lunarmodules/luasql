@@ -23,6 +23,12 @@
 
 #include "luasql.h"
 
+/* MSVC still doesn't support C99 properly until 2015 */ 
+#if defined(_MSC_VER) && _MSC_VER<1900
+#pragma warning(disable:4996)	/* and complains if you try to work around it */
+#define snprintf _snprintf
+#endif
+
 #define LUASQL_ENVIRONMENT_MYSQL "MySQL environment"
 #define LUASQL_CONNECTION_MYSQL "MySQL connection"
 #define LUASQL_CURSOR_MYSQL "MySQL cursor"
@@ -160,23 +166,25 @@ static char *getcolumntype (enum enum_field_types type) {
 /*
 ** Creates the lists of fields names and fields types.
 */
-static void create_colinfo (lua_State *L, cur_data *cur) {
-	MYSQL_FIELD *fields;
-	char typename[50];
+static void create_colinfo(lua_State *L, cur_data *cur) {
+	char name[50];
 	int i;
-	fields = mysql_fetch_fields(cur->my_res);
-	lua_newtable (L); /* names */
-	lua_newtable (L); /* types */
-	for (i = 1; i <= cur->numcols; i++) {
-		lua_pushstring (L, fields[i-1].name);
-		lua_rawseti (L, -3, i);
-		sprintf (typename, "%.20s(%ld)", getcolumntype (fields[i-1].type), fields[i-1].length);
-		lua_pushstring(L, typename);
-		lua_rawseti (L, -2, i);
+	MYSQL_FIELD *fields = mysql_fetch_fields(cur->my_res);
+
+	lua_newtable(L); /* names */
+	lua_newtable(L); /* types */
+
+	for(i = 1; i <= cur->numcols; i++) {
+		lua_pushstring(L, fields[i-1].name);
+		lua_rawseti(L, -3, i);
+		snprintf(name, sizeof(name), "%.20s(%ld)", getcolumntype (fields[i-1].type), fields[i-1].length);
+		lua_pushstring(L, name);
+		lua_rawseti(L, -2, i);
 	}
+
 	/* Stores the references in the cursor structure */
-	cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
-	cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
+	cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 
@@ -190,6 +198,7 @@ static int cur_nullify (lua_State *L, cur_data *cur) {
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+	return 0;
 }
 
 	
@@ -395,25 +404,26 @@ static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	size_t st_len;
 	const char *statement = luaL_checklstring (L, 2, &st_len);
-	if (mysql_real_query(conn->my_conn, statement, st_len)) 
+	if (mysql_real_query(conn->my_conn, statement, st_len)) {
 		/* error executing query */
 		return luasql_failmsg(L, "error executing query. MySQL: ", mysql_error(conn->my_conn));
-	else
-	{
+	} else {
 		MYSQL_RES *res = mysql_store_result(conn->my_conn);
 		unsigned int num_cols = mysql_field_count(conn->my_conn);
 
-		if (res) { /* tuples returned */
+		if (res) {
+			/* tuples returned */
 			return create_cursor (L, 1, res, num_cols);
-		}
-		else { /* mysql_use_result() returned nothing; should it have? */
+		} else {
+			/* mysql_use_result() returned nothing; should it have? */
 			if(num_cols == 0) { /* no tuples returned */
             	/* query does not return data (it was not a SELECT) */
-				lua_pushnumber(L, mysql_affected_rows(conn->my_conn));
+				luasql_pushinteger(L, mysql_affected_rows(conn->my_conn));
 				return 1;
-        	}
-			else /* mysql_use_result() should have returned data */
+        	} else {
+				/* mysql_use_result() should have returned data */
 				return luasql_failmsg(L, "error retrieving result. MySQL: ", mysql_error(conn->my_conn));
+			}
 		}
 	}
 }
@@ -460,7 +470,7 @@ static int conn_setautocommit (lua_State *L) {
 */
 static int conn_getlastautoid (lua_State *L) {
   conn_data *conn = getconnection(L);
-  lua_pushnumber(L, mysql_insert_id(conn->my_conn));
+  luasql_pushinteger(L, mysql_insert_id(conn->my_conn));
   return 1;
 }
 
