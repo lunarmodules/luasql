@@ -1029,33 +1029,24 @@ static int env_table_connect_DSN (lua_State *L) {
 **   new connection details table
 */
 static void env_connect_fix_old (lua_State *L) {
-	if(lua_isstring(L, 2)) {
-		/* convert to new table format */
-		int n = lua_gettop(L);
+	static const char* const opt_names[] = {
+		"source",
+		"user",
+		"password",
+		NULL
+	};
+	int i, t = lua_gettop(L)-1;
 
-		const char *sourcename = luaL_checkstring (L, 2);
-		const char *username = luaL_optstring (L, 3, NULL);
-		const char *password = luaL_optstring (L, 4, NULL);
+	lua_newtable(L);
+	lua_insert(L, 2);
 
-		lua_newtable(L);
-		lua_pushstring(L, "source");
-		lua_pushstring(L, sourcename);
-		lua_settable(L, -3);
-		if(username != NULL) {
-			lua_pushstring(L, "user");
-			lua_pushstring(L, username);
-			lua_settable(L, -3);
-		}
-		if(password != NULL) {
-			lua_pushstring(L, "password");
-			lua_pushstring(L, password);
-			lua_settable(L, -3);
-		}
-
-		while(n > 1) {
-			lua_remove(L, n--);
-		}
+	for(i=0; opt_names[i] != NULL && i<t; ++i) {
+		lua_pushstring(L, opt_names[i]);
+		lua_pushvalue(L, i+3);
+		lua_settable(L, 2);
 	}
+
+	lua_settop(L, 2);
 }
 
 /*
