@@ -74,14 +74,6 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
-#if LUA_VERSION_NUM>=503
-#define luasql_pushinteger lua_pushinteger
-#define luasql_isinteger lua_isinteger
-#else
-#define luasql_pushinteger lua_pushnumber
-#define luasql_isinteger lua_isnumber
-#endif
-
 /* MSVC still doesn't support C99 properly until 2015 */ 
 #if defined(_MSC_VER) && _MSC_VER<1900
 #pragma warning(disable:4996)	/* and complains if you try to work around it */

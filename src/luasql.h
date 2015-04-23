@@ -13,9 +13,14 @@
 #if !defined LUA_VERSION_NUM
 /* Lua 5.0 */
 #define luaL_Reg luaL_reg
+#endif
 
-#define lua_pushinteger(L, n) \
-	lua_pushnumber(L, (lua_Number)n)
+#if LUA_VERSION_NUM>=503
+#define luasql_pushinteger lua_pushinteger
+#define luasql_isinteger lua_isinteger
+#else
+#define luasql_pushinteger lua_pushnumber
+#define luasql_isinteger lua_isnumber
 #endif
 
 #define LUASQL_PREFIX "LuaSQL: "
