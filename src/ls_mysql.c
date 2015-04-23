@@ -480,6 +480,36 @@ static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 	return 1;
 }
 
+/*
+** Reforms old connection style to new one
+** Lua Input: source, [user], [pass], [host], [port]
+**   source: data source
+**   user, pass: data source authentication information
+** Lua Returns:
+**   new connection details table
+*/
+static void env_connect_fix_old (lua_State *L) {
+	static const char* const opt_names[] = {
+		"source",
+		"user",
+		"password",
+		"host",
+		"port",
+		NULL
+	};
+	int i, t = lua_gettop(L)-1;
+
+	lua_newtable(L);
+	lua_insert(L, 2);
+
+	for(i=0; opt_names[i] != NULL && i<t; ++i) {
+		lua_pushstring(L, opt_names[i]);
+		lua_pushvalue(L, i+3);
+		lua_settable(L, 2);
+	}
+
+	lua_settop(L, 2);
+}
 
 /*
 ** Connects to a data source.
@@ -487,21 +517,41 @@ static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 **     datasource, username, password, host and port.
 */
 static int env_connect (lua_State *L) {
-	const char *sourcename = luaL_checkstring(L, 2);
+	env_data *env = getenvironment(L); /* validade environment */
+
+/*	const char *sourcename = luaL_checkstring(L, 2);
 	const char *username = luaL_optstring(L, 3, NULL);
 	const char *password = luaL_optstring(L, 4, NULL);
 	const char *host = luaL_optstring(L, 5, NULL);
-	const int port = luaL_optint(L, 6, 0);
+	const int port = luaL_optinteger(L, 6, 0);
+*/	
+	const char *sourcename;
 	MYSQL *conn;
-	getenvironment(L); /* validade environment */
+
+	if(lua_gettop(L) < 2) {
+		return luasql_faildirect(L, "No connection details provided");
+	}
+
+	if(!lua_istable(L, 2)) {
+		env_connect_fix_old(L);
+	}
+
+	if((sourcename = luasql_table_optstring(L, 2, "source", NULL)) == NULL) {
+		return luasql_faildirect(L, "connection details table missing 'source'");
+	}
 
 	/* Try to init the connection object. */
 	conn = mysql_init(NULL);
 	if (conn == NULL)
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
-	if (!mysql_real_connect(conn, host, username, password, 
-		sourcename, port, NULL, 0))
+	if (!mysql_real_connect(conn,
+			luasql_table_optstring(L, 2, "host", NULL),
+			luasql_table_optstring(L, 2, "user", NULL),
+			luasql_table_optstring(L, 2, "password", NULL), 
+			sourcename,
+			(int)luasql_table_optnumber(L, 2, "port", 0),
+			NULL, 0))
 	{
 		char error_msg[100];
 		strncpy (error_msg,  mysql_error(conn), 99);
