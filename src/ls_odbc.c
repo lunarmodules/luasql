@@ -235,6 +235,32 @@ static int stmt_shut(lua_State *L, stmt_data *stmt)
 }
 
 /*
+** Closes a cursor directly
+** Returns non-zero on error
+*/
+static int cur_shut(lua_State *L, cur_data *cur)
+{
+	/* Nullify structure fields. */
+	cur->closed = 1;
+	if (error(SQLCloseCursor(cur->stmt->hstmt))) {
+		return fail(L, hSTMT, cur->stmt->hstmt);
+	}
+
+	/* release col tables */
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
+
+	/* release statement and, if hidden, shut it */
+	if(unlock_obj(L, cur->stmt) == 0) {
+		if(cur->stmt->hidden) {
+			return stmt_shut(L, cur->stmt);
+		}
+	}
+
+	return 0;
+}
+
+/*
 ** Returns the name of an equivalent lua type for a SQL type.
 */
 static const char *sqltypetolua (const SQLSMALLINT type) {
@@ -445,32 +471,6 @@ static int cur_fetch (lua_State *L) {
 		}
 		return cur->numcols;
 	}
-}
-
-/*
-** Closes a cursor directly
-** Returns non-zero on error
-*/
-static int cur_shut(lua_State *L, cur_data *cur)
-{
-	/* Nullify structure fields. */
-	cur->closed = 1;
-	if (error(SQLCloseCursor(cur->stmt->hstmt))) {
-		return fail(L, hSTMT, cur->stmt->hstmt);
-	}
-
-	/* release col tables */
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
-
-	/* release statement and, if hidden, shut it */
-	if(unlock_obj(L, cur->stmt) == 0) {
-		if(cur->stmt->hidden) {
-			return stmt_shut(L, cur->stmt);
-		}
-	}
-
-	return 0;
 }
 
 /*
