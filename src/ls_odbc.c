@@ -676,7 +676,7 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		case LUA_TNIL: {
 			lua_pop(L, 1);
 
-			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT, SQL_UNKNOWN_TYPE, 0, 0, NULL, 0, &cbNull))) {
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT, SQL_DOUBLE, 0, 0, NULL, 0, &cbNull))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
 		}	break;
@@ -706,6 +706,21 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 			lua_pop(L, 1);
 
 			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, data->buf, data->len, &data->type))) {
+				return fail(L, hSTMT, stmt->hstmt);
+			}
+		}	break;
+
+		case LUA_TBOOLEAN: {
+			SQLCHAR b = (SQLCHAR)lua_toboolean(L, -1);
+
+			data->buf = malloc(sizeof(SQLCHAR));
+			*(SQLCHAR *)data->buf = (SQLCHAR)lua_toboolean(L, -1);
+			data->len = 0;
+			data->type = 0;
+
+			lua_pop(L, 1);
+
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_BIT, SQL_BIT, 0, 0, data->buf, data->len, &data->type))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
 		}	break;
