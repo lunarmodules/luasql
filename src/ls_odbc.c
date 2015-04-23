@@ -303,7 +303,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				lua_pushnumber(L, num);
 			}
 			return 0;
-				  }
+		}
 #if LUA_VERSION_NUM>=503
 				  /* iNteger */
 		case 'n': {
@@ -319,7 +319,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				lua_pushinteger(L, num);
 			}
 			return 0;
-				  }
+		}
 #endif
 				  /* bOol */
 		case 'o': { 
@@ -335,7 +335,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				lua_pushboolean(L, b);
 			}
 			return 0;
-				  }
+		}
 				  /* sTring */
 		case 't': 
 			/* bInary */
@@ -382,7 +382,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 			/* return everything we got */
 			luaL_pushresult(&b);
 			return 0;
-				  }
+		}
 		}
 		return 0;
 }
@@ -835,6 +835,7 @@ static int conn_execute (lua_State *L)
 {
 	stmt_data *stmt;
 	int res, istmt;
+	int ltop = lua_gettop(L);
 
 	/* prepare statement */
 	if((res = conn_prepare(L)) != 1) {
@@ -845,6 +846,13 @@ static int conn_execute (lua_State *L)
 
 	/* because this is a direct execute, statement is hidden from user */
 	stmt->hidden = 1;
+
+	/* do we have any parameters */
+	if(ltop > 2) {
+		if((res = raw_readparams(L, stmt, 3)) != 0) {
+			return res;
+		}
+	}
 
 	/* do it */
 	res = raw_execute(L, istmt);
