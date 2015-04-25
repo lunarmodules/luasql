@@ -31,6 +31,7 @@
 
 #define LUASQL_ENVIRONMENT_MYSQL "MySQL environment"
 #define LUASQL_CONNECTION_MYSQL "MySQL connection"
+#define LUASQL_STATEMENT_MYSQL "MySQL statement"
 #define LUASQL_CURSOR_MYSQL "MySQL cursor"
 
 /* For compat with old version 4.0 */
@@ -66,20 +67,29 @@
 #endif
 
 typedef struct {
-	short      closed;
+	short         closed;
+	int           lock;               /* lock count for open connections */
 } env_data;
 
 typedef struct {
-	short      closed;
-	int        env;                /* reference to environment */
-	MYSQL     *my_conn;
+	short         closed;
+	int           lock;               /* lock count for open cursors */
+	int           env;                /* reference to environment */
+	MYSQL         *my_conn;
 } conn_data;
 
 typedef struct {
-	short      closed;
-	int        conn;               /* reference to connection */
-	int        numcols;            /* number of columns */
-	int        colnames, coltypes; /* reference to column information tables */
+	short         closed;
+	int           lock;               /* lock count for open statements */
+	unsigned char hidden;             /* statement was used interally i.e. from a
+	                                     direct con:execute */
+} stmt_data;
+
+typedef struct {
+	short         closed;
+	int           conn;               /* reference to connection */
+	int           numcols;            /* number of columns */
+	int           colnames, coltypes; /* reference to column information tables */
 	MYSQL_RES *my_res;
 } cur_data;
 
@@ -109,6 +119,17 @@ static conn_data *getconnection (lua_State *L)
 	return conn;
 }
 
+
+/*
+** Check for valid statement.
+*/
+static stmt_data *getstatement (lua_State *L)
+{
+	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_MYSQL);
+	luaL_argcheck (L, stmt != NULL, 1, "statement expected");
+	luaL_argcheck (L, !stmt->closed, 1, "statement is closed");
+	return stmt;
+}
 
 /*
 ** Check for valid cursor.
@@ -662,6 +683,9 @@ static void create_metatables (lua_State *L)
 		{"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
 	};
+	struct luaL_Reg statement_methods[] = {
+		{NULL, NULL},
+	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_gc},
 		{"close", cur_close},
@@ -673,8 +697,9 @@ static void create_metatables (lua_State *L)
 	};
 	luasql_createmeta (L, LUASQL_ENVIRONMENT_MYSQL, environment_methods);
 	luasql_createmeta (L, LUASQL_CONNECTION_MYSQL, connection_methods);
+	luasql_createmeta (L, LUASQL_STATEMENT_MYSQL, statement_methods);
 	luasql_createmeta (L, LUASQL_CURSOR_MYSQL, cursor_methods);
-	lua_pop (L, 3);
+	lua_pop (L, 4);
 }
 
 
