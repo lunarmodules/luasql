@@ -23,15 +23,15 @@
 
 typedef struct {
 	short           closed;
-	ISC_STATUS      status_vector[20];/* for error results */
 	int             lock;             /* lock count for open connections */
+	ISC_STATUS      status_vector[20];/* for error results */
 } env_data;
 
 typedef struct {
 	/* general */
 	short           closed;
-	env_data        *env;             /* the DB enviroment this is in */
 	int             lock;             /* lock count for open cursors */
+	env_data        *env;             /* the DB enviroment this is in */
 	int             autocommit;       /* should each statement be commited */
 	/* implimentation */
 	isc_db_handle   db;               /* the database handle */
@@ -44,15 +44,15 @@ typedef struct {
 
 typedef struct {
 	short           closed;
+	int             lock;             /* lock count for open statements */
 	env_data        *env;             /* the DB enviroment this is in */
 	conn_data       *conn;            /* the DB connection this cursor is from */
+	/* implimentation */
 	XSQLDA          *in_sqlda;        /* the parameter data array */
 	isc_stmt_handle handle;           /* the statement handle */
-	int
-	type;                             /* the statment's type (SELECT, UPDATE, etc...) */
-	int             lock;             /* lock count for open statements */
-	unsigned char
-	hidden;                           /* statement was used interally i.e. from a
+	int             type;             /* the statment's type (SELECT, UPDATE,
+	                                     etc...) */
+	unsigned char   hidden;           /* statement was used interally i.e. from a
 	                                     direct con:execute */
 } stmt_data;
 
@@ -527,14 +527,16 @@ static void parse_params(lua_State *L, stmt_data *stmt, int params)
 			case SQL_LONG:
 			case SQL_SHORT:
 				inum = (ISC_INT64)lua_tonumber(L, -1);
-				fill_param(var, SQL_INT64+1, (ISC_SCHAR *)&inum, sizeof(ISC_INT64));
+				fill_param(var, SQL_INT64+1, (ISC_SCHAR *)&inum,
+				           sizeof(ISC_INT64));
 				break;
 
 			case SQL_DOUBLE:
 			case SQL_D_FLOAT:
 			case SQL_FLOAT:
 				fnum = (double)lua_tonumber(L, -1);
-				fill_param(var, SQL_DOUBLE+1, (ISC_SCHAR *)&fnum, sizeof(double));
+				fill_param(var, SQL_DOUBLE+1, (ISC_SCHAR *)&fnum,
+				           sizeof(double));
 				break;
 
 			case SQL_TIMESTAMP:
@@ -548,7 +550,8 @@ static void parse_params(lua_State *L, stmt_data *stmt, int params)
 					ISC_TIMESTAMP isc_ts;
 					isc_encode_timestamp(tm_time, &isc_ts);
 
-					fill_param(var, SQL_TIMESTAMP+1, (ISC_SCHAR *)&isc_ts, sizeof(ISC_TIMESTAMP));
+					fill_param(var, SQL_TIMESTAMP+1, (ISC_SCHAR *)&isc_ts,
+					           sizeof(ISC_TIMESTAMP));
 				}	break;
 
 				case LUA_TSTRING: {
@@ -594,8 +597,6 @@ static int conn_prepare (lua_State *L)
 	stmt.closed = 0;
 	stmt.env = conn->env;
 	stmt.conn = conn;
-
-	stmt.handle = NULL;
 
 	/* create a statement to handle the query */
 	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &stmt.handle);
@@ -691,8 +692,8 @@ static int raw_execute (lua_State *L, int stmt_indx)
 		snprintf(cur_name, sizeof(cur_name), "dyn_cursor_%p", (void *)stmt);
 
 		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt->handle, cur_name,
-		                         0);
+		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt->handle,
+		                         cur_name, 0);
 		if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
 			lua_pop(L, 1);	/* the userdata */
 			free_cur(&cur);
@@ -715,7 +716,8 @@ static int raw_execute (lua_State *L, int stmt_indx)
 		ISC_SHORT n = cur.out_sqlda->sqld;
 		free_xsqlda(cur.out_sqlda);
 		cur.out_sqlda = malloc_xsqlda(n);
-		isc_dsql_describe(cur.env->status_vector, &cur.stmt->handle, 1, cur.out_sqlda);
+		isc_dsql_describe(cur.env->status_vector, &cur.stmt->handle, 1,
+		                  cur.out_sqlda);
 		if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
 			free_cur(&cur);
 			return return_db_error(L, cur.env->status_vector);
@@ -737,7 +739,8 @@ static int raw_execute (lua_State *L, int stmt_indx)
 	} else { /* a count */
 		/* if autocommit is set, commit change */
 		if(cur.stmt->conn->autocommit) {
-			isc_commit_retaining(cur.env->status_vector, &cur.stmt->conn->transaction);
+			isc_commit_retaining(cur.env->status_vector,
+			                     &cur.stmt->conn->transaction);
 			if ( CHECK_DB_ERROR(cur.env->status_vector) ) {
 				free_cur(&cur);
 				return return_db_error(L, cur.env->status_vector);
@@ -752,7 +755,8 @@ static int raw_execute (lua_State *L, int stmt_indx)
 		luasql_pushinteger(L, count);
 
 		/* totaly finished with the cursor */
-		isc_dsql_free_statement(cur.env->status_vector, &cur.stmt->handle, DSQL_close);
+		isc_dsql_free_statement(cur.env->status_vector, &cur.stmt->handle,
+		                        DSQL_close);
 		free_cur(&cur);
 	}
 
@@ -913,9 +917,11 @@ static int conn_gc (lua_State *L)
 
 	if(conn->closed == 0) {
 		if(conn->autocommit != 0) {
-			isc_commit_transaction(conn->env->status_vector, &conn->transaction);
+			isc_commit_transaction(conn->env->status_vector,
+			                       &conn->transaction);
 		} else {
-			isc_rollback_transaction(conn->env->status_vector, &conn->transaction);
+			isc_rollback_transaction(conn->env->status_vector,
+			                         &conn->transaction);
 		}
 
 		isc_detach_database(conn->env->status_vector, &conn->db);
@@ -1151,8 +1157,8 @@ static int cur_fetch (lua_State *L)
 	int num = strchr(opts, 'n') != NULL;
 	int alpha = strchr(opts, 'a') != NULL;
 
-	if ((fetch_stat = isc_dsql_fetch(cur->env->status_vector, &cur->stmt->handle, 1,
-	                                 cur->out_sqlda)) == 0) {
+	if ((fetch_stat = isc_dsql_fetch(cur->env->status_vector, &cur->stmt->handle,
+	                                 1, cur->out_sqlda)) == 0) {
 		if (lua_istable (L, 2)) {
 			/* remove the option string */
 			lua_settop(L, 2);
@@ -1283,17 +1289,11 @@ static int cur_gc (lua_State *L)
 */
 static int create_environment (lua_State *L)
 {
-	int i;
 	env_data *env;
 
 	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_FIREBIRD);
-	/* fill in structure */
-	for(i=0; i<20; i++) {
-		env->status_vector[i] = 0;
-	}
-	env->closed = 0;
-	env->lock = 0;
+	memset (env, 0, sizeof (env_data));
 
 	return 1;
 }
