@@ -12,19 +12,19 @@ T= mysql
 # Installation directories
 
 # Default prefix
-PREFIX = /usr/local
+PREFIX = /usr
 
 # System's libraries directory (where binary libraries are installed)
-LUA_LIBDIR= $(PREFIX)/lib/lua/5.1
+LUA_LIBDIR= $(PREFIX)/lib/lua/5.2
 
 # System's lua directory (where Lua libraries are installed)
-LUA_DIR= $(PREFIX)/share/lua/5.1
+LUA_DIR= $(PREFIX)/share/lua/5.2
 
 # Lua includes directory
-LUA_INC= $(PREFIX)/include
+LUA_INC= $(PREFIX)/include/lua5.2
 
 # Lua version number (first and second digits of target version)
-LUA_VERSION_NUM= 501
+LUA_VERSION_NUM= 502
 
 # OS dependent
 LIB_OPTION= -shared #for Linux
@@ -60,9 +60,9 @@ DRIVER_INCS= -I/usr/include/mysql
 #DRIVER_LIBS= -L/usr/local/firebird -lfbclient
 #DRIVER_INCS=
 
-WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -ansi -pedantic
+WARN= -Wall -Wmissing-prototypes -Wmissing-declarations -pedantic
 INCS= -I$(LUA_INC)
-CFLAGS= -O2 $(WARN) -fPIC $(DRIVER_INCS) $(INCS) -DLUASQL_VERSION_NUMBER='"$V"' $(DEFS)
+CFLAGS= -O2 -std=gnu99 $(WARN) -fPIC $(DRIVER_INCS) $(INCS) -DLUASQL_VERSION_NUMBER='"$V"' $(DEFS)
 CC= gcc
 
 # $Id: config,v 1.10 2008/05/30 17:21:18 tomas Exp $
