@@ -112,7 +112,8 @@ static int unlock_obj(lua_State *L, void *ptr)
 /*
 ** Check for valid environment.
 */
-static env_data *getenvironment (lua_State *L, int i) {
+static env_data *getenvironment (lua_State *L, int i)
+{
 	env_data *env = (env_data *)luaL_checkudata (L, i, LUASQL_ENVIRONMENT_ODBC);
 	luaL_argcheck (L, env != NULL, i, LUASQL_PREFIX"environment expected");
 	luaL_argcheck (L, !env->closed, i, LUASQL_PREFIX"environment is closed");
@@ -122,7 +123,8 @@ static env_data *getenvironment (lua_State *L, int i) {
 /*
 ** Check for valid connection.
 */
-static conn_data *getconnection (lua_State *L, int i) {
+static conn_data *getconnection (lua_State *L, int i)
+{
 	conn_data *conn = (conn_data *)luaL_checkudata (L, i, LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, i, LUASQL_PREFIX"connection expected");
 	luaL_argcheck (L, !conn->closed, i, LUASQL_PREFIX"connection is closed");
@@ -132,7 +134,8 @@ static conn_data *getconnection (lua_State *L, int i) {
 /*
 ** Check for valid connection.
 */
-static stmt_data *getstatement (lua_State *L, int i) {
+static stmt_data *getstatement (lua_State *L, int i)
+{
 	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, i, LUASQL_STATEMENT_ODBC);
 	luaL_argcheck (L, stmt != NULL, i, LUASQL_PREFIX"statement expected");
 	luaL_argcheck (L, !stmt->closed, i, LUASQL_PREFIX"statement is closed");
@@ -142,7 +145,8 @@ static stmt_data *getstatement (lua_State *L, int i) {
 /*
 ** Check for valid cursor.
 */
-static cur_data *getcursor (lua_State *L, int i) {
+static cur_data *getcursor (lua_State *L, int i)
+{
 	cur_data *cursor = (cur_data *)luaL_checkudata (L, i, LUASQL_CURSOR_ODBC);
 	luaL_argcheck (L, cursor != NULL, i, LUASQL_PREFIX"cursor expected");
 	luaL_argcheck (L, !cursor->closed, i, LUASQL_PREFIX"cursor is closed");
@@ -153,18 +157,20 @@ static cur_data *getcursor (lua_State *L, int i) {
 /*
 ** Pushes true and returns 1
 */
-static int pass(lua_State *L) {
+static int pass(lua_State *L)
+{
 	lua_pushboolean (L, 1);
 	return 1;
 }
 
 /*
 ** Fails with error message from ODBC
-** Inputs: 
+** Inputs:
 **   type: type of handle used in operation
 **   handle: handle used in operation
 */
-static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
+static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle)
+{
 	SQLCHAR State[6];
 	SQLINTEGER NativeError;
 	SQLSMALLINT MsgSize, i;
@@ -176,14 +182,15 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
 	luaL_buffinit(L, &b);
 	i = 1;
 	while (1) {
-		ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg, sizeof(Msg), &MsgSize);
+		ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg, sizeof(Msg),
+		                    &MsgSize);
 		if (ret == SQL_NO_DATA) {
 			break;
 		}
-		luaL_addlstring(&b, (char*)Msg, MsgSize);
+		luaL_addlstring(&b, (char *)Msg, MsgSize);
 		luaL_addchar(&b, '\n');
 		i++;
-	} 
+	}
 	luaL_pushresult(&b);
 	return 2;
 }
@@ -263,23 +270,39 @@ static int cur_shut(lua_State *L, cur_data *cur)
 /*
 ** Returns the name of an equivalent lua type for a SQL type.
 */
-static const char *sqltypetolua (const SQLSMALLINT type) {
+static const char *sqltypetolua (const SQLSMALLINT type)
+{
 	switch (type) {
-	case SQL_UNKNOWN_TYPE: case SQL_CHAR: case SQL_VARCHAR: 
-	case SQL_TYPE_DATE: case SQL_TYPE_TIME: case SQL_TYPE_TIMESTAMP: 
-	case SQL_DATE: case SQL_INTERVAL: case SQL_TIMESTAMP: 
+	case SQL_UNKNOWN_TYPE:
+	case SQL_CHAR:
+	case SQL_VARCHAR:
+	case SQL_TYPE_DATE:
+	case SQL_TYPE_TIME:
+	case SQL_TYPE_TIMESTAMP:
+	case SQL_DATE:
+	case SQL_INTERVAL:
+	case SQL_TIMESTAMP:
 	case SQL_LONGVARCHAR:
-	case SQL_WCHAR: case SQL_WVARCHAR: case SQL_WLONGVARCHAR:
+	case SQL_WCHAR:
+	case SQL_WVARCHAR:
+	case SQL_WLONGVARCHAR:
 		return "string";
-	case SQL_BIGINT: case SQL_TINYINT: 
-	case SQL_INTEGER: case SQL_SMALLINT: 
+	case SQL_BIGINT:
+	case SQL_TINYINT:
+	case SQL_INTEGER:
+	case SQL_SMALLINT:
 #if LUA_VERSION_NUM>=503
 		return "integer";
 #endif
-	case SQL_NUMERIC: case SQL_DECIMAL: 
-	case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
+	case SQL_NUMERIC:
+	case SQL_DECIMAL:
+	case SQL_FLOAT:
+	case SQL_REAL:
+	case SQL_DOUBLE:
 		return "number";
-	case SQL_BINARY: case SQL_VARBINARY: case SQL_LONGVARBINARY:
+	case SQL_BINARY:
+	case SQL_VARBINARY:
+	case SQL_LONGVARBINARY:
 		return "binary";	/* !!!!!! nao seria string? */
 	case SQL_BIT:
 		return "boolean";
@@ -299,128 +322,130 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
 ** Returns:
 **   0 if successfull, non-zero otherwise;
 */
-static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
-	SQLUSMALLINT i) {
-		const char *tname;
-		char type;
-		/* get column type from types table */
-		lua_rawgeti (L, LUA_REGISTRYINDEX, coltypes);
-		lua_rawgeti (L, -1, i);	/* typename of the column */
-		tname = lua_tostring(L, -1);
-		if (!tname) {
-			return luasql_faildirect(L, "invalid type in table.");
-		}
-		type = tname[1];
-		lua_pop(L, 2);	/* pops type name and coltypes table */
+static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
+                       SQLUSMALLINT i)
+{
+	const char *tname;
+	char type;
+	/* get column type from types table */
+	lua_rawgeti (L, LUA_REGISTRYINDEX, coltypes);
+	lua_rawgeti (L, -1, i);	/* typename of the column */
+	tname = lua_tostring(L, -1);
+	if (!tname) {
+		return luasql_faildirect(L, "invalid type in table.");
+	}
+	type = tname[1];
+	lua_pop(L, 2);	/* pops type name and coltypes table */
 
-		/* deal with data according to type */
-		switch (type) {
-			/* nUmber */
-		case 'u': { 
-			double num;
-			SQLLEN got;
-			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
-			if (error(rc)) {
-				return fail(L, hSTMT, hstmt);
-			}
-			if (got == SQL_NULL_DATA) {
-				lua_pushnil(L);
-			} else {
-				lua_pushnumber(L, num);
-			}
-			return 0;
+	/* deal with data according to type */
+	switch (type) {
+	/* nUmber */
+	case 'u': {
+		double num;
+		SQLLEN got;
+		SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
+		if (error(rc)) {
+			return fail(L, hSTMT, hstmt);
 		}
-#if LUA_VERSION_NUM>=503
-				  /* iNteger */
-		case 'n': {
-			long int num;
-			SQLLEN got;
-			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
-			if (error(rc)) {
-				return fail(L, hSTMT, hstmt);
-			}
-			if (got == SQL_NULL_DATA) {
-				lua_pushnil(L);
-			} else {
-				lua_pushinteger(L, num);
-			}
-			return 0;
-		}
-#endif
-				  /* bOol */
-		case 'o': { 
-			char b;
-			SQLLEN got;
-			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
-			if (error(rc)) {
-				return fail(L, hSTMT, hstmt);
-			}
-			if (got == SQL_NULL_DATA) {
-				lua_pushnil(L);
-			} else {
-				lua_pushboolean(L, b);
-			}
-			return 0;
-		}
-				  /* sTring */
-		case 't': 
-			/* bInary */
-		case 'i': { 
-			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
-			SQLLEN got;
-			char *buffer;
-			luaL_Buffer b;
-			SQLRETURN rc;
-			luaL_buffinit(L, &b);
-			buffer = luaL_prepbuffer(&b);
-			rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
-			if (got == SQL_NULL_DATA) {
-				lua_pushnil(L);
-				return 0;
-			}
-			/* concat intermediary chunks */
-			while (rc == SQL_SUCCESS_WITH_INFO) {
-				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-					got = LUAL_BUFFERSIZE;
-					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) {
-						got--;
-					}
-				}
-				luaL_addsize(&b, got);
-				buffer = luaL_prepbuffer(&b);
-				rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
-			}
-			/* concat last chunk */
-			if (rc == SQL_SUCCESS) {
-				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-					got = LUAL_BUFFERSIZE;
-					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) {
-						got--;
-					}
-				}
-				luaL_addsize(&b, got);
-			}
-			if (rc == SQL_ERROR) {
-				return fail(L, hSTMT, hstmt);
-			}
-			/* return everything we got */
-			luaL_pushresult(&b);
-			return 0;
-		}
+		if (got == SQL_NULL_DATA) {
+			lua_pushnil(L);
+		} else {
+			lua_pushnumber(L, num);
 		}
 		return 0;
+	}
+#if LUA_VERSION_NUM>=503
+	/* iNteger */
+	case 'n': {
+		long int num;
+		SQLLEN got;
+		SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
+		if (error(rc)) {
+			return fail(L, hSTMT, hstmt);
+		}
+		if (got == SQL_NULL_DATA) {
+			lua_pushnil(L);
+		} else {
+			lua_pushinteger(L, num);
+		}
+		return 0;
+	}
+#endif
+	/* bOol */
+	case 'o': {
+		char b;
+		SQLLEN got;
+		SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
+		if (error(rc)) {
+			return fail(L, hSTMT, hstmt);
+		}
+		if (got == SQL_NULL_DATA) {
+			lua_pushnil(L);
+		} else {
+			lua_pushboolean(L, b);
+		}
+		return 0;
+	}
+	/* sTring */
+	case 't':
+	/* bInary */
+	case 'i': {
+		SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
+		SQLLEN got;
+		char *buffer;
+		luaL_Buffer b;
+		SQLRETURN rc;
+		luaL_buffinit(L, &b);
+		buffer = luaL_prepbuffer(&b);
+		rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
+		if (got == SQL_NULL_DATA) {
+			lua_pushnil(L);
+			return 0;
+		}
+		/* concat intermediary chunks */
+		while (rc == SQL_SUCCESS_WITH_INFO) {
+			if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
+				got = LUAL_BUFFERSIZE;
+				/* get rid of null termination in string block */
+				if (stype == SQL_C_CHAR) {
+					got--;
+				}
+			}
+			luaL_addsize(&b, got);
+			buffer = luaL_prepbuffer(&b);
+			rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
+		}
+		/* concat last chunk */
+		if (rc == SQL_SUCCESS) {
+			if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
+				got = LUAL_BUFFERSIZE;
+				/* get rid of null termination in string block */
+				if (stype == SQL_C_CHAR) {
+					got--;
+				}
+			}
+			luaL_addsize(&b, got);
+		}
+		if (rc == SQL_ERROR) {
+			return fail(L, hSTMT, hstmt);
+		}
+		/* return everything we got */
+		luaL_pushresult(&b);
+		return 0;
+	}
+	}
+	return 0;
 }
 
 /*
 ** Get another row of the given cursor.
 */
-static int cur_fetch (lua_State *L) {
+static int cur_fetch (lua_State *L)
+{
 	cur_data *cur = getcursor (L, 1);
 	SQLHSTMT hstmt = cur->stmt->hstmt;
-	int ret; 
-	SQLRETURN rc = SQLFetch(hstmt); 
+	int ret;
+	SQLRETURN rc = SQLFetch(hstmt);
 	if (rc == SQL_NO_DATA) {
 		/* automatically close cursor when end of resultset is reached */
 		if((ret = cur_shut(L, cur)) != 0) {
@@ -476,7 +501,8 @@ static int cur_fetch (lua_State *L) {
 /*
 ** Closes a cursor.
 */
-static int cur_close (lua_State *L) {
+static int cur_close (lua_State *L)
+{
 	int res;
 	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
@@ -496,7 +522,8 @@ static int cur_close (lua_State *L) {
 /*
 ** Returns the table with column names.
 */
-static int cur_colnames (lua_State *L) {
+static int cur_colnames (lua_State *L)
+{
 	cur_data *cur = getcursor (L, 1);
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->colnames);
 	return 1;
@@ -506,7 +533,8 @@ static int cur_colnames (lua_State *L) {
 /*
 ** Returns the table with column types.
 */
-static int cur_coltypes (lua_State *L) {
+static int cur_coltypes (lua_State *L)
+{
 	cur_data *cur = getcursor (L, 1);
 	lua_rawgeti (L, LUA_REGISTRYINDEX, cur->coltypes);
 	return 1;
@@ -516,7 +544,8 @@ static int cur_coltypes (lua_State *L) {
 /*
 ** Creates two tables with the names and the types of the columns.
 */
-static int create_colinfo (lua_State *L, cur_data *cur) {
+static int create_colinfo (lua_State *L, cur_data *cur)
+{
 	SQLCHAR buffer[256];
 	SQLSMALLINT namelen, datatype, i;
 	SQLRETURN ret;
@@ -527,14 +556,14 @@ static int create_colinfo (lua_State *L, cur_data *cur) {
 	lua_newtable(L);
 	names = lua_gettop (L);
 	for (i = 1; i <= cur->numcols; i++) {
-		ret = SQLDescribeCol(cur->stmt->hstmt, i, buffer, sizeof(buffer), 
-			&namelen, &datatype, NULL, NULL, NULL);
+		ret = SQLDescribeCol(cur->stmt->hstmt, i, buffer, sizeof(buffer),
+		                     &namelen, &datatype, NULL, NULL, NULL);
 		if (ret == SQL_ERROR) {
 			lua_pop(L, 2);
 			return -1;
 		}
 
-		lua_pushstring (L, (char*)buffer);
+		lua_pushstring (L, (char *)buffer);
 		lua_rawseti (L, names, i);
 		lua_pushstring(L, sqltypetolua(datatype));
 		lua_rawseti (L, types, i);
@@ -549,7 +578,8 @@ static int create_colinfo (lua_State *L, cur_data *cur) {
 /*
 ** Creates a cursor table and leave it on the top of the stack.
 */
-static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt, const SQLSMALLINT numcols)
+static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt,
+                          const SQLSMALLINT numcols)
 {
 	cur_data *cur;
 
@@ -577,7 +607,8 @@ static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt, const SQLSM
 /*
 ** Returns the table with statement params.
 */
-static int stmt_paramtypes (lua_State *L) {
+static int stmt_paramtypes (lua_State *L)
+{
 	stmt_data *stmt = getstatement(L, 1);
 	lua_rawgeti (L, LUA_REGISTRYINDEX, stmt->paramtypes);
 	return 1;
@@ -587,7 +618,8 @@ static int stmt_close(lua_State *L)
 {
 	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
 	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
-	luaL_argcheck (L, stmt->lock == 0, 1, LUASQL_PREFIX"there are still open cursors");
+	luaL_argcheck (L, stmt->lock == 0, 1,
+	               LUASQL_PREFIX"there are still open cursors");
 
 	if (stmt->closed) {
 		lua_pushboolean (L, 0);
@@ -686,17 +718,20 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 	data = stmt->params;
 
 	for(i=1; i<=stmt->numparams; ++i, ++data) {
-		lua_pushnumber(L, i);      /* not using lua_geti for backwards compat with Lua 5.1/LuaJIT */
+		/* not using lua_geti for backwards compat with Lua 5.1/LuaJIT */
+		lua_pushnumber(L, i);
 		lua_gettable(L, iparams);
 
 		switch(lua_type(L, -1)) {
 		case LUA_TNIL: {
 			lua_pop(L, 1);
 
-			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT, SQL_DOUBLE, 0, 0, NULL, 0, &cbNull))) {
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT,
+			                          SQL_DOUBLE, 0, 0, NULL, 0, &cbNull))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
-		}	break;
+		}
+		break;
 
 		case LUA_TNUMBER: {
 			data->buf = malloc(sizeof(double));
@@ -706,13 +741,16 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 
 			lua_pop(L, 1);
 
-			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, data->buf, data->len, &data->type))) {
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DOUBLE,
+			                          SQL_DOUBLE, 0, 0, data->buf, data->len,
+			                          &data->type))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
-		}	break;
+		}
+		break;
 
 		case LUA_TSTRING: {
-			const char* str = lua_tostring(L, -1);
+			const char *str = lua_tostring(L, -1);
 			size_t len = strlen(str);
 
 			data->buf = malloc(len+1);
@@ -722,10 +760,13 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 
 			lua_pop(L, 1);
 
-			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, data->buf, data->len, &data->type))) {
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_CHAR,
+			                          SQL_CHAR, len, 0, data->buf, data->len,
+			                          &data->type))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
-		}	break;
+		}
+		break;
 
 		case LUA_TBOOLEAN: {
 			SQLCHAR b = (SQLCHAR)lua_toboolean(L, -1);
@@ -737,10 +778,13 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 
 			lua_pop(L, 1);
 
-			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_BIT, SQL_BIT, 0, 0, data->buf, data->len, &data->type))) {
+			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_BIT,
+			                          SQL_BIT, 0, 0, data->buf, data->len,
+			                          &data->type))) {
 				return fail(L, hSTMT, stmt->hstmt);
 			}
-		}	break;
+		}
+		break;
 
 		default:
 			lua_pop(L, 1);
@@ -787,7 +831,8 @@ static int desc_params(lua_State *L, stmt_data *stmt)
 		SQLSMALLINT type, digits, nullable;
 		SQLULEN len;
 
-		/* fun fact: most ODBC drivers don't support this function (MS Access for example), so we can't get a param type table */
+		/* fun fact: most ODBC drivers don't support this function (MS Access for
+		   example), so we can't get a param type table */
 		if(error(SQLDescribeParam(stmt->hstmt, i, &type, &len, &digits, &nullable))) {
 			lua_pop(L,1);
 			return LUA_NOREF;
@@ -810,7 +855,7 @@ static int desc_params(lua_State *L, stmt_data *stmt)
 static int conn_prepare(lua_State *L)
 {
 	conn_data *conn = getconnection(L, 1);
-	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
+	SQLCHAR *statement = (SQLCHAR *)luaL_checkstring(L, 2);
 	SQLHDBC hdbc = conn->hdbc;
 	SQLHSTMT hstmt;
 	SQLRETURN ret;
@@ -831,7 +876,7 @@ static int conn_prepare(lua_State *L)
 
 	stmt = (stmt_data *)lua_newuserdata(L, sizeof(stmt_data));
 	memset(stmt, 0, sizeof(stmt_data));
-	
+
 	stmt->closed = 0;
 	stmt->lock = 0;
 	stmt->hidden = 0;
@@ -901,9 +946,10 @@ static int conn_execute (lua_State *L)
 }
 
 /*
-** Commits a transaction. 
+** Commits a transaction.
 */
-static int conn_commit (lua_State *L) {
+static int conn_commit (lua_State *L)
+{
 	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret = SQLEndTran(hDBC, conn->hdbc, SQL_COMMIT);
 	if (error(ret)) {
@@ -914,9 +960,10 @@ static int conn_commit (lua_State *L) {
 }
 
 /*
-** Rollback the current transaction. 
+** Rollback the current transaction.
 */
-static int conn_rollback (lua_State *L) {
+static int conn_rollback (lua_State *L)
+{
 	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret = SQLEndTran(hDBC, conn->hdbc, SQL_ROLLBACK);
 	if (error(ret)) {
@@ -929,15 +976,16 @@ static int conn_rollback (lua_State *L) {
 /*
 ** Sets the auto commit mode
 */
-static int conn_setautocommit (lua_State *L) {
+static int conn_setautocommit (lua_State *L)
+{
 	conn_data *conn = getconnection (L, 1);
 	SQLRETURN ret;
 	if (lua_toboolean (L, 2)) {
 		ret = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
-			(SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
+		                        (SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
 	} else {
 		ret = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
-			(SQLPOINTER) SQL_AUTOCOMMIT_OFF, 0);
+		                        (SQLPOINTER) SQL_AUTOCOMMIT_OFF, 0);
 	}
 	if (error(ret)) {
 		return fail(L, hSTMT, conn->hdbc);
@@ -949,12 +997,14 @@ static int conn_setautocommit (lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
+static int create_connection (lua_State *L, int o, SQLHDBC hdbc)
+{
 	env_data *env = getenvironment(L, 1);
 	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
 
 	/* set auto commit mode */
-	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
+	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT,
+	                                  (SQLPOINTER) SQL_AUTOCOMMIT_ON, 0);
 	if (error(ret)) {
 		return fail(L, hDBC, hdbc);
 	}
@@ -966,7 +1016,7 @@ static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
 	conn->lock = 0;
 	conn->env = env;
 	conn->hdbc = hdbc;
-	
+
 	lock_obj(L, 1, env);
 
 	return 1;
@@ -981,16 +1031,17 @@ static int create_connection (lua_State *L, int o, SQLHDBC hdbc) {
 **   connection object if successfull
 **   nil and error message otherwise.
 */
-static int env_table_connect_DSN (lua_State *L) {
+static int env_table_connect_DSN (lua_State *L)
+{
 	env_data *env = getenvironment (L, 1);
-	SQLCHAR *sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "dsn", NULL);
+	SQLCHAR *sourcename = (SQLCHAR *)luasql_table_optstring(L, 2, "dsn", NULL);
 
 	SQLHDBC hdbc;
 	SQLCHAR sqlOutBuf[4097];
 	SQLSMALLINT sqlOutLen;
 	SQLRETURN ret;
 
-	ret = SQLSetEnvAttr (env->henv, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+	ret = SQLSetEnvAttr (env->henv, SQL_ATTR_ODBC_VERSION, (void *)SQL_OV_ODBC3, 0);
 	if (error(ret)) {
 		return luasql_faildirect (L, "error setting SQL version.");
 	}
@@ -1002,7 +1053,8 @@ static int env_table_connect_DSN (lua_State *L) {
 	}
 
 	/* tries to connect handle */
-	ret = SQLDriverConnect (hdbc, NULL, sourcename, SQL_NTS, sqlOutBuf, 4096, &sqlOutLen, SQL_DRIVER_NOPROMPT);
+	ret = SQLDriverConnect (hdbc, NULL, sourcename, SQL_NTS, sqlOutBuf, 4096,
+	                        &sqlOutLen, SQL_DRIVER_NOPROMPT);
 	if (error(ret)) {
 		ret = fail(L, hDBC, hdbc);
 		SQLFreeHandle(hDBC, hdbc);
@@ -1013,7 +1065,7 @@ static int env_table_connect_DSN (lua_State *L) {
 	ret = create_connection (L, 1, hdbc);
 	if(ret == 1) {
 		/* Add the sqlOutBuf string to the results, for diagnostics */
-		lua_pushlstring(L, (char*)sqlOutBuf, sqlOutLen);
+		lua_pushlstring(L, (char *)sqlOutBuf, sqlOutLen);
 		return 2;
 	}
 
@@ -1028,8 +1080,9 @@ static int env_table_connect_DSN (lua_State *L) {
 ** Lua Returns:
 **   new connection details table
 */
-static void env_connect_fix_old (lua_State *L) {
-	static const char* const opt_names[] = {
+static void env_connect_fix_old (lua_State *L)
+{
+	static const char *const opt_names[] = {
 		"source",
 		"user",
 		"password",
@@ -1062,7 +1115,8 @@ static void env_connect_fix_old (lua_State *L) {
 **   connection object if successfull
 **   nil and error message otherwise.
 */
-static int env_connect (lua_State *L) {
+static int env_connect (lua_State *L)
+{
 	env_data *env = getenvironment (L, 1);
 	SQLCHAR *sourcename = NULL;
 	SQLCHAR *username = NULL;
@@ -1084,9 +1138,9 @@ static int env_connect (lua_State *L) {
 	}
 
 	/* get the standard connection details */
-	sourcename = (SQLCHAR*)luasql_table_optstring(L, 2, "source", NULL);
-	username = (SQLCHAR*)luasql_table_optstring(L, 2, "user", NULL);
-	password = (SQLCHAR*)luasql_table_optstring(L, 2, "password", NULL);
+	sourcename = (SQLCHAR *)luasql_table_optstring(L, 2, "source", NULL);
+	username = (SQLCHAR *)luasql_table_optstring(L, 2, "user", NULL);
+	password = (SQLCHAR *)luasql_table_optstring(L, 2, "password", NULL);
 
 	/* tries to allocate connection handle */
 	ret = SQLAllocHandle (hDBC, env->henv, &hdbc);
@@ -1095,7 +1149,8 @@ static int env_connect (lua_State *L) {
 	}
 
 	/* tries to connect handle */
-	ret = SQLConnect (hdbc, sourcename, SQL_NTS, username, SQL_NTS, password, SQL_NTS);
+	ret = SQLConnect (hdbc, sourcename, SQL_NTS, username, SQL_NTS, password,
+	                  SQL_NTS);
 	if (error(ret)) {
 		ret = fail(L, hDBC, hdbc);
 		SQLFreeHandle(hDBC, hdbc);
@@ -1109,7 +1164,8 @@ static int env_connect (lua_State *L) {
 /*
 ** Closes an environment object
 */
-static int env_close (lua_State *L) {
+static int env_close (lua_State *L)
+{
 	SQLRETURN ret;
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_ODBC);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
@@ -1134,7 +1190,8 @@ static int env_close (lua_State *L) {
 /*
 ** Create metatables for each class of object.
 */
-static void create_metatables (lua_State *L) {
+static void create_metatables (lua_State *L)
+{
 	struct luaL_Reg environment_methods[] = {
 		{"__gc", env_close}, /* Should this method be changed? */
 		{"close", env_close},
@@ -1177,7 +1234,8 @@ static void create_metatables (lua_State *L) {
 /*
 ** Creates an Environment and returns it.
 */
-static int create_environment (lua_State *L) {
+static int create_environment (lua_State *L)
+{
 	env_data *env;
 	SQLHENV henv;
 	SQLRETURN ret = SQLAllocHandle(hENV, SQL_NULL_HANDLE, &henv);
@@ -1185,7 +1243,7 @@ static int create_environment (lua_State *L) {
 		return luasql_faildirect(L, "error creating environment.");
 	}
 
-	ret = SQLSetEnvAttr (henv, SQL_ATTR_ODBC_VERSION, (void*)SQL_OV_ODBC3, 0);
+	ret = SQLSetEnvAttr (henv, SQL_ATTR_ODBC_VERSION, (void *)SQL_OV_ODBC3, 0);
 	if (error(ret)) {
 		ret = luasql_faildirect (L, "error setting SQL version.");
 		SQLFreeHandle (hENV, henv);
@@ -1206,7 +1264,8 @@ static int create_environment (lua_State *L) {
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasql_odbc (lua_State *L) {
+LUASQL_API int luaopen_luasql_odbc (lua_State *L)
+{
 	struct luaL_Reg driver[] = {
 		{"odbc", create_environment},
 		{NULL, NULL},
@@ -1216,4 +1275,4 @@ LUASQL_API int luaopen_luasql_odbc (lua_State *L) {
 	luaL_setfuncs (L, driver, 0);
 	luasql_set_info (L);
 	return 1;
-} 
+}
