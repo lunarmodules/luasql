@@ -181,7 +181,7 @@ static void free_sqlda_vars(XSQLDA *sqlda)
 	XSQLVAR *var;
 
 	if(sqlda != NULL) {
-		for (i=0, var = sqlda->sqlvar; i < sqlda->sqld; i++, var++) {
+		for (i=0, var = sqlda->sqlvar; i < sqlda->sqln; i++, var++) {
 			free(var->sqldata);
 			free(var->sqlind);
 		}
