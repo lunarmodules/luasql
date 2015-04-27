@@ -34,11 +34,12 @@ LUASQL_API int luasql_failmsg (lua_State *L, const char *err, const char *m);
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_Reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
 LUASQL_API void luasql_set_info (lua_State *L);
+LUASQL_API void luasql_find_driver_table (lua_State *L);
+LUASQL_API void luasql_reg_driver (lua_State *L, const luaL_Reg *driver);
 
 LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def);
 LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def);
 
-LUASQL_API void luasql_find_driver_table (lua_State *L);
 
 void luasql_registerobj(lua_State *L, int index, void *obj);
 void luasql_unregisterobj(lua_State *L, void *obj);

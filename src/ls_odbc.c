@@ -1270,9 +1270,9 @@ LUASQL_API int luaopen_luasql_odbc (lua_State *L)
 		{"odbc", create_environment},
 		{NULL, NULL},
 	};
+
 	create_metatables (L);
-	luasql_find_driver_table (L);
-	luaL_setfuncs (L, driver, 0);
-	luasql_set_info (L);
+	luasql_reg_driver(L, driver);
+
 	return 1;
 }

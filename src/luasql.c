@@ -133,32 +133,6 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_settable (L, -3);
 }
 
-
-LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def) {
-	const char* res = NULL;
-
-	lua_pushstring(L, name);
-	lua_gettable(L, idx);
-
-	res = lua_tostring(L, -1);
-	lua_pop(L, 1);
-
-	return (res != NULL) ? res : def;
-}
-
-
-LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def) {
-	lua_Number res = 0;
-
-	lua_pushstring(L, name);
-	lua_gettable(L, idx);
-
-	res = lua_tonumber(L, -1);	
-	lua_pop(L, 1);
-
-	return lua_isnumber(L, -1) ? res : def;
-}
-
 /*
 ** Finds a pre-existing LuaSQL table, or creates a new one.
 */
@@ -185,6 +159,47 @@ LUASQL_API void luasql_find_driver_table (lua_State *L) {
 	}
 
 	lua_newtable (L);
+}
+
+/*
+** registers a driver, taking account of the Lua version differences
+** Lua Returns:
+**   The new/existing 'luasql' driver table on the top of the stack
+*/
+LUASQL_API void luasql_reg_driver (lua_State *L, const luaL_Reg *driver)
+{
+#if LUA_VERSION_NUM<=501
+	luaL_register (L, LUASQL_TABLENAME, driver);
+#else
+	luasql_find_driver_table (L);
+	luaL_setfuncs (L, driver, 0);
+#endif
+	luasql_set_info (L);
+}
+
+LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def) {
+	const char* res = NULL;
+
+	lua_pushstring(L, name);
+	lua_gettable(L, idx);
+
+	res = lua_tostring(L, -1);
+	lua_pop(L, 1);
+
+	return (res != NULL) ? res : def;
+}
+
+
+LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def) {
+	lua_Number res = 0;
+
+	lua_pushstring(L, name);
+	lua_gettable(L, idx);
+
+	res = lua_tonumber(L, -1);	
+	lua_pop(L, 1);
+
+	return lua_isnumber(L, -1) ? res : def;
 }
 
 /*
