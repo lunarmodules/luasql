@@ -85,7 +85,7 @@ typedef struct {
 
 static int error(SQLRETURN a)
 {
-	return (a != SQL_SUCCESS) && (a != SQL_SUCCESS_WITH_INFO);
+	return (a != SQL_SUCCESS) && (a != SQL_SUCCESS_WITH_INFO) && (a != SQL_NO_DATA);
 }
 
 LUASQL_API int luaopen_luasql_odbc (lua_State *L);
@@ -1161,6 +1161,94 @@ static int env_connect (lua_State *L)
 	return create_connection (L, 1, hdbc);
 }
 
+static int split_strnull_attr_list(lua_State *L, const char* str)
+{
+	const char *end = str;
+	const char *equ = str;
+
+	lua_newtable(L);
+	
+	while(*str != '\0') {
+		while(*end != '\0') {
+			if(*end == '=') {
+				equ = end;
+			}
+			++end;
+		}
+
+		lua_pushlstring(L, str, equ-str);
+		lua_pushstring(L, equ + 1);
+		lua_settable(L, -3);
+
+		str = ++end;
+	}
+
+	return 1;
+}
+
+/*
+** Lists avilable ODBC drivers
+*/
+static int env_drivers (lua_State *L)
+{
+	env_data *env = getenvironment(L, 1);
+	SQLCHAR *driver = NULL;
+	SQLCHAR *attr = NULL;
+	SQLSMALLINT attr_max = 5, driver_max = 5;
+	SQLSMALLINT attr_req, driver_req;
+	SQLRETURN ret;
+	int i = 1;
+
+	/* pre-flight to get max sizes */
+	if(error(ret = SQLDrivers(env->henv, SQL_FETCH_FIRST,
+	                 NULL, driver_max, &driver_req,
+	                 NULL, attr_max, &attr_req) ) )
+	{
+		return fail(L, hENV, env->henv);
+	}
+
+	do {
+		if(driver_req > driver_max) {
+			driver_max = driver_req;
+		}
+		if(attr_req > attr_max) {
+			attr_max = attr_req;
+		}
+	} while(SQL_SUCCEEDED(ret = SQLDrivers(env->henv, SQL_FETCH_NEXT,
+	                                       NULL, driver_max, &driver_req,
+	                                       NULL, attr_max, &attr_req) ));
+	if(error(ret)) {
+		return fail(L, hENV, env->henv);
+	}
+
+	/* alloc the buffers and pull in the data */
+	driver = (SQLCHAR *)malloc(++driver_max);
+	attr = (SQLCHAR *)malloc(++attr_max);
+
+	lua_newtable(L);
+	while(SQL_SUCCEEDED(ret = SQLDrivers(env->henv, SQL_FETCH_NEXT,
+	                                     driver, driver_max, &driver_req,
+										 attr, attr_max, &attr_req) ) )
+	{
+		lua_newtable(L);
+		lua_pushstring(L, (const char *)driver);
+		lua_setfield(L, -2, "driver");
+		split_strnull_attr_list(L, (const char *)attr);
+		lua_setfield(L, -2, "attr");
+		
+		lua_rawseti(L, -2, i++);
+	}
+
+	free(driver);
+	free(attr);
+
+	if(error(ret)) {
+		return fail(L, hENV, env->henv);
+	}
+
+	return 1;
+}
+
 /*
 ** Closes an environment object
 */
@@ -1196,6 +1284,7 @@ static void create_metatables (lua_State *L)
 		{"__gc", env_close}, /* Should this method be changed? */
 		{"close", env_close},
 		{"connect", env_connect},
+		{"drivers", env_drivers},
 		{NULL, NULL},
 	};
 	struct luaL_Reg connection_methods[] = {
