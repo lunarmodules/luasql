@@ -16,7 +16,7 @@
 #define NO_CLIENT_LONG_LONG
 #endif
 
-#include "mysql.h"
+#include <mysql.h>
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -161,7 +161,6 @@ static void pushvalue (lua_State *L, void *row, long int len)
 */
 static char *getcolumntype (enum enum_field_types type)
 {
-
 	switch (type) {
 	case MYSQL_TYPE_VAR_STRING:
 	case MYSQL_TYPE_STRING:
@@ -252,11 +251,13 @@ static int cur_fetch (lua_State *L)
 	MYSQL_RES *res = cur->my_res;
 	unsigned long *lengths;
 	MYSQL_ROW row = mysql_fetch_row(res);
+	
 	if (row == NULL) {
 		cur_nullify (L, cur);
 		lua_pushnil(L);  /* no more results */
 		return 1;
 	}
+
 	lengths = mysql_fetch_lengths(res);
 
 	if (lua_istable (L, 2)) {
@@ -377,7 +378,7 @@ static int cur_getcoltypes (lua_State *L)
 */
 static int cur_numrows (lua_State *L)
 {
-	lua_pushnumber (L, (lua_Number)mysql_num_rows (getcursor(L)->my_res));
+	luasql_pushinteger (L, mysql_num_rows (getcursor(L)->my_res));
 	return 1;
 }
 
@@ -406,7 +407,7 @@ static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols)
 
 static int conn_gc (lua_State *L)
 {
-	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
+	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_MYSQL);
 	if (conn != NULL && !(conn->closed)) {
 		/* Nullify structure fields. */
 		conn->closed = 1;
@@ -494,6 +495,7 @@ static int conn_execute (lua_State *L)
 static int conn_commit (lua_State *L)
 {
 	conn_data *conn = getconnection (L);
+	
 	lua_pushboolean(L, !mysql_commit(conn->my_conn));
 	return 1;
 }
@@ -505,6 +507,7 @@ static int conn_commit (lua_State *L)
 static int conn_rollback (lua_State *L)
 {
 	conn_data *conn = getconnection (L);
+
 	lua_pushboolean(L, !mysql_rollback(conn->my_conn));
 	return 1;
 }
@@ -516,11 +519,9 @@ static int conn_rollback (lua_State *L)
 static int conn_setautocommit (lua_State *L)
 {
 	conn_data *conn = getconnection (L);
-	if (lua_toboolean (L, 2)) {
-		mysql_autocommit(conn->my_conn, 1); /* Set it ON */
-	} else {
-		mysql_autocommit(conn->my_conn, 0);
-	}
+
+	mysql_autocommit(conn->my_conn, lua_toboolean (L, 2) ? 1 : 0);
+
 	lua_pushboolean(L, 1);
 	return 1;
 }
@@ -531,25 +532,26 @@ static int conn_setautocommit (lua_State *L)
 */
 static int conn_getlastautoid (lua_State *L)
 {
-	conn_data *conn = getconnection(L);
-	luasql_pushinteger(L, mysql_insert_id(conn->my_conn));
+	conn_data *conn = getconnection (L);
+	luasql_pushinteger (L, mysql_insert_id(conn->my_conn));
 	return 1;
 }
 
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection (lua_State *L, int env, MYSQL *const my_conn)
+static int create_connection (lua_State *L, int env, MYSQL *my_conn)
 {
-	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
-	luasql_setmeta (L, LUASQL_CONNECTION_MYSQL);
+	conn_data *conn = getconnection (L);
 
 	/* fill in structure */
 	conn->closed = 0;
 	conn->env = LUA_NOREF;
 	conn->my_conn = my_conn;
+	
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
+
 	return 1;
 }
 
@@ -597,15 +599,15 @@ static int env_connect (lua_State *L)
 
 	getenvironment(L); /* validade environment */
 
-	if(lua_gettop(L) < 2) {
+	if (lua_gettop(L) < 2) {
 		return luasql_faildirect(L, "No connection details provided");
 	}
 
-	if(!lua_istable(L, 2)) {
+	if (!lua_istable(L, 2)) {
 		env_connect_fix_old(L);
 	}
 
-	if((sourcename = luasql_table_optstring(L, 2, "source", NULL)) == NULL) {
+	if ((sourcename = luasql_table_optstring(L, 2, "source", NULL)) == NULL) {
 		return luasql_faildirect(L, "connection details table missing 'source'");
 	}
 
@@ -636,10 +638,12 @@ static int env_connect (lua_State *L)
 */
 static int env_gc (lua_State *L)
 {
-	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
+	env_data *env = getenvironment(L);
+
 	if (env != NULL && !(env->closed)) {
 		env->closed = 1;
 	}
+
 	return 0;
 }
 
@@ -649,13 +653,15 @@ static int env_gc (lua_State *L)
 */
 static int env_close (lua_State *L)
 {
-	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
-	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
+	env_data *env = getenvironment(L);
+
 	if (env->closed) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
+	
 	env->closed = 1;
+	
 	lua_pushboolean (L, 1);
 	return 1;
 }
