@@ -83,6 +83,7 @@ typedef struct {
 	int           lock;               /* lock count for open statements */
 	unsigned char hidden;             /* statement was used interally i.e. from a
 	                                     direct con:execute */
+	MYSQL_STMT    *my_stmt;           /* statement handle */
 } stmt_data;
 
 typedef struct {
@@ -90,7 +91,7 @@ typedef struct {
 	int           conn;               /* reference to connection */
 	int           numcols;            /* number of columns */
 	int           colnames, coltypes; /* reference to column information tables */
-	MYSQL_RES *my_res;
+	MYSQL_RES     *my_res;
 } cur_data;
 
 LUASQL_API int luaopen_luasql_mysql (lua_State *L);
@@ -142,6 +143,18 @@ static cur_data *getcursor (lua_State *L)
 	return cur;
 }
 
+/*
+** Shut an active statement object
+*/
+static int stmt_shut(lua_State *L, stmt_data *stmt)
+{
+	if(!stmt->closed) {
+		mysql_stmt_close(stmt->my_stmt);
+		stmt->closed = 1;
+	}
+
+	return 0;
+}
 
 /*
 ** Push the value of #i field of #tuple row.
@@ -404,6 +417,26 @@ static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols)
 	return 1;
 }
 
+static int stmt_gc (lua_State *L)
+{
+	stmt_shut(L, getstatement(L));
+
+	return 0;
+}
+
+static int stmt_close(lua_State *L)
+{
+	stmt_data *stmt = getstatement(L);
+	if (stmt->closed) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+	
+	stmt_shut(L, stmt);
+
+	lua_pushboolean (L, 1);
+	return 1;
+}
 
 static int conn_gc (lua_State *L)
 {
@@ -450,6 +483,55 @@ static int escape_string (lua_State *L)
 	}
 	luaL_error(L, "could not allocate escaped string");
 	return 0;
+}
+
+/*
+** Prepares an SQL statement
+** Returns a Statement object
+*/
+static int conn_prepare (lua_State *L)
+{
+	conn_data *conn = getconnection (L);
+	size_t st_len;
+	const char *statement = luaL_checklstring (L, 2, &st_len);
+	stmt_data *stmt = (stmt_data *)lua_newuserdata(L, sizeof(stmt_data));
+
+	memset(stmt, 0, sizeof(stmt_data));
+	luasql_setmeta (L, LUASQL_STATEMENT_MYSQL);
+
+	stmt->my_stmt = mysql_stmt_init(conn->my_conn);
+
+	if(stmt->my_stmt == NULL) {
+		return luasql_failmsg(L, "error preparing query. MySQL: ",
+		                      "out of memory");
+	}
+
+	if(mysql_stmt_prepare(stmt->my_stmt, statement, st_len) < 0) {
+		return luasql_failmsg(L, "error preparing query. MySQL: ",
+		                      mysql_stmt_error(stmt->my_stmt));
+	}
+
+	return 1;
+}
+
+static int stmt_execute(lua_State *L)
+{
+	stmt_data *stmt = getstatement(L);
+
+	if(mysql_stmt_execute(stmt->my_stmt) < 0) {
+		return luasql_failmsg(L, "error executing statement. MySQL: ",
+		                      mysql_stmt_error(stmt->my_stmt));
+	}
+
+	if(mysql_stmt_field_count(stmt->my_stmt) != 0) {
+		/* SELECT */
+		/* TODO: create cursor here */
+		return 0;
+	} else {
+		/* INSERT, DELETE, UPDATE, etc */
+		luasql_pushinteger(L, mysql_stmt_affected_rows(stmt->my_stmt));
+		return 1;
+	}
 }
 
 /*
@@ -682,6 +764,7 @@ static void create_metatables (lua_State *L)
 		{"__gc", conn_gc},
 		{"close", conn_close},
 		{"escape", escape_string},
+		{"prepare", conn_prepare},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
@@ -690,6 +773,8 @@ static void create_metatables (lua_State *L)
 		{NULL, NULL},
 	};
 	struct luaL_Reg statement_methods[] = {
+		{"__gc", stmt_gc},
+		{"close", stmt_close},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
