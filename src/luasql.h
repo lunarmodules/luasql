@@ -3,6 +3,9 @@
 ** See Copyright Notice in license.html
 */
 
+#include <lua.h>
+#include <lauxlib.h>
+
 #ifndef _LUASQL_
 #define _LUASQL_
 
