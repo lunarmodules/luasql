@@ -21,6 +21,9 @@
 #define LUASQL_STATEMENT_FIREBIRD "Firebird statement"
 #define LUASQL_CURSOR_FIREBIRD "Firebird cursor"
 
+/* pre-def to keep the compiler happy */
+LUASQL_API int luaopen_luasql_firebird (lua_State *L);
+
 typedef struct {
 	short           closed;
 	int             lock;             /* lock count for open connections */
