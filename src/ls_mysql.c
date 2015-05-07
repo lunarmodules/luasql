@@ -88,7 +88,7 @@ typedef struct {
 
 typedef struct {
 	short         closed;
-	int           conn;               /* reference to connection */
+	int           stmt;               /* reference to statement */
 	int           numcols;            /* number of columns */
 	int           colnames, coltypes; /* reference to column information tables */
 	MYSQL_RES     *my_res;
@@ -248,7 +248,7 @@ static int cur_nullify (lua_State *L, cur_data *cur)
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	mysql_free_result(cur->my_res);
-	luaL_unref (L, LUA_REGISTRYINDEX, cur->conn);
+	luaL_unref (L, LUA_REGISTRYINDEX, cur->stmt);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->colnames);
 	luaL_unref (L, LUA_REGISTRYINDEX, cur->coltypes);
 	return 0;
@@ -399,20 +399,20 @@ static int cur_numrows (lua_State *L)
 /*
 ** Create a new Cursor object and push it on top of the stack.
 */
-static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols)
+static int create_cursor (lua_State *L, int stmt, MYSQL_RES *result, int cols)
 {
 	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_MYSQL);
 
 	/* fill in structure */
 	cur->closed = 0;
-	cur->conn = LUA_NOREF;
+	cur->stmt = LUA_NOREF;
 	cur->numcols = cols;
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
 	cur->my_res = result;
-	lua_pushvalue (L, conn);
-	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+	lua_pushvalue (L, stmt);
+	cur->stmt = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
@@ -517,16 +517,23 @@ static int conn_prepare (lua_State *L)
 static int stmt_execute(lua_State *L)
 {
 	stmt_data *stmt = getstatement(L);
+	int numcols;
 
 	if(mysql_stmt_execute(stmt->my_stmt) < 0) {
 		return luasql_failmsg(L, "error executing statement. MySQL: ",
 		                      mysql_stmt_error(stmt->my_stmt));
 	}
 
-	if(mysql_stmt_field_count(stmt->my_stmt) != 0) {
+	if((numcols = mysql_stmt_field_count(stmt->my_stmt)) != 0) {
 		/* SELECT */
-		/* TODO: create cursor here */
-		return 0;
+		MYSQL_RES *res = mysql_stmt_result_metadata(stmt->my_stmt);
+
+		if(res != NULL) {
+			return create_cursor(L, 1, res, numcols);
+		}
+
+		return luasql_failmsg(L, "error creating cursor. MySQL: ",
+		                      mysql_stmt_error(stmt->my_stmt));
 	} else {
 		/* INSERT, DELETE, UPDATE, etc */
 		luasql_pushinteger(L, mysql_stmt_affected_rows(stmt->my_stmt));
@@ -541,33 +548,16 @@ static int stmt_execute(lua_State *L)
 */
 static int conn_execute (lua_State *L)
 {
-	conn_data *conn = getconnection (L);
-	size_t st_len;
-	const char *statement = luaL_checklstring (L, 2, &st_len);
-	if (mysql_real_query(conn->my_conn, statement, st_len)) {
-		/* error executing query */
-		return luasql_failmsg(L, "error executing query. MySQL: ",
-		                      mysql_error(conn->my_conn));
-	} else {
-		MYSQL_RES *res = mysql_store_result(conn->my_conn);
-		unsigned int num_cols = mysql_field_count(conn->my_conn);
+	int res;
 
-		if (res) {
-			/* tuples returned */
-			return create_cursor (L, 1, res, num_cols);
-		} else {
-			/* mysql_use_result() returned nothing; should it have? */
-			if(num_cols == 0) { /* no tuples returned */
-				/* query does not return data (it was not a SELECT) */
-				luasql_pushinteger(L, mysql_affected_rows(conn->my_conn));
-				return 1;
-			} else {
-				/* mysql_use_result() should have returned data */
-				return luasql_failmsg(L, "error retrieving result. MySQL: ",
-				                      mysql_error(conn->my_conn));
-			}
-		}
+	/* prepare statement */
+	if((res = conn_prepare(L)) != 1) {
+		return res;
 	}
+
+	/* execute statement */
+	lua_insert(L, 1);
+	return stmt_execute(L);
 }
 
 
@@ -775,6 +765,7 @@ static void create_metatables (lua_State *L)
 	struct luaL_Reg statement_methods[] = {
 		{"__gc", stmt_gc},
 		{"close", stmt_close},
+		{"execute", stmt_execute},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
