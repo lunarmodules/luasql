@@ -769,8 +769,6 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		break;
 
 		case LUA_TBOOLEAN: {
-			SQLCHAR b = (SQLCHAR)lua_toboolean(L, -1);
-
 			data->buf = malloc(sizeof(SQLCHAR));
 			*(SQLCHAR *)data->buf = (SQLCHAR)lua_toboolean(L, -1);
 			data->len = 0;
