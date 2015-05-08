@@ -614,7 +614,8 @@ static int conn_getlastautoid (lua_State *L)
 */
 static int create_connection (lua_State *L, int env, MYSQL *my_conn)
 {
-	conn_data *conn = getconnection (L);
+	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
+	luasql_setmeta (L, LUASQL_CONNECTION_MYSQL);
 
 	/* fill in structure */
 	conn->closed = 0;
