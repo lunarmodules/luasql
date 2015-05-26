@@ -391,7 +391,7 @@ static int cur_getcoltypes (lua_State *L)
 */
 static int cur_numrows (lua_State *L)
 {
-	luasql_pushinteger (L, mysql_num_rows (getcursor(L)->my_res));
+	lua_pushinteger (L, (lua_Integer)mysql_num_rows (getcursor(L)->my_res));
 	return 1;
 }
 
@@ -536,7 +536,7 @@ static int stmt_execute(lua_State *L)
 		                      mysql_stmt_error(stmt->my_stmt));
 	} else {
 		/* INSERT, DELETE, UPDATE, etc */
-		luasql_pushinteger(L, mysql_stmt_affected_rows(stmt->my_stmt));
+		lua_pushinteger(L, (lua_Integer)mysql_stmt_affected_rows(stmt->my_stmt));
 		return 1;
 	}
 }
@@ -605,7 +605,7 @@ static int conn_setautocommit (lua_State *L)
 static int conn_getlastautoid (lua_State *L)
 {
 	conn_data *conn = getconnection (L);
-	luasql_pushinteger (L, mysql_insert_id(conn->my_conn));
+	lua_pushinteger (L, (lua_Integer)mysql_insert_id(conn->my_conn));
 	return 1;
 }
 
