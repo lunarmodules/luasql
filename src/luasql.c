@@ -51,13 +51,14 @@ typedef struct { short  closed; } pseudo_data;
 ** This function is used by `tostring'.
 */
 static int luasql_tostring (lua_State *L) {
-	char buff[100];
 	pseudo_data *obj = (pseudo_data *)lua_touserdata (L, 1);
-	if (obj->closed)
-		strcpy (buff, "closed");
-	else
-		sprintf (buff, "%p", (void *)obj);
-	lua_pushfstring (L, "%s (%s)", lua_tostring(L,lua_upvalueindex(1)), buff);
+
+	if (obj->closed) {
+		lua_pushfstring (L, "%s (closed)", lua_tostring(L,lua_upvalueindex(1)));
+	} else {
+		lua_pushfstring (L, "%s (%p)", lua_tostring(L,lua_upvalueindex(1)), (void *)obj);
+	}
+
 	return 1;
 }
 
@@ -122,12 +123,103 @@ LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 */
 LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "_COPYRIGHT");
-	lua_pushliteral (L, "Copyright (C) 2003-2012 Kepler Project");
+	lua_pushliteral (L, "Copyright (C) 2003-2015 Kepler Project");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "LuaSQL 2.3.0");
+	lua_pushliteral (L, "LuaSQL 3.0.0");
 	lua_settable (L, -3);
+}
+
+/*
+** Finds a pre-existing LuaSQL table, or creates a new one.
+*/
+LUASQL_API void luasql_find_driver_table (lua_State *L) {
+	lua_getglobal(L, "package");
+	if(lua_istable(L, -1)) {
+		lua_getfield(L, -1, "loaded");
+		lua_remove(L, -2);
+
+		lua_pushnil(L);
+		while(lua_next(L, -2) != 0) {
+			const char *key = lua_tostring(L, -2);
+			if(strncmp(key, LUASQL_TABLENAME, strlen(LUASQL_TABLENAME)) == 0) {
+				lua_remove(L, -2);
+				lua_remove(L, -2);
+				return;
+			}
+
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 2);
+	} else {
+		lua_pop(L, 1);
+	}
+
+	lua_newtable (L);
+}
+
+/*
+** registers a driver, taking account of the Lua version differences
+** Lua Returns:
+**   The new/existing 'luasql' driver table on the top of the stack
+*/
+LUASQL_API void luasql_reg_driver (lua_State *L, const luaL_Reg *driver)
+{
+#if LUA_VERSION_NUM<=501
+	luaL_register (L, LUASQL_TABLENAME, driver);
+#else
+	luasql_find_driver_table (L);
+	luaL_setfuncs (L, driver, 0);
+#endif
+	luasql_set_info (L);
+}
+
+LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def) {
+	const char* res = NULL;
+
+	lua_pushstring(L, name);
+	lua_gettable(L, idx);
+
+	res = lua_tostring(L, -1);
+	lua_pop(L, 1);
+
+	return (res != NULL) ? res : def;
+}
+
+
+LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def) {
+	lua_Number res = 0;
+
+	lua_pushstring(L, name);
+	lua_gettable(L, idx);
+
+	res = lua_tonumber(L, -1);	
+	lua_pop(L, 1);
+
+	return lua_isnumber(L, -1) ? res : def;
+}
+
+/*
+** Registers a given C object in the registry to avoid GC
+*/
+void luasql_registerobj(lua_State *L, int index, void *obj)
+{
+	lua_pushvalue(L, index);
+	lua_pushlightuserdata(L, obj);
+	lua_pushvalue(L, -2);
+	lua_settable(L, LUA_REGISTRYINDEX);
+	lua_pop(L, 1);
+}
+
+/*
+** Unregisters a given C object from the registry
+*/
+void luasql_unregisterobj(lua_State *L, void *obj)
+{
+	lua_pushlightuserdata(L, obj);
+	lua_pushnil(L);
+	lua_settable(L, LUA_REGISTRYINDEX);
 }
