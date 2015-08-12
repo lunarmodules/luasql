@@ -525,6 +525,21 @@ static int conn_close (lua_State *L) {
     return pass(L);
 }
 
+static SQLRETURN SQLPrepare_codepage(
+	SQLHSTMT      StatementHandle,
+	SQLCHAR *     StatementText,
+	SQLINTEGER    TextLength,
+	unsigned char unicode /* 0 : local, 1 : UTF8 */ )
+{
+	if(unicode) {
+		SQLWCHAR *wStatementText = to_odbc_wchar((const char*)StatementText);
+		SQLRETURN res = SQLPrepareW(StatementHandle, wStatementText, TextLength);
+		free(wStatementText);
+		return res;
+	} else {
+		return SQLPrepare(StatementHandle, StatementText, TextLength);
+	}
+}
 
 /*
 ** Executes a SQL statement.
@@ -532,7 +547,7 @@ static int conn_close (lua_State *L) {
 **   cursor object: if there are results or
 **   row count: number of rows affected by statement if no results
 */
-static int conn_execute (lua_State *L) {
+static int conn_execute_codepage (lua_State *L, unsigned char unicode) {
 	conn_data *conn = (conn_data *) getconnection (L);
 	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
 	SQLHDBC hdbc = conn->hdbc;
@@ -543,7 +558,7 @@ static int conn_execute (lua_State *L) {
 	if (error(ret))
 		return fail(L, hDBC, hdbc);
 
-	ret = SQLPrepare(hstmt, statement, SQL_NTS);
+	ret = SQLPrepare_codepage(hstmt, statement, SQL_NTS, unicode);
 	if (error(ret)) {
 		ret = fail(L, hSTMT, hstmt);
 		SQLFreeHandle(hSTMT, hstmt);
@@ -582,6 +597,16 @@ static int conn_execute (lua_State *L) {
 		SQLFreeHandle(hSTMT, hstmt);
 		return 1;
 	}
+}
+
+static int conn_execute_local (lua_State *L)
+{
+	return conn_execute_codepage(L, 0);
+}
+
+static int conn_execute_utf8 (lua_State *L)
+{
+	return conn_execute_codepage(L, 1);
 }
 
 /*
@@ -725,7 +750,9 @@ static void create_metatables (lua_State *L) {
 	struct luaL_Reg connection_methods[] = {
 		{"__gc", conn_close}, /* Should this method be changed? */
 		{"close", conn_close},
-		{"execute", conn_execute},
+		{"execute", conn_execute_local},
+		{"local_execute", conn_execute_local},
+		{"utf8_execute", conn_execute_utf8},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
@@ -735,6 +762,7 @@ static void create_metatables (lua_State *L) {
 		{"__gc", cur_close}, /* Should this method be changed? */
 		{"close", cur_close},
 		{"fetch", cur_fetch},
+		{"local_fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},
 		{"getcolnames", cur_colnames},
 		{NULL, NULL},
