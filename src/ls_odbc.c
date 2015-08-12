@@ -32,6 +32,57 @@
 #define LUASQL_CONNECTION_ODBC "ODBC connection"
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
+/* convert ODBC unicode text to utf8, caller's responisblity to dispose of result */
+char *from_odbc_whcar(const SQLWCHAR *wtxt)
+{
+#if defined(_WIN32)
+	char *res = NULL;
+	int len = WideCharToMultiByte(CP_UTF8, 0, wtxt, -1, NULL, 0, NULL, NULL);
+
+	if(len == 0xFFFD || len == 0) {
+		return NULL;
+	}
+
+	res = (SQLCHAR *)malloc(len);
+	len = WideCharToMultiByte(CP_UTF8, 0, wtxt, -1, res, len, NULL, NULL);
+
+	if(len == 0xFFFD || len == 0) {
+		free(res);
+		return NULL;
+	}
+
+	return res;
+#else
+	#pragma message Unicode support not avilable
+	return NULL;
+#endif
+}
+
+/* convert utf8 text to ODBC unicode, caller's responisblity to dispose of result */
+SQLWCHAR *to_odbc_wchar(const char *txt)
+{
+#if defined(_WIN32)
+	SQLWCHAR *res = NULL;
+	int len = MultiByteToWideChar(CP_UTF8, 0, txt, -1, NULL, 0);
+
+	if(len == 0xFFFD || len == 0) {
+		return NULL;
+	}
+
+	res = (SQLWCHAR *)malloc(len * sizeof(SQLWCHAR));
+	len = MultiByteToWideChar(CP_UTF8, 0, txt, -1, res, len);
+
+	if(len == 0xFFFD || len == 0) {
+		free(res);
+		return NULL;
+	}
+
+	return res;
+#else
+	#pragma message Unicode support not avilable
+	return NULL;
+#endif
+}
 
 typedef struct {
 	short      closed;
