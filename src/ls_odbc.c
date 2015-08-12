@@ -224,11 +224,12 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
 **   types: index in stack of column types table
 **   hstmt: statement handle
 **   i: column number
+**   unicode: 0 = use plain SQLCHAR, 1 = use SQLWCHAR text and convert to UTF8
 ** Returns:
 **   0 if successfull, non-zero otherwise;
 */
-static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
-        SQLUSMALLINT i) {
+static int push_column_codepage(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
+        SQLUSMALLINT i, unsigned char unicode) {
     const char *tname;
     char type;
     /* get column type from types table */
@@ -287,11 +288,18 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
         case 't': 
         /* bInary */
         case 'i': { 
-			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
-			SQLLEN got;
+			SQLSMALLINT stype = (type == 't') ? (unicode ? SQL_C_WCHAR : SQL_C_CHAR) : SQL_C_BINARY;
+			SQLLEN got, char_width = 0;
 			char *buffer;
 			luaL_Buffer b;
 			SQLRETURN rc;
+
+			switch(stype) {
+			case SQL_C_CHAR: char_width = sizeof(SQLCHAR); break;
+			case SQL_C_WCHAR: char_width = sizeof(SQLWCHAR); break;
+			default: char_width = 0; break;
+			}
+
 			luaL_buffinit(L, &b);
 			buffer = luaL_prepbuffer(&b);
 			rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
@@ -304,7 +312,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
 					got = LUAL_BUFFERSIZE;
 					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) got--;
+					got -= char_width;
 				}
 				luaL_addsize(&b, got);
 				buffer = luaL_prepbuffer(&b);
@@ -316,13 +324,26 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
 					got = LUAL_BUFFERSIZE;
 					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) got--;
+					got -= char_width;
 				}
 				luaL_addsize(&b, got);
 			}
 			if (rc == SQL_ERROR) return fail(L, hSTMT, hstmt);
+			/* fix WCHAR zero term */
+			if(stype == SQL_C_WCHAR) {
+				buffer = luaL_prepbuffer(&b);
+				buffer[0] = '\0';
+				luaL_addsize(&b, 1);
+			}
 			/* return everything we got */
 			luaL_pushresult(&b);
+			/* convert from WCHAR */
+			if(stype == SQL_C_WCHAR) {
+				char *txt = from_odbc_whcar((SQLWCHAR *)lua_tostring(L, -1));
+				lua_pop(L,1);
+				lua_pushstring(L, txt);
+				free(txt);
+			}
 			return 0;
 		}
     }
@@ -332,7 +353,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 /*
 ** Get another row of the given cursor.
 */
-static int cur_fetch (lua_State *L) {
+static int cur_fetch_codepage (lua_State *L, unsigned char unicode) {
     cur_data *cur = (cur_data *) getcursor (L);
     SQLHSTMT hstmt = cur->hstmt;
     int ret; 
@@ -348,7 +369,7 @@ static int cur_fetch (lua_State *L) {
 		int num = strchr (opts, 'n') != NULL;
 		int alpha = strchr (opts, 'a') != NULL;
 		for (i = 1; i <= cur->numcols; i++) {
-			ret = push_column (L, cur->coltypes, hstmt, i);
+			ret = push_column_codepage (L, cur->coltypes, hstmt, i, unicode);
 			if (ret)
 				return ret;
 			if (alpha) {
@@ -370,12 +391,22 @@ static int cur_fetch (lua_State *L) {
 		SQLUSMALLINT i;
 		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 1; i <= cur->numcols; i++) {
-			ret = push_column (L, cur->coltypes, hstmt, i);
+			ret = push_column_codepage (L, cur->coltypes, hstmt, i, unicode);
 			if (ret)
 				return ret;
 		}
 		return cur->numcols;
 	}
+}
+
+static int cur_fetch_local (lua_State *L)
+{
+	return cur_fetch_codepage(L, 0);
+}
+
+static int cur_fetch_utf8 (lua_State *L)
+{
+	return cur_fetch_codepage(L, 1);
 }
 
 /*
@@ -525,6 +556,7 @@ static int conn_close (lua_State *L) {
     return pass(L);
 }
 
+/* wraps SQLPrepare and SQLPrepareW call for local codepage or UTF8 use */
 static SQLRETURN SQLPrepare_codepage(
 	SQLHSTMT      StatementHandle,
 	SQLCHAR *     StatementText,
@@ -761,8 +793,9 @@ static void create_metatables (lua_State *L) {
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_close}, /* Should this method be changed? */
 		{"close", cur_close},
-		{"fetch", cur_fetch},
-		{"local_fetch", cur_fetch},
+		{"fetch", cur_fetch_local},
+		{"local_fetch", cur_fetch_local},
+		{"utf8_fetch", cur_fetch_utf8},
 		{"getcoltypes", cur_coltypes},
 		{"getcolnames", cur_colnames},
 		{NULL, NULL},
