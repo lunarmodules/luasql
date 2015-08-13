@@ -43,7 +43,7 @@ char *from_odbc_whcar(const SQLWCHAR *wtxt)
 		return NULL;
 	}
 
-	res = (SQLCHAR *)malloc(len);
+	res = (char *)malloc(len);
 	len = WideCharToMultiByte(CP_UTF8, 0, wtxt, -1, res, len, NULL, NULL);
 
 	if(len == 0xFFFD || len == 0) {
