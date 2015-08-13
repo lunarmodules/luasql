@@ -21,6 +21,9 @@
 #include "sql.h"
 #include "sqltypes.h"
 #include "sqlext.h"
+
+#include "errno.h"
+#include "iconv.h"
 #endif
 
 #include "lua.h"
@@ -33,7 +36,7 @@
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
 /* convert ODBC unicode text to utf8, caller's responisblity to dispose of result */
-char *from_odbc_whcar(const SQLWCHAR *wtxt)
+static char *from_odbc_whcar(const SQLWCHAR *wtxt)
 {
 #if defined(_WIN32)
 	char *res = NULL;
@@ -52,14 +55,46 @@ char *from_odbc_whcar(const SQLWCHAR *wtxt)
 	}
 
 	return res;
+#elif defined(UNIXODBC)
+	iconv_t cd = iconv_open("UTF8","UCS2");
+
+	size_t txtlen = 0;
+	size_t inlen, outlen;
+	size_t outscale = 1;
+	
+	SQLWCHAR *inbuf = (SQLWCHAR *)wtxt;
+	char *txt = NULL;
+	char *outbuf;
+
+	/* wstrlen is wrong for this, so we have to do it by hand */
+	while(*(inbuf++) != (SQLWCHAR)(0)) {
+		++txtlen;
+	}
+
+	errno = E2BIG;
+	do {
+		free(txt);
+		if(errno == E2BIG) {
+			inlen = txtlen + 1;
+			outlen = ++outscale * inlen;
+			inbuf = (SQLWCHAR *)wtxt;
+			outbuf = txt = (char *)malloc(outlen);
+		} else {
+			iconv_close(cd);
+			return NULL;
+		}
+	} while(iconv(cd, (char **)&inbuf, &inlen, &outbuf, &outlen) < 0);
+
+	iconv_close(cd);
+	return txt;
 #else
-	#pragma message Unicode support not avilable
+	#warning "Unicode support not avilable"
 	return NULL;
 #endif
 }
 
 /* convert utf8 text to ODBC unicode, caller's responisblity to dispose of result */
-SQLWCHAR *to_odbc_wchar(const char *txt)
+static SQLWCHAR *to_odbc_wchar(const char *txt)
 {
 #if defined(_WIN32)
 	SQLWCHAR *res = NULL;
@@ -78,8 +113,35 @@ SQLWCHAR *to_odbc_wchar(const char *txt)
 	}
 
 	return res;
+#elif defined(UNIXODBC)
+	iconv_t cd = iconv_open("UCS2","UTF8");
+
+	size_t txtlen = strlen(txt);
+	size_t inlen, outlen;
+	size_t outscale = 1;
+	
+	char *inbuf;
+	SQLWCHAR *wtxt = NULL;
+	SQLWCHAR *outbuf;
+
+	errno = E2BIG;
+	do {
+		free(wtxt);
+		if(errno == E2BIG) {
+			inlen = txtlen + 1;
+			outlen = ++outscale * inlen;
+			inbuf = (char *)txt;
+			outbuf = wtxt = (SQLWCHAR *)malloc(outlen);
+		} else {
+			iconv_close(cd);
+			return NULL;
+		}
+	} while(iconv(cd, &inbuf, &inlen, (char **)&outbuf, &outlen) < 0);
+
+	iconv_close(cd);
+	return wtxt;
 #else
-	#pragma message Unicode support not avilable
+	#warning "Unicode support not avilable"
 	return NULL;
 #endif
 }
