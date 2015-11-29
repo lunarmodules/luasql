@@ -27,5 +27,5 @@ table.insert (EXTENSIONS, function ()
 	assert2 (true, row.f3, "Wrong bit representation")
 
 	-- Drops the table
-    assert2 (DROP_TABLE_RETURN_VALUE0, CONN:execute("drop table test_dt") )
+    assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute("drop table test_dt") )
 end)
