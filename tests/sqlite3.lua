@@ -17,3 +17,6 @@ end
 function checkUnknownDatabase(ENV)
 	-- skip this test
 end
+
+table.insert (CONN_METHODS, "escape")
+table.insert (EXTENSIONS, escape)

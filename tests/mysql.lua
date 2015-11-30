@@ -7,6 +7,8 @@ QUERYING_STRING_TYPE_NAME = "binary(65535)"
 
 table.insert (CUR_METHODS, "numrows")
 table.insert (EXTENSIONS, numrows)
+table.insert (CONN_METHODS, "escape")
+table.insert (EXTENSIONS, escape)
 
 ---------------------------------------------------------------------
 -- Build SQL command to create the test table.

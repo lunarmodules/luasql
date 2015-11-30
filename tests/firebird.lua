@@ -19,3 +19,5 @@ function drop_table ()
 	CONN:commit()
 end
 
+table.insert (CONN_METHODS, "escape")
+table.insert (EXTENSIONS, escape)

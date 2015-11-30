@@ -5,3 +5,5 @@
 
 table.insert (CUR_METHODS, "numrows")
 table.insert (EXTENSIONS, numrows)
+table.insert (CONN_METHODS, "escape")
+table.insert (EXTENSIONS, escape)
