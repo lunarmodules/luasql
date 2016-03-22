@@ -373,15 +373,15 @@ static int conn_escape (lua_State *L) {
 	const char *from = luaL_checklstring (L, 2, &len);
 	char *to = malloc(len*sizeof(char)*2+1);
 	int error;
-    int ret = 1;
+	int ret = 1;
 	len = PQescapeStringConn (conn->pg_conn, to, from, len, &error);
 	if (error == 0) { /* success ! */
 		lua_pushlstring (L, to, len);
-    } else {
+	} else {
 		ret = luasql_failmsg (L, "cannot escape string. PostgreSQL: ", PQerrorMessage (conn->pg_conn));
-    }
-    free(to);
-    return ret;
+	}
+	free(to);
+	return ret;
 }
 
 
