@@ -58,6 +58,12 @@ typedef struct {
   #define FB_INTERPRET(BUF, LEN, VECTOR) isc_interpret(BUF, VECTOR)
 #endif
 
+#if LUA_VERSION_NUM>=503
+#define luasql_pushinteger lua_pushinteger
+#else
+#define luasql_pushinteger lua_pushnumber
+#endif
+
 LUASQL_API int luaopen_luasql_firebird (lua_State *L);
 
 /*
@@ -274,6 +280,13 @@ static int count_rows_affected(cur_data* cur)
 	return res;
 }
 
+static void *malloc_zero(size_t len)
+{
+	void *res = malloc(len);
+	memset(res, 0, len);
+	return res;
+}
+
 /*
 ** Executes a SQL statement.
 ** Returns
@@ -347,37 +360,37 @@ static int conn_execute (lua_State *L) {
 		dtype = (var->sqltype & ~1); /* drop flag bit for now */
 		switch(dtype) {
 		case SQL_VARYING:
-			var->sqldata = (char *)malloc(sizeof(char)*var->sqllen + 2);
+			var->sqldata = (char *)malloc_zero(sizeof(char)*var->sqllen + 2);
 			break;
 		case SQL_TEXT:
-			var->sqldata = (char *)malloc(sizeof(char)*var->sqllen);
+			var->sqldata = (char *)malloc_zero(sizeof(char)*var->sqllen);
 			break;
 		case SQL_SHORT:
-			var->sqldata = (char *)malloc(sizeof(short));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_SHORT));
 			break;			
 		case SQL_LONG:
-			var->sqldata = (char *)malloc(sizeof(long));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_LONG));
 			break;
 		case SQL_INT64:
-			var->sqldata = (char *)malloc(sizeof(ISC_INT64));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_INT64));
 			break;
 		case SQL_FLOAT:
-			var->sqldata = (char *)malloc(sizeof(float));
+			var->sqldata = (char *)malloc_zero(sizeof(float));
 			break;
 		case SQL_DOUBLE:
-			var->sqldata = (char *)malloc(sizeof(double));
+			var->sqldata = (char *)malloc_zero(sizeof(double));
 			break;
 		case SQL_TYPE_TIME:
-			var->sqldata = (char *)malloc(sizeof(ISC_TIME));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_TIME));
 			break;
 		case SQL_TYPE_DATE:
-			var->sqldata = (char *)malloc(sizeof(ISC_DATE));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_DATE));
 			break;
 		case SQL_TIMESTAMP:
-			var->sqldata = (char *)malloc(sizeof(ISC_TIMESTAMP));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_TIMESTAMP));
 			break;
 		case SQL_BLOB:
-			var->sqldata = (char *)malloc(sizeof(ISC_QUAD));
+			var->sqldata = (char *)malloc_zero(sizeof(ISC_QUAD));
 			break;
 		/* TODO : add extra data type handles here */
 		}
@@ -616,13 +629,13 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata, cur->out_sqlda->sqlvar[i].sqllen);
 			break;
 		case SQL_SHORT:
-			lua_pushnumber(L, *(short*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(ISC_SHORT*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_LONG:
-			lua_pushnumber(L, *(long*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(ISC_LONG*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_INT64:
-			lua_pushnumber(L, (lua_Number)*(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, *(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_FLOAT:
 			lua_pushnumber(L, *(float*)(cur->out_sqlda->sqlvar[i].sqldata));
@@ -799,6 +812,10 @@ static int cur_coltypes (lua_State *L) {
 		case SQL_SHORT:
 		case SQL_LONG:
 		case SQL_INT64:
+#if LUA_VERSION_NUM>=503
+            lua_pushstring(L, "integer");
+			break;
+#endif
 		case SQL_FLOAT:
 		case SQL_DOUBLE:
             lua_pushstring(L, "number");

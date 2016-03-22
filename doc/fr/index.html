@@ -2,7 +2,7 @@
    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <title>LuaSQL: Database connectivity for the Lua programming language</title>
+    <title>LuaSQL: Connection au base de donnée pour le language de programmation Lua</title>
     <link rel="stylesheet" href="doc.css" type="text/css"/>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 </head>
@@ -15,7 +15,7 @@
 		<img alt="LuaSQL logo" src="luasql.png"/>
 	</a></div>
 	<div id="product_name"><big><strong>LuaSQL</strong></big></div>
-	<div id="product_description">Database connectivity for the Lua programming language</div>
+	<div id="product_description">Connection au base de donnée pour le language de programmation Lua</div>
 </div> <!-- id="product" -->
 
 <div id="main">
@@ -25,34 +25,34 @@
 	<ul>
 		<li><strong>Home</strong>
 			<ul>
-				<li><a href="index.html#overview">Overview</a></li>
-				<li><a href="index.html#status">Status</a></li>
-				<li><a href="index.html#download">Download</a></li>
-				<li><a href="index.html#credits">Credits</a></li>
-				<li><a href="index.html#contact">Contact us</a></li>
+				<li><a href="index.html#overview">Vue d'ensemble</a></li>
+				<li><a href="index.html#status">Statut</a></li>
+				<li><a href="index.html#download">Téléchargement</a></li>
+				<li><a href="index.html#credits">?Credits?</a></li>
+				<li><a href="index.html#contact">Contactez-nous</a></li>
 			</ul>
 		</li>
 		<li><a href="manual.html">Manual</a>
 			<ul>
 				<li><a href="manual.html#introduction">Introduction</a></li>
-				<li><a href="manual.html#compiling">Compiling</a></li>
+				<li><a href="manual.html#compiling">Compilation</a></li>
 				<li><a href="manual.html#installation">Installation</a></li>
-				<li><a href="manual.html#errors">Error handling</a></li>
+				<li><a href="manual.html#errors">Gestion d'erreur</a></li>
 				<li><a href="manual.html#drivers">Drivers</a></li>
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
-				<li><a href="manual.html#cursor_object">Cursor</a></li>
+				<li><a href="manual.html#cursor_object">Curseurr</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
 				<li><a href="manual.html#sqlite3_extensions">SQLite3</a></li>
 			</ul>
 		</li>
-		<li><a href="examples.html">Examples</a></li>
-		<li><a href="history.html">History</a></li>
-        <li><a href="http://github.com/keplerproject/luasql/">Project</a>
+		<li><a href="examples.html">Exemples</a></li>
+		<li><a href="history.html">History?historique?</a></li>
+        <li><a href="http://github.com/keplerproject/luasql/">Projet</a>
             <ul>
-                <li><a href="http://github.com/keplerproject/luasql/issues">Issues</a></li>
+                <li><a href="http://github.com/keplerproject/luasql/">Bug tracker</a></li>
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -64,7 +64,7 @@
 <h2><a name="overview"></a>Overview</h2>
 
 <p>
-LuaSQL is a simple interface from Lua to a DBMS. It enables a Lua program to:
+LuaSQL est une simple interface de Lua à DBMS. Cela permet à un programme Lua de :
 </p>
 
 <ul>
@@ -86,10 +86,11 @@ For more details on the features list please check the product
 <a href="history.html">history</a>.
 </p>
 
+
 <h2><a name="download"></a>Download</h2>
 <p>
-LuaSQL can be installed via <a href="http://luarocks.org">LuaRocks</a>, using the 
-driver for your database of choice:
+LuaSQL peut être installé via <a href="http://luarocks.org">LuaRocks</a>.
+Choissisez le moteur pour votre base de données:
 
 <pre>
 luarocks install luasql-sqlite3
@@ -98,9 +99,8 @@ luarocks install luasql-mysql
 luarocks install luasql-sqlite
 luarocks install luasql-odbc
 </pre>
-
-Source code for LuaSQL can be downloaded from its <a href=
-"http://github.com/keplerproject/luasql">GitHub</a> repository.
+Le code source pour LuaSQL peut être téléchargé de son dépôt à <a href=
+"http://github.com/keplerproject/luasql">GitHub</a>.
 </p>
 
 <h2><a name="credits"></a>Credits</h2>
@@ -110,7 +110,7 @@ Source code for LuaSQL can be downloaded from its <a href=
 Version 2.3 is just an adaptation of the code to work with Lua 5.0, 5.1 and 5.2.
 </p>
 <p>
-Version 2.2 started a distributed development, with all project discussions happenign through the <a href="https://groups.google.com/forum/#!forum/kepler-project">Kepler's mailing list</a>.
+Version 2.2 started a distributed development, with all project discussions happening through <a href="https://groups.google.com/forum/#!forum/kepler-project">Kepler's mailing list</a>.
 New developers: Hisham Muhammad, Ignacio Burgue&ntilde;o, Luis Eduardo Jason Santos, Marc Nijdam, Mauricio Bomfim and Scott Morgan.
 <p>
 Version 2.1 and 2.0 were redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal

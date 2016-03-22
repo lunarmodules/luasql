@@ -316,7 +316,7 @@ static int cur_getcoltypes (lua_State *L) {
 ** Push the number of rows.
 */
 static int cur_numrows (lua_State *L) {
-	lua_pushnumber (L, (lua_Number)mysql_num_rows (getcursor(L)->my_res));
+	lua_pushinteger (L, (lua_Number)mysql_num_rows (getcursor(L)->my_res));
 	return 1;
 }
 
@@ -409,7 +409,7 @@ static int conn_execute (lua_State *L) {
 		else { /* mysql_use_result() returned nothing; should it have? */
 			if(num_cols == 0) { /* no tuples returned */
             	/* query does not return data (it was not a SELECT) */
-				lua_pushnumber(L, mysql_affected_rows(conn->my_conn));
+				lua_pushinteger(L, mysql_affected_rows(conn->my_conn));
 				return 1;
         	}
 			else /* mysql_use_result() should have returned data */
@@ -460,7 +460,7 @@ static int conn_setautocommit (lua_State *L) {
 */
 static int conn_getlastautoid (lua_State *L) {
   conn_data *conn = getconnection(L);
-  lua_pushnumber(L, mysql_insert_id(conn->my_conn));
+  lua_pushinteger(L, mysql_insert_id(conn->my_conn));
   return 1;
 }
 
@@ -491,7 +491,7 @@ static int env_connect (lua_State *L) {
 	const char *username = luaL_optstring(L, 3, NULL);
 	const char *password = luaL_optstring(L, 4, NULL);
 	const char *host = luaL_optstring(L, 5, NULL);
-	const int port = luaL_optint(L, 6, 0);
+	const int port = luaL_optinteger(L, 6, 0);
 	MYSQL *conn;
 	getenvironment(L); /* validade environment */
 

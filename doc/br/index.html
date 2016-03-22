@@ -3,7 +3,7 @@
 <html>
 <head>
     <title>LuaSQL: Conectividade de banco de dados para a linguagem de programa&ccedil;&atilde;o Lua</title>
-    <link rel="stylesheet" href="http://www.keplerproject.org/doc.css" type="text/css"/>
+    <link rel="stylesheet" href="doc.css" type="text/css"/>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 </head>
 
@@ -51,10 +51,9 @@
 		</li>
 		<li><a href="examples.html">Exemplos</a></li>
 		<li><a href="history.html">Hist&oacute;rico</a></li>
-        <li><a href="http://luaforge.net/projects/luasql/">Projeto</a>
+        <li><a href="http://github.com/keplerproject/luasql/">Project</a>
             <ul>
-                <li><a href="http://luaforge.net/tracker/?group_id=12">Bug Tracker</a></li>
-                <li><a href="http://luaforge.net/scm/?group_id=12">CVS</a></li>
+                <li><a href="http://github.com/keplerproject/luasql/issues">Bug tracker</a></li>
             </ul>
         </li>
 		<li><a href="license.html">Licen&ccedil;a</a></li>
@@ -93,13 +92,19 @@ PostgreSQL 7.x e 8.x.</p>
 
 <h2><a name="download"></a>Download</h2>
 <p>
-O download do c&oacute;digo fonte do LuaSQL pode ser feito a partir da sua
-p&aacute;gina no
-<a href="http://luaforge.net/project/showfiles.php?group_id=12">LuaForge</a>. 
-Para os usu&aacute;rios do  
-<a href="http://luaforge.net/projects/luabinaries/">LuaBinaries</a> 5.0.2 Release 2
-uma vers&atilde;o compilada dos drivers do LuaSQL pode ser encontrada na mesma p&aacute;gina
-do LuaForge.
+LuaSQL pode ser instalado via <a href="http://luarocks.org">LuaRocks</a>, usando
+o driver do seu banco de dados escolhido:
+
+<pre>
+luarocks install luasql-sqlite3
+luarocks install luasql-postgres
+luarocks install luasql-mysql
+luarocks install luasql-sqlite
+luarocks install luasql-odbc
+</pre>
+
+O código fonte do LuaSQL pode ser baixado do seu repositório no <a href=
+"http://github.com/keplerproject/luasql">GitHub</a>.
 </p>
 
 <h2><a name="credits"></a>Cr&eacute;ditos</h2>
@@ -135,7 +140,7 @@ Coment&aacute;rios s&atilde;o muito bem-vindos!
 </p>
 
 <p>
-A <a href="http://luaforge.net/mail/?group_id=104">lista de discuss&atilde;o</a>
+A <a href="https://groups.google.com/forum/#!forum/kepler-project">lista de discuss&atilde;o</a>
 do projeto Kepler &eacute; outra forma de entrar em contato com desenvolvedores
 e usu&aacute;rios da plataforma Kepler.
 </p>

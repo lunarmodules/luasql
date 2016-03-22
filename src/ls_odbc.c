@@ -119,7 +119,7 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
     SQLINTEGER NativeError;
     SQLSMALLINT MsgSize, i;
     SQLRETURN ret;
-    char Msg[SQL_MAX_MESSAGE_LENGTH];
+    SQLCHAR Msg[SQL_MAX_MESSAGE_LENGTH];
     luaL_Buffer b;
     lua_pushnil(L);
 
@@ -129,7 +129,7 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
         ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg, 
                 sizeof(Msg), &MsgSize);
         if (ret == SQL_NO_DATA) break;
-        luaL_addlstring(&b, Msg, MsgSize);
+        luaL_addlstring(&b, (char*)Msg, MsgSize);
         luaL_addchar(&b, '\n');
         i++;
     } 
@@ -148,8 +148,12 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
         case SQL_LONGVARCHAR:
         case SQL_WCHAR: case SQL_WVARCHAR: case SQL_WLONGVARCHAR:
             return "string";
-        case SQL_BIGINT: case SQL_TINYINT: case SQL_NUMERIC: 
-        case SQL_DECIMAL: case SQL_INTEGER: case SQL_SMALLINT: 
+        case SQL_BIGINT: case SQL_TINYINT: 
+        case SQL_INTEGER: case SQL_SMALLINT: 
+#if LUA_VERSION_NUM>=503
+			return "integer";
+#endif
+		case SQL_NUMERIC: case SQL_DECIMAL: 
         case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
             return "number";
         case SQL_BINARY: case SQL_VARBINARY: case SQL_LONGVARBINARY:
@@ -200,7 +204,22 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				lua_pushnumber(L, num);
 			return 0;
 		}
-                  /* bOol */
+#if LUA_VERSION_NUM>=503
+		/* iNteger */
+		case 'n': {
+			long int num;
+			SQLLEN got;
+			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
+			if (error(rc))
+				return fail(L, hSTMT, hstmt);
+			if (got == SQL_NULL_DATA)
+				lua_pushnil(L);
+			else
+				lua_pushinteger(L, num);
+			return 0;
+		}
+#endif
+		/* bOol */
         case 'o': { 
 			char b;
 			SQLLEN got;
@@ -363,7 +382,7 @@ static int cur_coltypes (lua_State *L) {
 /*
 ** Creates two tables with the names and the types of the columns.
 */
-static void create_colinfo (lua_State *L, cur_data *cur) {
+static int create_colinfo (lua_State *L, cur_data *cur) {
 	SQLCHAR buffer[256];
 	SQLSMALLINT namelen, datatype, i;
 	SQLRETURN ret;
@@ -375,15 +394,21 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 	names = lua_gettop (L);
 	for (i = 1; i <= cur->numcols; i++) {
 		ret = SQLDescribeCol(cur->hstmt, i, buffer, sizeof(buffer), 
-                &namelen, &datatype, NULL, NULL, NULL);
-		/*if (ret == SQL_ERROR) return fail(L, hSTMT, cur->hstmt);*/
-		lua_pushstring (L, buffer);
+			&namelen, &datatype, NULL, NULL, NULL);
+		if (ret == SQL_ERROR) {
+			lua_pop(L, 2);
+			return -1;
+		}
+
+		lua_pushstring (L, (char*)buffer);
 		lua_rawseti (L, names, i);
 		lua_pushstring(L, sqltypetolua(datatype));
 		lua_rawseti (L, types, i);
 	}
 	cur->colnames = luaL_ref (L, LUA_REGISTRYINDEX);
 	cur->coltypes = luaL_ref (L, LUA_REGISTRYINDEX);
+
+	return 0;
 }
 
 
@@ -391,25 +416,30 @@ static void create_colinfo (lua_State *L, cur_data *cur) {
 ** Creates a cursor table and leave it on the top of the stack.
 */
 static int create_cursor (lua_State *L, int o, conn_data *conn, 
-        const SQLHSTMT hstmt, const SQLSMALLINT numcols) {
-    cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
+	const SQLHSTMT hstmt, const SQLSMALLINT numcols)
+{
+	cur_data *cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
 	conn->cur_counter++;
-    /* fill in structure */
+
+	/* fill in structure */
 	cur->closed = 0;
 	cur->conn = LUA_NOREF;
-    cur->numcols = numcols;
+	cur->numcols = numcols;
 	cur->colnames = LUA_NOREF;
 	cur->coltypes = LUA_NOREF;
-    cur->hstmt = hstmt;
+	cur->hstmt = hstmt;
 	lua_pushvalue (L, o);
-    cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
+	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
 	/* make and store column information table */
-	create_colinfo (L, cur);
+	if(create_colinfo (L, cur) < 0) {
+		lua_pop(L, 1);
+		return fail(L, hSTMT, cur->hstmt);
+	}
 
-    return 1;
+	return 1;
 }
 
 
@@ -453,7 +483,7 @@ static int conn_close (lua_State *L) {
 */
 static int conn_execute (lua_State *L) {
 	conn_data *conn = (conn_data *) getconnection (L);
-	const char *statement = luaL_checkstring(L, 2);
+	SQLCHAR *statement = (SQLCHAR*)luaL_checkstring(L, 2);
 	SQLHDBC hdbc = conn->hdbc;
 	SQLHSTMT hstmt;
 	SQLSMALLINT numcols;
@@ -462,7 +492,7 @@ static int conn_execute (lua_State *L) {
 	if (error(ret))
 		return fail(L, hDBC, hdbc);
 
-	ret = SQLPrepare(hstmt, (char *) statement, SQL_NTS);
+	ret = SQLPrepare(hstmt, statement, SQL_NTS);
 	if (error(ret)) {
 		ret = fail(L, hSTMT, hstmt);
 		SQLFreeHandle(hSTMT, hstmt);
@@ -490,7 +520,7 @@ static int conn_execute (lua_State *L) {
 		return create_cursor (L, 1, conn, hstmt, numcols);
 	else {
 		/* if action has no results (e.g., UPDATE) */
-		SQLINTEGER numrows;
+		SQLLEN numrows;
 		ret = SQLRowCount(hstmt, &numrows);
 		if (error(ret)) {
 			ret = fail(L, hSTMT, hstmt);
@@ -583,9 +613,9 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc) 
 */
 static int env_connect (lua_State *L) {
 	env_data *env = (env_data *) getenvironment (L);
-	const char *sourcename = luaL_checkstring (L, 2);
-	const char *username = luaL_optstring (L, 3, NULL);
-	const char *password = luaL_optstring (L, 4, NULL);
+	SQLCHAR *sourcename = (SQLCHAR*)luaL_checkstring (L, 2);
+	SQLCHAR *username = (SQLCHAR*)luaL_optstring (L, 3, NULL);
+	SQLCHAR *password = (SQLCHAR*)luaL_optstring (L, 4, NULL);
 	SQLHDBC hdbc;
 	SQLRETURN ret;
 
@@ -595,8 +625,8 @@ static int env_connect (lua_State *L) {
 		return luasql_faildirect (L, "connection allocation error.");
 
 	/* tries to connect handle */
-	ret = SQLConnect (hdbc, (char *) sourcename, SQL_NTS, 
-		(char *) username, SQL_NTS, (char *) password, SQL_NTS);
+	ret = SQLConnect (hdbc, sourcename, SQL_NTS, 
+		username, SQL_NTS, password, SQL_NTS);
 	if (error(ret)) {
 		ret = fail(L, hDBC, hdbc);
 		SQLFreeHandle(hDBC, hdbc);

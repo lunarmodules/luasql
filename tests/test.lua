@@ -499,6 +499,7 @@ end
 function escape ()
         local escaped = CONN:escape"a'b'c'd"
 	assert ("a\\'b\\'c\\'d" == escaped or "a''b''c''d" == escaped)
+	io.write (" escape")
 end
 
 ---------------------------------------------------------------------
@@ -644,7 +645,6 @@ tests = {
 	{ "fetch many", fetch_many },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
-	{ "escape", escape },
 	{ "extensions", extensions_test },
 	{ "close objects", check_close },
 	{ "drop table", drop_table },
