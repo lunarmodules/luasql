@@ -1,4 +1,4 @@
-V= 2.3.0
+V= 2.3.1
 CONFIG= ./config
 
 include $(CONFIG)

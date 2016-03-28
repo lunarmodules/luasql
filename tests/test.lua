@@ -615,9 +615,6 @@ if type(arg[1]) ~= "string" then
 end
 
 driver = arg[1]
-datasource = arg[2] or "luasql-test"
-username = arg[3] or nil
-password = arg[4] or nil
 
 -- Loading driver specific functions
 if arg[0] then
@@ -635,6 +632,10 @@ if arg[0] then
 		f ()
 	end
 end
+
+datasource = arg[2] or DEFAULT_TEST_DATABASE or "luasql-test"
+username = arg[3] or DEFAULT_USERNAME or nil
+password = arg[4] or DEFAULT_PASSWORD or nil
 
 -- Complete set of tests
 tests = {
