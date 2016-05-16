@@ -510,8 +510,9 @@ static int env_connect (lua_State *L) {
 	conn = PQsetdbLogin(pghost, pgport, NULL, NULL, sourcename, username, password);
 
 	if (PQstatus(conn) == CONNECTION_BAD) {
+		int rc = luasql_failmsg(L, "error connecting to database. PostgreSQL: ", PQerrorMessage(conn));
 		PQfinish(conn);
-		return luasql_failmsg(L, "error connecting to database. PostgreSQL: ", PQerrorMessage(conn));
+		return rc;
 	}
 	PQsetNoticeProcessor(conn, notice_processor, NULL);
 	return create_connection(L, 1, conn);
