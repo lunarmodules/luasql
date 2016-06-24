@@ -6,7 +6,7 @@
 
 #include <ibase.h>	/* The Firebird API*/
 #include <time.h>	/* For managing time values */
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Lua API */
