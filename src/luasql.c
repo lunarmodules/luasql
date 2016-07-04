@@ -151,13 +151,15 @@ LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char*
 ** Pulls an optional number value from the table at idx
 */
 LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def) {
-	lua_Number res = 0;
+	lua_Number res = def;
 
 	lua_pushstring(L, name);
 	lua_gettable(L, idx);
 
-	res = lua_tonumber(L, -1);	
+	if(lua_isnumber(L, -1)) {
+		res = lua_tonumber(L, -1);
+	}
 	lua_pop(L, 1);
 
-	return lua_isnumber(L, -1) ? res : def;
+	return res;
 }
