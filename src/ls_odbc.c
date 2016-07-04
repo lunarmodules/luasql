@@ -658,7 +658,7 @@ static int env_table_connect_DSN (lua_State *L)
 ** Lua Returns:
 **   new connection details table
 */
-static void env_connect_fix_old (lua_State *L)
+static void env_connect_convert_args_to_table (lua_State *L)
 {
 	static const char *const opt_names[] = {
 		"source",
@@ -707,7 +707,7 @@ static int env_connect (lua_State *L)
 	}
 
 	if(!lua_istable(L, 2)) {
-		env_connect_fix_old(L);
+		env_connect_convert_args_to_table(L);
 	}
 
 	/* check for the custom DSN connection string */
