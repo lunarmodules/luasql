@@ -374,21 +374,13 @@ static int conn_escape (lua_State *L) {
 	int error;
 	int ret = 1;
 	luaL_Buffer b;
-#if defined(luaL_buffinitsize)
-	char *to = luaL_buffinitsize (L, &b, 2*len+1);
-#else
 	char *to;
 	luaL_buffinit (L, &b);
-	to = luaL_prepbuffer (&b);
-#endif
+	to = luaL_prepbuffsize (&b, 2*len+1);
 	len = PQescapeStringConn (conn->pg_conn, to, from, len, &error);
 	if (error == 0) { /* success ! */
-#if defined(luaL_pushresultsize)
-		luaL_pushresultsize (&b, len);
-#else
 		luaL_addsize (&b, len);
 		luaL_pushresult (&b);
-#endif
 	} else {
 		ret = luasql_failmsg (L, "cannot escape string. PostgreSQL: ", PQerrorMessage (conn->pg_conn));
 	}
