@@ -375,15 +375,33 @@ static int conn_escape (lua_State *L) {
 	int ret = 1;
 	luaL_Buffer b;
 	char *to;
+#if !defined(LUA_VERSION_NUM) || (LUA_VERSION_NUM == 501)
+	/* Lua 5.0 and 5.1 */
 	luaL_buffinit (L, &b);
-	to = luaL_prepbuffsize (&b, 2*len+1);
+	do {
+		int max = LUAL_BUFFERSIZE / 2;
+		size_t bytes_copied;
+		size_t this_len = (len > max) ? max : len;
+		to = luaL_prepbuffer (&b);
+		bytes_copied = PQescapeStringConn (conn->pg_conn, to, from, this_len, &error);
+		if (error != 0) { /* failed ! */
+			return luasql_failmsg (L, "cannot escape string. PostgreSQL: ", PQerrorMessage (conn->pg_conn));
+		}
+		luaL_addsize (&b, bytes_copied);
+		from += this_len;
+		len -= this_len;
+	} while (len > 0);
+	luaL_pushresult (&b);
+#else
+	/* Lua 5.2 and 5.3 */
+	to = luaL_buffinitsize (L, &b, 2*len+1);
 	len = PQescapeStringConn (conn->pg_conn, to, from, len, &error);
 	if (error == 0) { /* success ! */
-		luaL_addsize (&b, len);
-		luaL_pushresult (&b);
+		luaL_pushresultsize (&b, len);
 	} else {
 		ret = luasql_failmsg (L, "cannot escape string. PostgreSQL: ", PQerrorMessage (conn->pg_conn));
 	}
+#endif
 	return ret;
 }
 
