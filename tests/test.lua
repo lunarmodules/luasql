@@ -497,8 +497,15 @@ end
 -- Escaping strings
 ---------------------------------------------------------------------
 function escape ()
-        local escaped = CONN:escape"a'b'c'd"
+	local escaped = CONN:escape"a'b'c'd"
 	assert ("a\\'b\\'c\\'d" == escaped or "a''b''c''d" == escaped)
+
+	local n = 5200
+	local s1 = string.rep("'", n)
+	local s2 = CONN:escape(s1)
+	assert (s1:len() == n)
+	assert (s2:len() == 2*n)
+
 	io.write (" escape")
 end
 
