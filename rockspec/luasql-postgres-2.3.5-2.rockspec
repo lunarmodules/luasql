@@ -12,7 +12,7 @@ description = {
       and retrieve results in a row-by-row cursor fashion.
    ]],
    license = "MIT/X11",
-   homepage = "http://www.keplerproject.org/luasql/"
+   homepage = "http://keplerproject.github.io/luasql/"
 }
 dependencies = {
    "lua >= 5.0"
