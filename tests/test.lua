@@ -503,9 +503,10 @@ function escape ()
 	local n = 5200
 	local s1 = string.rep("'", n)
 	local s2 = CONN:escape(s1)
+	local s3 = s1:gsub ("'", "\\'")
 	assert (s1:len() == n)
 	assert (s2:len() == 2*n)
-	assert (s2 == s1..s1)
+	assert (s2 == s1..s1 or s2 == s3)
 
 	io.write (" escape")
 end
