@@ -532,6 +532,7 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
+	mysql_library_end();
 	env->closed = 1;
 	lua_pushboolean (L, 1);
 	return 1;
