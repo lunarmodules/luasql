@@ -672,7 +672,11 @@ else
 	luasql = require ("luasql."..driver)
 end
 assert (luasql, "Could not load driver: no luasql table.")
-io.write (luasql._VERSION.." "..driver.." driver test.  "..luasql._COPYRIGHT.."\n")
+io.write (luasql._VERSION.." "..driver)
+if luasql._CLIENTVERSION then
+	io.write (" ("..luasql._CLIENTVERSION..")")
+end
+io.write (" driver test.  "..luasql._COPYRIGHT.."\n")
 
 for i = 1, table.getn (tests) do
 	local t = tests[i]
