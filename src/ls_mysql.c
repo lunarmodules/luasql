@@ -603,7 +603,12 @@ LUASQL_API int luaopen_luasql_mysql (lua_State *L) {
 	luaL_setfuncs(L, driver, 0);
 	luasql_set_info (L);
     lua_pushliteral (L, "_CLIENTVERSION");
-    lua_pushliteral (L, MYSQL_SERVER_VERSION);
+#ifdef MARIADB_CLIENT_VERSION_STR
+lua_pushliteral (L, MARIADB_CLIENT_VERSION_STR);
+#else
+lua_pushliteral (L, MYSQL_SERVER_VERSION);
+#endif
+    /*lua_pushliteral (L, MYSQL_SERVER_VERSION);*/
     lua_settable (L, -3);
 	return 1;
 }
