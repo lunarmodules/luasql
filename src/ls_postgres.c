@@ -414,7 +414,20 @@ static int conn_escape (lua_State *L) {
 static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
-	PGresult *res = PQexec(conn->pg_conn, statement);
+	int nparams = lua_gettop(L);
+	PGresult *res;
+	if (nparams > 2) {
+		int i;
+		const char ** values = malloc(sizeof (char *) * (nparams - 2));
+		for (i = 3; i <= nparams; i++)
+			values[i - 3] = lua_tostring(L, i);
+		res = PQexecParams(conn->pg_conn, statement, nparams - 2, NULL, values, NULL, NULL, 0);
+		free(values);
+	}
+	else {
+		/* for multiple statements support */
+		res = PQexec(conn->pg_conn, statement);
+	}
 	if (res && PQresultStatus(res)==PGRES_COMMAND_OK) {
 		/* no tuples returned */
 		lua_pushnumber(L, atof(PQcmdTuples(res)));
