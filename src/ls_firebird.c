@@ -335,7 +335,7 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* an unsupported SQL statement (something like COMMIT) */
-	if(stmt_type > 5) {
+	if(stmt_type > isc_info_sql_stmt_ddl && stmt_type != isc_info_sql_stmt_exec_procedure) {
 		free(cur.out_sqlda);
 		return luasql_faildirect(L, "unsupported SQL statement");
 	}
