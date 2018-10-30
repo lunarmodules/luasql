@@ -189,8 +189,6 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 		cur->errhp), cur->errhp);
 
 	switch (col->type) {
-		case SQLT_CHR:
-		case SQLT_STR:
 		case SQLT_VCS:
 		case SQLT_AFC:
 		case SQLT_AVC:
@@ -200,6 +198,17 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 			col->val.s = calloc (col->max + 1, sizeof(col->val.s));
 			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
 				cur->errhp, (ub4)i, col->val.s, col->max+1,
+				SQLT_STR /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		case SQLT_CHR:
+		case SQLT_STR:
+			ASSERT (L, OCIAttrGet (param, OCI_DTYPE_PARAM,
+				(dvoid *)&(col->max), 0, OCI_ATTR_DATA_SIZE,
+				cur->errhp), cur->errhp);
+				col->val.s = calloc (col->max * 2 + 1, sizeof(col->val.s));
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+				cur->errhp, (ub4)i, col->val.s, col->max * 2 + 1,
 				SQLT_STR /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
@@ -662,7 +671,7 @@ static int conn_commit (lua_State *L) {
 	ASSERT (L, OCITransCommit (conn->svchp, conn->errhp, OCI_DEFAULT),
 		conn->errhp);
 /*
-	if (conn->auto_commit == 0) 
+	if (conn->auto_commit == 0)
 		ASSERT (L, OCITransStart (conn->svchp, conn->errhp...
 */
 	return 0;
@@ -677,8 +686,8 @@ static int conn_rollback (lua_State *L) {
 	ASSERT (L, OCITransRollback (conn->svchp, conn->errhp, OCI_DEFAULT),
 		conn->errhp);
 /*
-	if (conn->auto_commit == 0) 
-		sql_begin(conn); 
+	if (conn->auto_commit == 0)
+		sql_begin(conn);
 */
 	return 0;
 }
