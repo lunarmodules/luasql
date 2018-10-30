@@ -1,8 +1,8 @@
 package = "LuaSQL-OCI8"
-version = "2.4.5-1"
+version = "2.4.0-1"
 source = {
   url = "git://github.com/keplerproject/luasql.git",
-  branch = "v2.4.5",
+  branch = "v2.4.0",
 }
 description = {
    summary = "Database connectivity for Lua (Oracle driver)",
