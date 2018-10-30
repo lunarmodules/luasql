@@ -515,7 +515,7 @@ static int env_connect (lua_State *L) {
 	const char *host = luaL_optstring(L, 5, NULL);
 	const int port = luaL_optinteger(L, 6, 0);
 	const char *unix_socket = luaL_optstring(L, 7, NULL);
-	const long client_flag = luaL_optlong(L, 8, 0);
+	const long client_flag = (long)luaL_optinteger(L, 8, 0);
 	MYSQL *conn;
 	getenvironment(L); /* validade environment */
 
