@@ -428,7 +428,7 @@ static int conn_execute(lua_State *L)
 
       case LUA_TSTRING:
         buffer = lua_tolstring(L, i, &size);
-        res = sqlite3_bind_blob(vm, i - 2, buffer, size, SQLITE_TRANSIENT);
+        res = sqlite3_bind_text(vm, i - 2, buffer, size, SQLITE_TRANSIENT);
         break;
 
       default:
