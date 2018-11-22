@@ -131,3 +131,18 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL 2.3.5 (for "LUA_VERSION")");
 	lua_settable (L, -3);
 }
+
+/*
+** Pulls an optional string value from the table at idx
+*/
+LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def) {
+	const char* res = NULL;
+
+	lua_pushstring(L, name);
+	lua_gettable(L, idx);
+
+	res = lua_tostring(L, -1);
+	lua_pop(L, 1);
+
+	return (res != NULL) ? res : def;
+}

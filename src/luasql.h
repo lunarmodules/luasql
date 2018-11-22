@@ -30,6 +30,9 @@ LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_Reg
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
 LUASQL_API void luasql_set_info (lua_State *L);
 
+LUASQL_API const char* luasql_table_optstring(lua_State *L, int idx, const char* name, const char* def);
+LUASQL_API lua_Number luasql_table_optnumber(lua_State *L, int idx, const char* name, lua_Number def);
+
 #if !defined LUA_VERSION_NUM || LUA_VERSION_NUM==501
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
 #endif
