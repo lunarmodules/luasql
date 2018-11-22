@@ -343,9 +343,11 @@ the Postgres driver also offers these extra features:</p>
 the MySQL driver also offers these extra features:</p>
 
 <dl class="reference">
-  <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></strong></dt>
+  <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port[,socket[,client_flag]]]]]])</code></strong></dt>
   <dd>In the MySQL driver, this method adds two optional parameters
-    that indicate the hostname and port to connect.<br/>
+    that indicate the hostname and port to connect.
+    It also accepts two optional parameters that indicate a unix socket and the
+    client flag.<br/>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
 
@@ -362,6 +364,13 @@ the MySQL driver also offers these extra features:</p>
     INSERT or UPDATE statement.<br/>
     See also: Official documentation of function <code>mysql_insert_id</code> for versions <a href="http://dev.mysql.com/doc/refman/4.1/en/mysql-insert-id.html">4.0</a>, <a href="http://dev.mysql.com/doc/refman/5.1/en/mysql-insert-id.html">5.1</a> and <a href="http://dev.mysql.com/doc/refman/6.0/en/mysql-insert-id.html">6.0</a><br/>
     Returns: the number of the last value generated for an AUTO_INCREMENT column.
+  </dd>
+
+  <a name="mysql_ping"></a>
+  <dt><strong><code>conn:ping()</code></strong></dt>
+  <dd>Check whether the connection is closed (returns false) or opened (returns true).
+    It will return nil followed by an error message in case of error.<br/>
+    Returns: true, if the connection is opened, or false, if it is closed.
   </dd>
 
   <dt><strong><code>cur:numrows()</code></strong></dt>

@@ -340,11 +340,18 @@ o driver Postgres oferece as seguintes funcionalidades adicionais:</p>
 o driver MySQL ainda oferece as seguintes funcionalidades adicionais:</p>
 
 <dl class="reference">
-    <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port]]]])</code></strong></dt>
+    <dt><strong><code>env:connect(sourcename[,username[,password[,hostname[,port[,socket[,client_flag]]]]]])</code></strong></dt>
     <dd>No driver MySQL, esse m&eacute;todo tem mais dois par&acirc;metros opcionais que indicam o
         <code>hostname</code> e a <code>port</code> a serem utilizados na conex&atilde;o.
+        Ela também aceita dois outros parâmetros que indicam um Unix socket de onde abrir a conexão e um flag do cliente.<br/>
         Veja tamb&eacute;m: <a href="#environment_object">ambiente</a><br/>
         Retorna: uma <a href="#connection_object">conex&atilde;o</a>
+    </dd>
+
+    <dt><strong><code>conn:ping()</code></strong></dt>
+    <dd>Verifica se uma conexão está fechada (retorna false) ou aberta (retorna true).
+        Irá retornar nil seguido de uma mensagem no caso de erro.<br/>
+        Retorna: true, se a conexão estiver aberta, ou false, se estiver fechada.
     </dd>
 
     <dt><strong><code>cur:numrows()</code></strong></dt>

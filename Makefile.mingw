@@ -1,0 +1,34 @@
+LUA_INC = -I/usr/local/include
+LUA_LIB = -L/usr/local/lib 
+DRIVER_INC = ./driver
+DRIVER_LIB = ./driver
+CFLAG = -Wall -O2 -shared
+CC = gcc
+LUA_DIR = /usr/local/lib/lua/5.3/luasql
+
+all:
+	echo "press mysql,sqlite,sqlite3,odbc"
+
+mysql:src/mysql.dll
+sqlite3:src/sqlite3.dll
+odbc:src/odbc.dll
+
+src/mysql.dll:src/luasql.c src/ls_mysql.c
+	$(CC) $(CFLAG) $(LUA_INC) $(LUA_LIB) -I$(DRIVER_INC)/mysql/include  -L$(DRIVER_LIB)/mysql/lib/ -o $@ $^ -llua53 -lmysql
+
+src/sqlite3.dll:src/luasql.c src/ls_sqlite3.c
+	$(CC) $(CFLAG) $(LUA_INC) $(LUA_LIB) -I$(DRIVER_INC)/sqlite3/include  -L$(DRIVER_LIB)/sqlite3/lib/ -o $@ $^  -lsqlite3 -llua53
+
+src/odbc.dll:src/luasql.c src/ls_odbc.c
+	$(CC) $(CFLAG) $(LUA_INC) $(LUA_LIB) -o $@ $^  -lodbc32 -llua53
+
+install:
+	-mkdir $(LUA_DIR)
+	-cp src/*.dll $(LUA_DIR)
+uninstall:
+	-rm -rf $(LUA_DIR)
+clean:
+	-rm src/*.dll
+
+
+
