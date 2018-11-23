@@ -131,3 +131,35 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL 2.3.5 (for "LUA_VERSION")");
 	lua_settable (L, -3);
 }
+
+/*
+** Execute an SQL statement from a string.
+** Return a Cursor object if the statement is a query, otherwise
+** return the number of tuples affected by the statement.
+** It's nothing more than a C implementation of:
+**     function conn:execute(sql, ...)
+**         local stmt, msg = conn:prepare(sql)
+**         if stmt == nil then return nil, msg end
+**         return stmt:execute(...)
+**     end
+*/
+LUASQL_API int luasql_conn_execute (lua_State *L) {
+	// stack: conn sql ...
+	lua_getfield(L, 1, "prepare");
+	lua_pushvalue(L, 1);
+	lua_pushvalue(L, 2);
+	// stack: conn sql ... conn.prepare conn sql
+	lua_call(L, 2, 2);
+	// stack: conn sql ... stmt msg
+	if (lua_isnil(L, -2))
+		return 2;
+	lua_pop(L, 1);
+	lua_replace(L, 2);
+	// stack: conn stmt ...
+	lua_getfield(L, 2, "execute");
+	lua_replace(L, 1);
+	// stack: stmt.execute stmt ...
+	lua_call(L, lua_gettop(L)-1, LUA_MULTRET);
+	// stack: cur msg?
+	return lua_gettop(L);
+}
