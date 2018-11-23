@@ -221,7 +221,8 @@ method.</p>
 	
 	<dt><a name="conn_execute"></a><strong><code>conn:execute(statement[,...])</code></strong></dt>
 	<dd>Executes the given SQL <code>statement</code>. As in traditional prepared statements,
-	additional parameters can be used to avoid SQL injections, though not all drivers support this.<br/>
+	additional parameters can be used to avoid SQL injections. Although this is only
+	supported by sqlite3, postgres and mysql drivers.<br/>
 	Returns: a <a href="#cursor_object">cursor object</a>
 	if there are results, or the number of rows affected by the command otherwise.</dd>
 	
