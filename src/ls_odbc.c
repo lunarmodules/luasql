@@ -698,26 +698,12 @@ static int raw_execute(lua_State *L, int istmt)
 	}
 }
 
-/*
-** Reads a param table into a statement
-*/
-static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
+static int set_param(lua_State *L, stmt_data *stmt, int i, param_data *data)
 {
 	static SQLINTEGER cbNull = SQL_NULL_DATA;
-	SQLSMALLINT i;
-	param_data *data;
 
-	free_stmt_params(stmt->params, stmt->numparams);
-	stmt->params = malloc_stmt_params(stmt->numparams);
-	data = stmt->params;
-
-	for(i=1; i<=stmt->numparams; ++i, ++data) {
-		/* not using lua_geti for backwards compat with Lua 5.1/LuaJIT */
-		lua_pushnumber(L, i);
-		lua_gettable(L, iparams);
-
-		switch(lua_type(L, -1)) {
-		case LUA_TNIL: {
+	switch(lua_type(L, -1)) {
+	case LUA_TNIL: {
 			lua_pop(L, 1);
 
 			if(error(SQLBindParameter(stmt->hstmt, i, SQL_PARAM_INPUT, SQL_C_DEFAULT,
@@ -727,7 +713,7 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		}
 		break;
 
-		case LUA_TNUMBER: {
+	case LUA_TNUMBER: {
 			data->buf = malloc(sizeof(double));
 			*(double *)data->buf = (double)lua_tonumber(L, -1);
 			data->len = sizeof(double);
@@ -743,7 +729,7 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		}
 		break;
 
-		case LUA_TSTRING: {
+	case LUA_TSTRING: {
 			const char *str = lua_tostring(L, -1);
 			size_t len = strlen(str);
 
@@ -762,7 +748,7 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		}
 		break;
 
-		case LUA_TBOOLEAN: {
+	case LUA_TBOOLEAN: {
 			data->buf = malloc(sizeof(SQLCHAR));
 			*(SQLCHAR *)data->buf = (SQLCHAR)lua_toboolean(L, -1);
 			data->len = 0;
@@ -778,10 +764,65 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 		}
 		break;
 
-		default:
-			lua_pop(L, 1);
-			return luasql_faildirect(L, "unsupported parameter type");
-			break;
+	default:
+		lua_pop(L, 1);
+		return luasql_faildirect(L, "unsupported parameter type");
+	}
+
+	return 0;
+}
+
+/*
+** Reads a param table into a statement
+*/
+static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
+{
+	static SQLINTEGER cbNull = SQL_NULL_DATA;
+	SQLSMALLINT i;
+	param_data *data;
+	int res = 0;
+
+	free_stmt_params(stmt->params, stmt->numparams);
+	stmt->params = malloc_stmt_params(stmt->numparams);
+	data = stmt->params;
+
+	for(i=1; i<=stmt->numparams; ++i, ++data) {
+		/* not using lua_geti for backwards compat with Lua 5.1/LuaJIT */
+		lua_pushnumber(L, i);
+		lua_gettable(L, iparams);
+
+		res = set_param(L, stmt, i, data);
+		if(res != 0) {
+			return res;
+		}
+	}
+
+	return 0;
+}
+
+/*
+** Reads a param table into a statement
+*/
+static int raw_readparams_args(lua_State *L, stmt_data *stmt, int arg, int ltop)
+{
+	static SQLINTEGER cbNull = SQL_NULL_DATA;
+	SQLSMALLINT i;
+	param_data *data;
+	int res = 0;
+
+	free_stmt_params(stmt->params, stmt->numparams);
+	stmt->params = malloc_stmt_params(stmt->numparams);
+	data = stmt->params;
+
+	for(i=1; i<=stmt->numparams; ++i, ++data, ++arg) {
+		if(arg > ltop) {
+			lua_pushnil(L);
+		} else {
+			lua_pushvalue(L, arg);
+		}
+		res = set_param(L, stmt, i, data);
+		if(res != 0) {
+			return res;
 		}
 	}
 
@@ -798,10 +839,17 @@ static int raw_readparams(lua_State *L, stmt_data *stmt, int iparams)
 */
 static int stmt_execute(lua_State *L)
 {
+	int ltop = lua_gettop(L);
+	int res;
+
 	/* any parameters to use */
-	if(lua_gettop(L) > 1) {
+	if(ltop > 1) {
 		stmt_data *stmt = getstatement(L, 1);
-		int res = raw_readparams(L, stmt, 2);
+		if(lua_type(L, 2) == LUA_TTABLE) {
+			res = raw_readparams_table(L, stmt, 2);
+		} else {
+			res = raw_readparams_args(L, stmt, 2, ltop);
+		}
 		if(res != 0) {
 			return res;
 		}
@@ -918,7 +966,12 @@ static int conn_execute (lua_State *L)
 
 	/* do we have any parameters */
 	if(ltop > 2) {
-		if((res = raw_readparams(L, stmt, 3)) != 0) {
+		if(lua_type(L, 3) == LUA_TTABLE) {
+			res = raw_readparams_table(L, stmt, 3);
+		} else {
+			res = raw_readparams_args(L, stmt, 3, ltop);
+		}
+		if(res != 0) {
 			return res;
 		}
 	}
