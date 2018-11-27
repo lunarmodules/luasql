@@ -15,6 +15,10 @@ MSG_CURSOR_NOT_CLOSED = "cursor was not automatically closed by fetch"
 
 CHECK_GETCOL_INFO_TABLES = true
 
+PREPARED_STATEMENT_ARGUMENT = function(n)
+	return "?" -- postgres uses $1, $2, ...
+end
+
 ---------------------------------------------------------------------
 if not string.find(_VERSION, " 5.0") then
 	table.getn = assert((loadstring or load)[[return function (t) return #t end]])()
@@ -110,6 +114,10 @@ end
 CUR_METHODS = { "close", "fetch", "getcolnames", "getcoltypes", }
 CUR_OK = function (obj)
 	return test_object (obj, CUR_METHODS)
+end
+STMT_METHODS = { "close", "execute", }
+STMT_OK = function (obj)
+	return test_object (obj, STMT_METHODS)
 end
 
 function checkUnknownDatabase(ENV)
@@ -509,6 +517,38 @@ function escape ()
 	assert (s2 == s1..s1 or s2 == s3)
 
 	io.write (" escape")
+end
+
+function execparams ()
+	local arg = PREPARED_STATEMENT_ARGUMENT
+
+	assert2 (1, CONN:execute ("insert into t (f1, f2) values ("..arg(1)..", "..arg(2)..")", "x", "'"))
+	local cur = CUR_OK (CONN:execute ("select f1 from t where f2 = "..arg(1), "'"))
+	assert2 ((cur:fetch()), 'x')
+	cur:close()
+	assert2 (1, CONN:execute ("delete from t where f2 in ("..arg(1)..")", "'"))
+
+	io.write (" execparams")
+end
+
+function prepare ()
+	local arg = PREPARED_STATEMENT_ARGUMENT
+
+	local sql = "insert into t (f1, f2) values ("..arg(1)..", "..arg(2)..")"
+	local stmt = STMT_OK (CONN:prepare(sql))
+
+	for i = 1, 10 do
+		assert2 (1, stmt:execute ("foo", i))
+	end
+	stmt:close()
+	local stmt = STMT_OK (CONN:prepare("select count(*) from t where f1 = "..arg(1)))
+	local cur = CUR_OK (stmt:execute "foo")
+	cur:close()
+	stmt:close()
+
+	assert2 (10, CONN:execute ("delete from t where f1 = 'foo'"))
+
+	io.write (" execparams")
 end
 
 ---------------------------------------------------------------------

@@ -20,3 +20,4 @@ end
 
 table.insert (CONN_METHODS, "escape")
 table.insert (EXTENSIONS, escape)
+table.insert (EXTENSIONS, execparams)
