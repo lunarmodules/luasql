@@ -29,6 +29,7 @@ LUASQL_API int luasql_failmsg (lua_State *L, const char *err, const char *m);
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_Reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
 LUASQL_API void luasql_set_info (lua_State *L);
+LUASQL_API int luasql_conn_execute (lua_State *L);
 
 #if !defined LUA_VERSION_NUM || LUA_VERSION_NUM==501
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);

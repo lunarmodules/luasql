@@ -9,6 +9,8 @@ table.insert (CUR_METHODS, "numrows")
 table.insert (EXTENSIONS, numrows)
 table.insert (CONN_METHODS, "escape")
 table.insert (EXTENSIONS, escape)
+table.insert (EXTENSIONS, prepare)
+table.insert (EXTENSIONS, execparams)
 
 ---------------------------------------------------------------------
 -- Build SQL command to create the test table.

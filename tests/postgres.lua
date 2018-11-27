@@ -4,8 +4,10 @@
 ---------------------------------------------------------------------
 
 DEFAULT_USERNAME = "postgres"
+PREPARED_STATEMENT_ARGUMENT = function(n) return "$"..n end
 
 table.insert (CUR_METHODS, "numrows")
 table.insert (EXTENSIONS, numrows)
 table.insert (CONN_METHODS, "escape")
 table.insert (EXTENSIONS, escape)
+table.insert (EXTENSIONS, execparams)
