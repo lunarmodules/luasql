@@ -15,7 +15,7 @@ DROP_TABLE_RETURN_VALUE = -1
 table.insert (EXTENSIONS, function ()
 	assert2 (CREATE_TABLE_RETURN_VALUE, CONN:execute"create table test_dt (f1 integer, f2 varchar(30), f3 bit )")
 	-- Inserts a number, a string value and a "bit" value.
-	assert2 (1, CONN:execute"insert into test_dt values (10, 'ABCDE', 1)")
+	assert2 (1, CONN:execute("insert into test_dt values (?, ?, ?)", 10, "ABCDE", true))
 
 	-- Checks the results with the inserted values.
 	local cur = CUR_OK (CONN:execute"select * from test_dt")
