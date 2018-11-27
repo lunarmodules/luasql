@@ -18,7 +18,8 @@ table.insert (EXTENSIONS, function ()
 	assert2 (1, CONN:execute("insert into test_dt values (?, ?, ?)", 10, "ABCDE", true))
 
 	-- Checks the results with the inserted values.
-	local cur = CUR_OK (CONN:execute"select * from test_dt")
+	local stmt = assert(CONN:prepare"select * from test_dt where f1 = ?")
+	local cur = CUR_OK (stmt:execute(10))
 	local row, err = cur:fetch ({}, "a")
 	assert2 ("table", type(row), err)
 
@@ -27,6 +28,7 @@ table.insert (EXTENSIONS, function ()
 	assert2 (true, row.f3, "Wrong bit representation")
 
 	cur:close()
+	stmt:close()
 
 	-- Drops the table
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute("drop table test_dt") )
