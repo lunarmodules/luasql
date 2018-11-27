@@ -41,6 +41,7 @@ typedef struct {
 	env_data*		env;			/* the DB enviroment this is in */
 	conn_data*		conn;			/* the DB connection this cursor is from */
 	isc_stmt_handle stmt;			/* the statement handle */
+	int			stmt_type;			/* the type of the statment */
 	XSQLDA			*out_sqlda;		/* the cursor data array */
 } cur_data;
 
@@ -124,6 +125,31 @@ static void free_cur(cur_data* cur)
 
 	/* free the data array */
 	free(cur->out_sqlda);
+}
+
+/*
+** Shuts down a cursor
+*/
+static int cur_shut(lua_State *L, cur_data *cur)
+{
+	isc_dsql_free_statement(cur->env->status_vector, &cur->stmt,
+	                        DSQL_close);
+	if ( CHECK_DB_ERROR(cur->env->status_vector) ) {
+		return return_db_error(L, cur->env->status_vector);
+	}
+
+	/* free the cursor data */
+	free_cur(cur);
+
+	/* remove cursor from lock count and check if statment can be unregistered */
+	cur->closed = 1;
+	--cur->conn->lock;
+
+	/* check if connection can be unregistered */
+	if(cur->conn->lock == 0)
+		lua_unregisterobj(L, cur->conn);
+
+	return 0;
 }
 
 /*
@@ -300,7 +326,7 @@ static int conn_execute (lua_State *L) {
 
 	XSQLVAR *var;
 	long dtype;
-	int i, n, count, stmt_type;
+	int i, n, count;
 
 	cur_data cur;
 
@@ -328,14 +354,22 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* what type of SQL statement is it? */
-	stmt_type = get_statement_type(&cur);
-	if(stmt_type < 0) {
+	cur.stmt_type = get_statement_type(&cur);
+	if(cur.stmt_type < 0) {
 		free(cur.out_sqlda);
 		return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* an unsupported SQL statement (something like COMMIT) */
-	if(stmt_type > 5) {
+	switch(cur.stmt_type) {
+	case isc_info_sql_stmt_select:
+	case isc_info_sql_stmt_insert:
+	case isc_info_sql_stmt_update:
+	case isc_info_sql_stmt_delete:
+	case isc_info_sql_stmt_ddl:
+	case isc_info_sql_stmt_exec_procedure:
+		break;
+	default:
 		free(cur.out_sqlda);
 		return luasql_faildirect(L, "unsupported SQL statement");
 	}
@@ -411,7 +445,7 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* if autocommit is set and it's a non SELECT query, commit change */
-	if(conn->autocommit != 0 && stmt_type > 1) {
+	if(conn->autocommit != 0 && cur.stmt_type > 1) {
 		isc_commit_retaining(conn->env->status_vector, &conn->transaction);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 			free_cur(&cur);
@@ -700,11 +734,17 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 */
 static int cur_fetch (lua_State *L) {
 	ISC_STATUS fetch_stat;
-	int i;
-	cur_data *cur = getcursor(L,1);
+	int i, res;
+	cur_data *cur = (cur_data *)luaL_checkudata (L, 1, LUASQL_CURSOR_FIREBIRD);
 	const char *opts = luaL_optstring (L, 3, "n");
 	int num = strchr(opts, 'n') != NULL;
 	int alpha = strchr(opts, 'a') != NULL;
+
+	/* check cursor status */
+	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
+	if (cur->closed) {
+		return 0;
+	}
 
 	if ((fetch_stat = isc_dsql_fetch(cur->env->status_vector, &cur->stmt, 1, cur->out_sqlda)) == 0) {
 		if (lua_istable (L, 2)) {
@@ -715,13 +755,13 @@ static int cur_fetch (lua_State *L) {
 			for (i = 0; i < cur->out_sqlda->sqld; i++) {
 				push_column(L, i, cur);
 
-				if( num ) {
+				if (num) {
 					lua_pushnumber(L, i+1);
 					lua_pushvalue(L, -2);
 					lua_settable(L, 2);
 				}
 
-				if( alpha ) {
+				if (alpha) {
 					lua_pushlstring(L, cur->out_sqlda->sqlvar[i].aliasname, cur->out_sqlda->sqlvar[i].aliasname_length);
 					lua_pushvalue(L, -2);
 					lua_settable(L, 2);
@@ -731,14 +771,22 @@ static int cur_fetch (lua_State *L) {
 			}
 
 			/* returning given table */
-			return 1;
+			res = 1;
 		} else {
 			for (i = 0; i < cur->out_sqlda->sqld; i++)
 				push_column(L, i, cur);
 
 			/* returning a list of values */
-			return cur->out_sqlda->sqld;
+			res = cur->out_sqlda->sqld;
 		}
+
+		/* close cursor for procedures/returnings as they (currently) only
+		   return one result, and error on subsequent fetches */
+		if (cur->stmt_type == isc_info_sql_stmt_exec_procedure) {
+			cur_shut(L, cur);
+		}
+
+		return res;
 	}
 
 	/* isc_dsql_fetch returns 100 if no more rows remain to be retrieved
@@ -839,22 +887,13 @@ static int cur_coltypes (lua_State *L) {
 static int cur_close (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata(L,1,LUASQL_CURSOR_FIREBIRD);
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
+	int shut_res;
 
 	if(cur->closed == 0) {
-		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
-		if ( CHECK_DB_ERROR(cur->env->status_vector) )
-			return return_db_error(L, cur->env->status_vector);
-
-		/* free the cursor data */
-		free_cur(cur);
-
-		/* remove cursor from lock count */
-		cur->closed = 1;
-		--cur->conn->lock;
-
-		/* check if connection can be unregistered */
-		if(cur->conn->lock == 0)
-			lua_unregisterobj(L, cur->conn);
+		shut_res = cur_shut(L, cur);
+		if(shut_res > 0) {
+			return shut_res;
+		}
 
 		/* return sucsess */
 		lua_pushboolean(L, 1);
@@ -873,18 +912,7 @@ static int cur_gc (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
 
 	if(cur->closed == 0) {
-		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
-
-		/* free the cursor data */
-		free_cur(cur);
-
-		/* remove cursor from lock count */
-		cur->closed = 1;
-		--cur->conn->lock;
-
-		/* check if connection can be unregistered */
-		if(cur->conn->lock == 0)
-			lua_unregisterobj(L, cur->conn);
+		cur_shut(L, cur);
 	}
 
 	return 0;
