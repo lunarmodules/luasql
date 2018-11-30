@@ -323,6 +323,28 @@ static int cur_numrows (lua_State *L) {
 
 
 /*
+** Seek to a specific row.
+*/
+static int cur_seek (lua_State *L) {
+	cur_data *cur = getcursor (L);
+	if (!lua_isnumber(L, 2)) {
+		lua_pushboolean (L, 0);
+		return 1;
+	}
+
+	lua_Integer rownum = lua_tointeger (L, 2);
+	rownum--;
+	if (rownum < 0) {
+		rownum = 0;
+	}
+
+	mysql_data_seek (cur->my_res, rownum);
+	lua_pushboolean (L, 1);
+	return 1;
+}
+
+
+/*
 ** Create a new Cursor object and push it on top of the stack.
 */
 static int create_cursor (lua_State *L, int conn, MYSQL_RES *result, int cols) {
@@ -591,6 +613,7 @@ static void create_metatables (lua_State *L) {
         {"getcolnames", cur_getcolnames},
         {"getcoltypes", cur_getcoltypes},
         {"fetch", cur_fetch},
+        {"seek", cur_seek},
         {"numrows", cur_numrows},
 		{NULL, NULL},
     };
