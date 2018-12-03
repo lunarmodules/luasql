@@ -19,9 +19,36 @@ function create_table ()
 end
 
 function drop_table ()
+	-- Firebird prefers to keep DDL stuff (CREATE TABLE, etc.) 
+	-- seperate. So we need a new transaction i.e. connection
+	-- to work in
+	assert(CONN:close ())
+	CONN = assert(ENV:connect (datasource, username, password))
 	orig_drop_table()
 	CONN:commit()
 end
 
 table.insert (CONN_METHODS, "escape")
 table.insert (EXTENSIONS, escape)
+
+-- Check RETURNING support
+table.insert (EXTENSIONS, function()
+	local cur = assert (CONN:execute[[
+EXECUTE BLOCK
+RETURNS (A INTEGER, B INTEGER)
+AS
+BEGIN
+  A = 123;
+  B = 321;
+  SUSPEND;
+END
+]])
+
+	local f1, f2 = cur:fetch ()
+	assert2 (123, f1)
+	assert2 (321, f2)
+	cur:close ()
+	
+	io.write (" returning")
+end)
+
