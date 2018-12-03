@@ -1,3 +1,7 @@
+---------------------------------------------------------------------
+-- Firebird specific tests and configurations.
+---------------------------------------------------------------------
+
 DEFINITION_STRING_TYPE_NAME = "VARCHAR(80)"
 QUERYING_STRING_TYPE_NAME = "string"
 
