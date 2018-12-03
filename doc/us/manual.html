@@ -372,9 +372,16 @@ the MySQL driver also offers these extra features:</p>
     Returns: true, if the connection is opened, or false, if it is closed.
   </dd>
 
+  <a name="mysql_numrows"></a>
   <dt><strong><code>cur:numrows()</code></strong></dt>
   <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
     Returns: the number of rows in the query result.</dd>
+
+  <a name="mysql_seek"></a>
+  <dt><strong><code>cur:seek(row_number)</code></strong></dt>
+  <dd>Seeks to an arbitrary row in a query result set. The number of the first row is 1.<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: nothing.</dd>
 </dl>
 
 <p>Notes:</p>
