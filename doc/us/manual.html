@@ -381,10 +381,30 @@ the MySQL driver also offers these extra features:</p>
   <dt><strong><code>cur:seek(row_number)</code></strong></dt>
   <dd>Seeks to an arbitrary row in a query result set. The number of the first row is 1.<br/>
     See also: <a href="#cursor_object">cursor objects</a><br/>
-    Returns: nothing.</dd>
+	Returns: nothing.</dd>
+
+  <a name="mysql_next_result"></a>
+  <dt><strong><code>cur:nextresult()</code></strong></dt>
+  <dd>Retrieves the next result set, if another result is available (e.g. multiple statements)<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+	Returns: true, if next result was selected. false and -1 if no other result is available. false, errno and error message, if an error occured.<br/>
+	To use it you need to pass the <code>CLIENT_MULTI_STATEMENTS = 1<<16</code> flag on connection. 
+	Be aware that you need to iterate over all results otherwise you will receive an "out of sync" error.
+  </dd>
+
+  <a name="mysql_has_next_result"></a>
+  <dt><strong><code>cur:hasnextresult()</code></strong></dt>
+  <dd>Checks if next result is available<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: true or false<br/>
+	To use it you need to pass the <code>CLIENT_MULTI_STATEMENTS = 1<<16</code> flag on connection. 
+	Be aware that you need to iterate over all results otherwise you will receive an "out of sync" error.
+  </dd>
 </dl>
 
 <p>Notes:</p>
+
+<p>I </p>
 
 <p>This driver is compatible with versions 4.0, 4.1 and 5.0 of the
 MySQL API. Only from version 4.1 MySQL provides support for transactions by using
