@@ -346,7 +346,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
     switch (type) {
         /* nUmber */
         case 'u': { 
-			double num;
+			SQLDOUBLE num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
 			if (error(rc))
@@ -360,7 +360,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 #if LUA_VERSION_NUM>=503
 		/* iNteger */
 		case 'n': {
-			long int num;
+			SQLINTEGER num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
 			if (error(rc))
@@ -374,7 +374,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 #endif
 		/* bOol */
         case 'o': { 
-			char b;
+			SQLCHAR b;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
 			if (error(rc))
