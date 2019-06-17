@@ -52,3 +52,47 @@ END
 	io.write (" returning")
 end)
 
+-- Check parameterized queires
+table.insert (EXTENSIONS, function()
+	local cur = assert (CONN:execute ([[
+EXECUTE BLOCK (X INTEGER = ?, Y INTEGER = ?)
+RETURNS (A INTEGER, B INTEGER)
+AS
+BEGIN
+  A = X;
+  B = Y;
+  SUSPEND;
+END
+]], 123, 321))
+
+	local x, y = cur:fetch ()
+	assert2 (123, x)
+	assert2 (321, y)
+
+	io.write (" parameter_queries")
+end)
+
+-- Check prepared statements, with params
+table.insert (EXTENSIONS, function()
+	local stmt = assert (CONN:prepare[[
+EXECUTE BLOCK (X INTEGER = ?, Y INTEGER = ?)
+RETURNS (A INTEGER, B INTEGER)
+AS
+BEGIN
+  A = X;
+  B = Y;
+  SUSPEND;
+END
+]])
+
+	local cur = assert (stmt:execute ( 123, 321 ))
+
+	local x, y = cur:fetch ()
+	assert2 (123, x)
+	assert2 (321, y)
+
+	stmt:close()
+
+	io.write (" prepared_queries")
+end)
+
