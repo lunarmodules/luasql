@@ -219,8 +219,10 @@ method.</p>
 	the operation could not be performed or when it is not implemented.</dd>
 	
 	
-	<dt><a name="conn_execute"></a><strong><code>conn:execute(statement)</code></strong></dt>
-	<dd>Executes the given SQL <code>statement</code>.<br/>
+	<dt><a name="conn_execute"></a><strong><code>conn:execute(statement[,...])</code></strong></dt>
+	<dd>Executes the given SQL <code>statement</code>. As in traditional prepared statements,
+	additional parameters can be used to avoid SQL injections. Although this is only
+	supported by sqlite3, postgres and mysql drivers.<br/>
 	Returns: a <a href="#cursor_object">cursor object</a>
 	if there are results, or the number of rows affected by the command otherwise.</dd>
 	

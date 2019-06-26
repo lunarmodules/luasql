@@ -379,6 +379,7 @@ static int conn_escape(lua_State *L)
 */
 static int conn_execute(lua_State *L)
 {
+  int i;
   conn_data *conn = getconnection(L);
   const char *statement = luaL_checkstring(L, 2);
   int res;
@@ -396,6 +397,52 @@ static int conn_execute(lua_State *L)
     {
       errmsg = sqlite3_errmsg(conn->sql_conn);
       return luasql_faildirect(L, errmsg);
+    }
+
+  /* bind any additional arguments to the statement */
+  numcols = lua_gettop(L);
+  for (i = 3; i <= numcols; i++)
+    {
+      const char * buffer;
+      size_t size;
+      switch (lua_type(L, i)) {
+      case LUA_TNIL:
+        res = sqlite3_bind_null(vm, i - 2);
+        break;
+
+      case LUA_TBOOLEAN:
+      case LUA_TNUMBER:
+#ifdef LUA_INT_TYPE
+        if (lua_isnumber(L, i) && !lua_isinteger(L, i))
+          {
+            res = sqlite3_bind_double(vm, i - 2, lua_tonumber(L, i));
+          }
+        else
+          {
+            res = sqlite3_bind_int64(vm, i - 2, lua_tointeger(L, i));
+          }
+#else
+	res = sqlite3_bind_double(vm, i - 2, lua_tonumber(L, i));
+#endif
+        break;
+
+      case LUA_TSTRING:
+        buffer = lua_tolstring(L, i, &size);
+        res = sqlite3_bind_text(vm, i - 2, buffer, size, SQLITE_TRANSIENT);
+        break;
+
+      default:
+        sqlite3_finalize(vm);
+        return luaL_error(L, LUASQL_PREFIX"Invalid type for execute parameter %d", i - 2);
+      }
+
+      /* handle errors */
+      if (res != SQLITE_OK)
+        {
+          errmsg = sqlite3_errmsg(conn->sql_conn);
+          sqlite3_finalize(vm);
+          return luaL_error(L, LUASQL_PREFIX"Error binding parameter %d: %s", i - 2, errmsg);
+        }
     }
 
   /* process first result to retrive query information and type */
