@@ -382,9 +382,10 @@ o driver Oracle ainda oferece uma funcionalidade adicional:</p>
 <p>Al&eacute;m das funcionalidades b&aacute;sicas oferecidas por todos os drivers,
 o driver para SQLite3 ainda oferece uma funcionalidade adicional:</p>
 
-<dt><strong><code>env:connect(sourcename[,locktimeout])</code></strong></dt>
+<dt><strong><code>env:connect(sourcename[,locktimeout,readOnlyMode])</code></strong></dt>
   <dd>No driver para SQLite3, este método tem mais um parâmetro opcional que indica
-    a quantidade de milissegundos para esperar por uma trava de escrita no banco de dados, se ela não for obtida de imediato.<br/>
+    a quantidade de milissegundos para esperar por uma trava de escrita no banco de dados, se ela não for obtida de imediato.
+      TODO: translate me : To connect in readOnlyMode, set readOnlyMode to true<br/>
     Veja tamb&eacute;m: <a href="#environment_object">ambiente</a><br/>
     Retorna: uma <a href="#connection_object">conex&atilde;o</a></dd>
 

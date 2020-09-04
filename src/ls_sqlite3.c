@@ -7,6 +7,7 @@
 */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -549,19 +550,36 @@ static int env_connect(lua_State *L)
   sqlite3 *conn;
   const char *errmsg;
   int res;
+  bool readOnlyMode = false;
+  int mode;
+
   getenvironment(L);  /* validate environment */
 
-  sourcename = luaL_checkstring(L, 2);
+  if (lua_isboolean(L, 4)) {
+    if (lua_toboolean(L, 4)) {
+      readOnlyMode = true;
+    }
+  }
 
+  sourcename = luaL_checkstring(L, 2);
 #if SQLITE_VERSION_NUMBER > 3006013
   if (strstr(sourcename, ":memory:")) /* TODO: rework this and get/add param 'flag' for sqlite3_open_v2 - see TODO below */
   {
-	  res = sqlite3_open_v2(sourcename, &conn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_MEMORY, NULL);
+    if (readOnlyMode) {
+      mode = SQLITE_OPEN_READONLY | SQLITE_OPEN_MEMORY;
+    } else {
+      mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_MEMORY;
+    }
   }
   else
   {
-	  res = sqlite3_open_v2(sourcename, &conn, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (readOnlyMode) {
+      mode = SQLITE_OPEN_READONLY;
+    } else {
+      mode = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    }
   }
+  res = sqlite3_open_v2(sourcename, &conn, mode, NULL);
 #else
   res = sqlite3_open(sourcename, &conn);
 #endif
