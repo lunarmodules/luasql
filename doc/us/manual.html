@@ -413,9 +413,10 @@ the Oracle driver also offers this extra feature:</p>
 <p>Besides the basic functionality provided by all drivers,
 the SQLite3 driver also offers this extra feature:</p>
 
-<dt><strong><code>env:connect(sourcename[,locktimeout])</code></strong></dt>
+<dt><strong><code>env:connect(sourcename[,locktimeout,readOnlyMode])</code></strong></dt>
   <dd>In the SQLite3 driver, this method adds an optional parameter
-    that indicate the amount of milliseconds to wait for a write lock if one cannot be obtained immediately.<br/>
+    that indicate the amount of milliseconds to wait for a write lock if one cannot be obtained immediately.
+	  To connect in readOnlyMode, set readOnlyMode to true.<br/>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
 
