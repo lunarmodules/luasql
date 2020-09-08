@@ -2,7 +2,6 @@
 ** LuaSQL, Oracle driver
 ** Authors: Tomas Guisasola, Leonardo Godinho
 ** See Copyright Notice in license.html
-** $Id: ls_oci8.c,v 1.31 2009/02/07 23:16:23 tomas Exp $
 */
 
 #include <assert.h>
@@ -78,7 +77,6 @@ typedef struct {
 
 int checkerr (lua_State *L, sword status, OCIError *errhp);
 #define ASSERT(L,exp,err) {sword s = exp; if (s) return checkerr (L, s, err);}
-LUASQL_API int luaopen_luasql_oci8 (lua_State *L);
 
 
 /*

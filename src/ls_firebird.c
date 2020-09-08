@@ -65,8 +65,6 @@ typedef struct {
 #define luasql_pushinteger lua_pushnumber
 #endif
 
-LUASQL_API int luaopen_luasql_firebird (lua_State *L);
-
 /*
 ** Returns a standard database error message
 */
