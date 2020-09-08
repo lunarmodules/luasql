@@ -2,7 +2,6 @@
 ** LuaSQL, SQLite driver
 ** Author: Tiago Dionizio, Eduardo Quintao
 ** See Copyright Notice in license.html
-** $Id: ls_sqlite.c,v 1.13 2008/05/04 02:46:17 tomas Exp $
 */
 
 #include <stdio.h>
@@ -21,32 +20,27 @@
 #define LUASQL_CONNECTION_SQLITE "SQLite connection"
 #define LUASQL_CURSOR_SQLITE "SQLite cursor"
 
-typedef struct
-{
-    short       closed;
+typedef struct {
+	short       closed;
 } env_data;
 
 
-typedef struct
-{
+typedef struct {
 	short        closed;
 	int          env;                /* reference to environment */
 	short        auto_commit;        /* 0 for manual commit */
-	unsigned int cur_counter;          
+	unsigned int cur_counter;
 	sqlite      *sql_conn;
 } conn_data;
 
 
-typedef struct
-{
+typedef struct {
 	short       closed;
 	int         conn;               /* reference to connection */
 	int         numcols;            /* number of columns */
 	int         colnames, coltypes; /* reference to column information tables */
 	sqlite_vm  *sql_vm;
 } cur_data;
-
-LUASQL_API int luaopen_luasql_sqlite(lua_State *L);
 
 
 /*
@@ -85,8 +79,7 @@ static cur_data *getcursor(lua_State *L) {
 /*
 ** Closes the cursor and nullify all structure fields.
 */
-static void cur_nullify(lua_State *L, cur_data *cur)
-{
+static void cur_nullify(lua_State *L, cur_data *cur) {
   conn_data *conn;
 
   /* Nullify structure fields. */
@@ -108,20 +101,19 @@ static void cur_nullify(lua_State *L, cur_data *cur)
 ** Return nil + errmsg or nil in case of sucess
 */
 static int finalize(lua_State *L, cur_data *cur) {
-    char *errmsg;
-    if (sqlite_finalize(cur->sql_vm, &errmsg) != SQLITE_OK)
-    {
+	char *errmsg;
+	if (sqlite_finalize(cur->sql_vm, &errmsg) != SQLITE_OK) {
 		cur_nullify(L, cur);
-        lua_pushnil(L);
-        lua_pushliteral(L, LUASQL_PREFIX);
-        lua_pushstring(L, errmsg);
-        sqlite_freemem(errmsg);
-        lua_concat(L, 2);
-        return 2;
-    }
+		lua_pushnil(L);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
 	cur_nullify(L, cur);
 	lua_pushnil(L);
-    return 1;
+	return 1;
 }
 
 
@@ -130,53 +122,50 @@ static int finalize(lua_State *L, cur_data *cur) {
 */
 static int cur_fetch (lua_State *L) {
 	cur_data *cur = getcursor(L);
-    sqlite_vm *vm = cur->sql_vm;
-    const char **row = NULL;
-    int res;
+	sqlite_vm *vm = cur->sql_vm;
+	const char **row = NULL;
+	int res;
 
-    if (vm == NULL)
-        return 0;
+	if (vm == NULL) {
+		return 0;
+	}
 
-    res = sqlite_step(vm, NULL, &row, NULL);
+	res = sqlite_step(vm, NULL, &row, NULL);
 
-    /* no more results? */
-    if (res == SQLITE_DONE)
-        return finalize(L, cur);
+	/* no more results? */
+	if (res == SQLITE_DONE) {
+		return finalize(L, cur);
+	}
 
-    if (res != SQLITE_ROW)
-        return finalize(L, cur);
+	if (res != SQLITE_ROW) {
+		return finalize(L, cur);
+	}
 
-	if (lua_istable (L, 2))
-    {
+	if (lua_istable (L, 2)) {
 		int i;
 		const char *opts = luaL_optstring(L, 3, "n");
 
-		if (strchr(opts, 'n') != NULL)
-        {
+		if (strchr(opts, 'n') != NULL) {
 			/* Copy values to numerical indices */
-			for (i = 0; i < cur->numcols;)
-            {
-                lua_pushstring(L, row[i]);
+			for (i = 0; i < cur->numcols;) {
+				lua_pushstring(L, row[i]);
 				lua_rawseti(L, 2, ++i);
 			}
-        }
-		if (strchr(opts, 'a') != NULL)
-        {
+		}
+		if (strchr(opts, 'a') != NULL) {
 			/* Copy values to alphanumerical indices */
-            lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
+			lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
 
-			for (i = 0; i < cur->numcols; i++)
-            {
+			for (i = 0; i < cur->numcols; i++) {
 				lua_rawgeti(L, -1, i+1);
-                lua_pushstring(L, row[i]);
+				lua_pushstring(L, row[i]);
 				lua_rawset (L, 2);
 			}
-        }
+		}
 		lua_pushvalue(L, 2);
 		return 1; /* return table */
 	}
-	else
-    {
+	else {
 		int i;
 		luaL_checkstack (L, cur->numcols, LUASQL_PREFIX"too many columns");
 		for (i = 0; i < cur->numcols; ++i)
@@ -189,15 +178,13 @@ static int cur_fetch (lua_State *L) {
 /*
 ** Cursor object collector function
 */
-static int cur_gc(lua_State *L)
-{
-  cur_data *cur = (cur_data *)luaL_checkudata(L, 1, LUASQL_CURSOR_SQLITE);
-  if (cur != NULL && !(cur->closed))
-    {
-      sqlite_finalize(cur->sql_vm, NULL);
-      cur_nullify(L, cur);
-    }
-  return 0;
+static int cur_gc(lua_State *L) {
+	cur_data *cur = (cur_data *)luaL_checkudata(L, 1, LUASQL_CURSOR_SQLITE);
+	if (cur != NULL && !(cur->closed)) {
+		sqlite_finalize(cur->sql_vm, NULL);
+		cur_nullify(L, cur);
+	}
+	return 0;
 }
 
 
@@ -205,8 +192,7 @@ static int cur_gc(lua_State *L)
 ** Close the cursor on top of the stack.
 ** Return 1
 */
-static int cur_close(lua_State *L)
-{
+static int cur_close(lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata(L, 1, LUASQL_CURSOR_SQLITE);
 	luaL_argcheck(L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
@@ -223,10 +209,9 @@ static int cur_close(lua_State *L)
 /*
 ** Return the list of field names.
 */
-static int cur_getcolnames(lua_State *L)
-{
-    cur_data *cur = getcursor(L);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
+static int cur_getcolnames(lua_State *L) {
+	cur_data *cur = getcursor(L);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, cur->colnames);
 	return 1;
 }
 
@@ -234,10 +219,9 @@ static int cur_getcolnames(lua_State *L)
 /*
 ** Return the list of field types.
 */
-static int cur_getcoltypes(lua_State *L)
-{
-    cur_data *cur = getcursor(L);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, cur->coltypes);
+static int cur_getcoltypes(lua_State *L) {
+	cur_data *cur = getcursor(L);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, cur->coltypes);
 	return 1;
 }
 
@@ -246,11 +230,11 @@ static int cur_getcoltypes(lua_State *L)
 ** Create a new Cursor object and push it on top of the stack.
 */
 /* static int create_cursor(lua_State *L, int conn, sqlite_vm *sql_vm,
-    int numcols, const char **row, const char **col_info)*/
+	int numcols, const char **row, const char **col_info)*/
 static int create_cursor(lua_State *L, int o, conn_data *conn, 
 		sqlite_vm *sql_vm, int numcols, const char **col_info)
 {
-    int i;
+	int i;
 	cur_data *cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_SQLITE);
 
@@ -265,26 +249,24 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 	cur->coltypes = LUA_NOREF;
 	cur->sql_vm = sql_vm;
 
-    lua_pushvalue(L, o);
+	lua_pushvalue(L, o);
 	cur->conn = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    /* create table with column names */
-    lua_newtable(L);
-    for (i = 0; i < numcols;)
-    {
-        lua_pushstring(L, col_info[i]);
-        lua_rawseti(L, -2, ++i);
-    }
-    cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
+	/* create table with column names */
+	lua_newtable(L);
+	for (i = 0; i < numcols;) {
+		lua_pushstring(L, col_info[i]);
+		lua_rawseti(L, -2, ++i);
+	}
+	cur->colnames = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    /* create table with column types */
-    lua_newtable(L);
-    for (i = 0; i < numcols;)
-    {
-        lua_pushstring(L, col_info[numcols+i]);
-        lua_rawseti(L, -2, ++i);
-    }
-    cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
+	/* create table with column types */
+	lua_newtable(L);
+	for (i = 0; i < numcols;) {
+		lua_pushstring(L, col_info[numcols+i]);
+		lua_rawseti(L, -2, ++i);
+	}
+	cur->coltypes = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
@@ -293,28 +275,26 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 /*
 ** Connection object collector function
 */
-static int conn_gc(lua_State *L)
-{
-  conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
-  if (conn != NULL && !(conn->closed))
-    {
-      if (conn->cur_counter > 0)
-        return luaL_error (L, LUASQL_PREFIX"there are open cursors");
+static int conn_gc(lua_State *L) {
+	conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
+	if (conn != NULL && !(conn->closed)) {
+		if (conn->cur_counter > 0) {
+			return luaL_error (L, LUASQL_PREFIX"there are open cursors");
+		}
 
-      /* Nullify structure fields. */
-      conn->closed = 1;
-      luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
-      sqlite_close(conn->sql_conn);
-    }
-  return 0;
+		/* Nullify structure fields. */
+		conn->closed = 1;
+		luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+		sqlite_close(conn->sql_conn);
+	}
+	return 0;
 }
 
 
 /*
 ** Close a Connection object.
 */
-static int conn_close(lua_State *L)
-{
+static int conn_close(lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
@@ -332,79 +312,76 @@ static int conn_close(lua_State *L)
 ** Return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
 */
-static int conn_execute(lua_State *L)
-{
+static int conn_execute(lua_State *L) {
 	conn_data *conn = getconnection(L);
 	const char *statement = luaL_checkstring(L, 2);
-    int res;
-    sqlite_vm *vm;
-    char *errmsg;
-    int numcols;
-    const char **col_info;
+	int res;
+	sqlite_vm *vm;
+	char *errmsg;
+	int numcols;
+	const char **col_info;
 
-    res = sqlite_compile(conn->sql_conn, statement, NULL, &vm, &errmsg);
-    if (res != SQLITE_OK)
-    {
-        lua_pushnil(L);
-        lua_pushliteral(L, LUASQL_PREFIX);
-        lua_pushstring(L, errmsg);
-        sqlite_freemem(errmsg);
-        lua_concat(L, 2);
-        return 2;
-    }
+	res = sqlite_compile(conn->sql_conn, statement, NULL, &vm, &errmsg);
+	if (res != SQLITE_OK) {
+		lua_pushnil(L);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
 
-    /* process first result to retrive query information and type */
-    res = sqlite_step(vm, &numcols, NULL, &col_info);
+	/* process first result to retrive query information and type */
+	res = sqlite_step(vm, &numcols, NULL, &col_info);
 
-    /* real query? if empty, must have numcols!=0 */
-	if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols))
-	{
+	/* real query? if empty, must have numcols!=0 */
+	if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols)) {
 		sqlite_reset(vm, NULL);
 		return create_cursor(L, 1, conn, vm, numcols, col_info);
 	}
 
-    if (res == SQLITE_DONE) /* and numcols==0, INSERT,UPDATE,DELETE statement */
-    {
-        sqlite_finalize(vm, NULL);
-        /* return number of columns changed */
-        lua_pushnumber(L, sqlite_changes(conn->sql_conn));
-        return 1;
-    }
+	if (res == SQLITE_DONE) /* and numcols==0, INSERT,UPDATE,DELETE statement */
+	{
+		sqlite_finalize(vm, NULL);
+		/* return number of columns changed */
+		lua_pushnumber(L, sqlite_changes(conn->sql_conn));
+		return 1;
+	}
 
-    /* error */
-    sqlite_finalize(vm, &errmsg);
-    lua_pushnil(L);
-    lua_pushliteral(L, LUASQL_PREFIX);
-    lua_pushstring(L, errmsg);
-    sqlite_freemem(errmsg);
-    lua_concat(L, 2);
-    return 2;
+	/* error */
+	sqlite_finalize(vm, &errmsg);
+	lua_pushnil(L);
+	lua_pushliteral(L, LUASQL_PREFIX);
+	lua_pushstring(L, errmsg);
+	sqlite_freemem(errmsg);
+	lua_concat(L, 2);
+	return 2;
 }
 
 
 /*
 ** Commit the current transaction.
 */
-static int conn_commit(lua_State *L)
-{
-    char *errmsg;
+static int conn_commit(lua_State *L) {
+	char *errmsg;
 	conn_data *conn = getconnection(L);
 	int res;
-    const char *sql = "COMMIT";
+	const char *sql = "COMMIT";
 
-    if (conn->auto_commit == 0) sql = "COMMIT;BEGIN";
+	if (conn->auto_commit == 0) {
+		sql = "COMMIT;BEGIN";
+	}
 
-    res = sqlite_exec(conn->sql_conn, sql, NULL, NULL, &errmsg);
-    if (res != SQLITE_OK)
-    {
+	res = sqlite_exec(conn->sql_conn, sql, NULL, NULL, &errmsg);
+	if (res != SQLITE_OK) {
 		lua_pushnil(L);
-        lua_pushliteral(L, LUASQL_PREFIX);
-        lua_pushstring(L, errmsg);
-        sqlite_freemem(errmsg);
-        lua_concat(L, 2);
-        return 2;
-    }
-    lua_pushboolean(L, 1);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -412,26 +389,26 @@ static int conn_commit(lua_State *L)
 /*
 ** Rollback the current transaction.
 */
-static int conn_rollback(lua_State *L)
-{
-    char *errmsg;
+static int conn_rollback(lua_State *L) {
+	char *errmsg;
 	conn_data *conn = getconnection(L);
 	int res;
-    const char *sql = "ROLLBACK";
+	const char *sql = "ROLLBACK";
 
-    if (conn->auto_commit == 0) sql = "ROLLBACK;BEGIN";
+	if (conn->auto_commit == 0) {
+		sql = "ROLLBACK;BEGIN";
+	}
 
-    res = sqlite_exec(conn->sql_conn, sql, NULL, NULL, &errmsg);
-    if (res != SQLITE_OK)
-    {
+	res = sqlite_exec(conn->sql_conn, sql, NULL, NULL, &errmsg);
+	if (res != SQLITE_OK) {
 		lua_pushnil(L);
-        lua_pushliteral(L, LUASQL_PREFIX);
-        lua_pushstring(L, errmsg);
-        sqlite_freemem(errmsg);
-        lua_concat(L, 2);
-        return 2;
-    }
-    lua_pushboolean(L, 1);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
+	lua_pushboolean(L, 1);
 	return 1;
 }
 
@@ -441,29 +418,25 @@ static int conn_rollback(lua_State *L)
 ** If 'true', then rollback current transaction.
 ** If 'false', then start a new transaction.
 */
-static int conn_setautocommit(lua_State *L)
-{
+static int conn_setautocommit(lua_State *L) {
 	conn_data *conn = getconnection(L);
-	if (lua_toboolean(L, 2))
-    {
+	if (lua_toboolean(L, 2)) {
 		conn->auto_commit = 1;
-        /* undo active transaction - ignore errors */
-        (void) sqlite_exec(conn->sql_conn, "ROLLBACK", NULL, NULL, NULL);
+		/* undo active transaction - ignore errors */
+		(void) sqlite_exec(conn->sql_conn, "ROLLBACK", NULL, NULL, NULL);
 	}
-	else
-    {
-        char *errmsg;
-        int res;
+	else {
+		char *errmsg;
+		int res;
 		conn->auto_commit = 0;
-        res = sqlite_exec(conn->sql_conn, "BEGIN", NULL, NULL, &errmsg);
-        if (res != SQLITE_OK)
-        {
-            lua_pushliteral(L, LUASQL_PREFIX);
-            lua_pushstring(L, errmsg);
-            sqlite_freemem(errmsg);
-            lua_concat(L, 2);
-            lua_error(L);
-        }
+		res = sqlite_exec(conn->sql_conn, "BEGIN", NULL, NULL, &errmsg);
+		if (res != SQLITE_OK) {
+			lua_pushliteral(L, LUASQL_PREFIX);
+			lua_pushstring(L, errmsg);
+			sqlite_freemem(errmsg);
+			lua_concat(L, 2);
+			lua_error(L);
+		}
 	}
 	lua_pushboolean(L, 1);
 	return 1;
@@ -473,8 +446,7 @@ static int conn_setautocommit(lua_State *L)
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection(lua_State *L, int env, sqlite *sql_conn)
-{
+static int create_connection(lua_State *L, int env, sqlite *sql_conn) {
 	conn_data *conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
 	luasql_setmeta(L, LUASQL_CONNECTION_SQLITE);
 
@@ -493,35 +465,33 @@ static int create_connection(lua_State *L, int env, sqlite *sql_conn)
 /*
 ** Connects to a data source.
 */
-static int env_connect(lua_State *L)
-{
-    const char *sourcename;
+static int env_connect(lua_State *L) {
+	const char *sourcename;
 	sqlite *conn;
-    char *errmsg;
+	char *errmsg;
 	getenvironment(L);  /* validate environment */
-    sourcename = luaL_checkstring(L, 2);
-    conn = sqlite_open(sourcename, 0, &errmsg);
-    if (conn == NULL)
-    {
-        lua_pushnil(L);
-        lua_pushliteral(L, LUASQL_PREFIX);
-        lua_pushstring(L, errmsg);
-        sqlite_freemem(errmsg);
-        lua_concat(L, 2);
-        return 2;
-    }
-    return create_connection(L, 1, conn);
+	sourcename = luaL_checkstring(L, 2);
+	conn = sqlite_open(sourcename, 0, &errmsg);
+	if (conn == NULL) {
+		lua_pushnil(L);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
+	return create_connection(L, 1, conn);
 }
 
 
 /*
 ** Close environment object.
 */
-static int env_gc (lua_State *L)
-{
+static int env_gc (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_SQLITE);
-	if (env != NULL && !(env->closed))
+	if (env != NULL && !(env->closed)) {
 		env->closed = 1;
+	}
 	return 0;
 }
 
@@ -529,8 +499,7 @@ static int env_gc (lua_State *L)
 /*
 ** Close environment object.
 */
-static int env_close (lua_State *L)
-{
+static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_SQLITE);
 	luaL_argcheck(L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
@@ -542,51 +511,47 @@ static int env_close (lua_State *L)
 	return 1;
 }
 
-static int conn_escape(lua_State *L)
-{
-    const char *from = luaL_checklstring (L, 2, 0);
-    char *escaped = sqlite_mprintf("%q", from);
-    if (escaped == NULL) 
-    {
-        lua_pushnil(L);
-    } 
-    else
-    {
-        lua_pushstring(L, escaped);        
-        sqlite_freemem(escaped);
-    }
-    return 1;
+static int conn_escape(lua_State *L) {
+	const char *from = luaL_checklstring (L, 2, 0);
+	char *escaped = sqlite_mprintf("%q", from);
+	if (escaped == NULL) {
+		lua_pushnil(L);
+	} 
+	else {
+		lua_pushstring(L, escaped);
+		sqlite_freemem(escaped);
+	}
+	return 1;
 }
 
 /*
 ** Create metatables for each class of object.
 */
-static void create_metatables (lua_State *L)
-{
-    struct luaL_Reg environment_methods[] = {
-        {"__gc", env_gc},
-        {"close", env_close},
-        {"connect", env_connect},
+static void create_metatables (lua_State *L) {
+	struct luaL_Reg environment_methods[] = {
+		{"__gc", env_gc},
+		{"close", env_close},
+		{"connect", env_connect},
 		{NULL, NULL},
 	};
-    struct luaL_Reg connection_methods[] = {
-        {"__gc", conn_gc},
-        {"close", conn_close},
+	struct luaL_Reg connection_methods[] = {
+		{"__gc", conn_gc},
+		{"close", conn_close},
 		{"escape", conn_escape},
-        {"execute", conn_execute},
-        {"commit", conn_commit},
-        {"rollback", conn_rollback},
-        {"setautocommit", conn_setautocommit},
+		{"execute", conn_execute},
+		{"commit", conn_commit},
+		{"rollback", conn_rollback},
+		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
-    };
-    struct luaL_Reg cursor_methods[] = {
-        {"__gc", cur_gc},
-        {"close", cur_close},
-        {"getcolnames", cur_getcolnames},
-        {"getcoltypes", cur_getcoltypes},
-        {"fetch", cur_fetch},
+	};
+	struct luaL_Reg cursor_methods[] = {
+		{"__gc", cur_gc},
+		{"close", cur_close},
+		{"getcolnames", cur_getcolnames},
+		{"getcoltypes", cur_getcoltypes},
+		{"fetch", cur_fetch},
 		{NULL, NULL},
-    };
+	};
 	luasql_createmeta(L, LUASQL_ENVIRONMENT_SQLITE, environment_methods);
 	luasql_createmeta(L, LUASQL_CONNECTION_SQLITE, connection_methods);
 	luasql_createmeta(L, LUASQL_CURSOR_SQLITE, cursor_methods);
@@ -596,8 +561,7 @@ static void create_metatables (lua_State *L)
 /*
 ** Creates an Environment and returns it.
 */
-static int create_environment (lua_State *L)
-{
+static int create_environment (lua_State *L) {
 	env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
 	luasql_setmeta(L, LUASQL_ENVIRONMENT_SQLITE);
 
@@ -611,8 +575,7 @@ static int create_environment (lua_State *L)
 ** Creates the metatables for the objects and registers the
 ** driver open method.
 */
-LUASQL_API int luaopen_luasql_sqlite(lua_State *L)
-{
+LUASQL_API int luaopen_luasql_sqlite(lua_State *L) {
 	struct luaL_Reg driver[] = {
 		{"sqlite", create_environment},
 		{NULL, NULL},
