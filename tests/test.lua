@@ -564,6 +564,12 @@ function close_conn ()
 end
 
 ---------------------------------------------------------------------
+---------------------------------------------------------------------
+function finalization ()
+	-- nothing to do
+end
+
+---------------------------------------------------------------------
 -- Testing Extensions
 ---------------------------------------------------------------------
 EXTENSIONS = {
@@ -659,6 +665,7 @@ tests = {
 	{ "close objects", check_close },
 	{ "drop table", drop_table },
 	{ "close connection", close_conn },
+	{ "finalization", finalization },
 }
 
 if string.find(_VERSION, " 5.0") then
