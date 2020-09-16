@@ -297,6 +297,9 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
         case SQL_DATE: case SQL_INTERVAL: case SQL_TIMESTAMP: 
         case SQL_LONGVARCHAR:
         case SQL_WCHAR: case SQL_WVARCHAR: case SQL_WLONGVARCHAR:
+#if (ODBCVER >= 0x0350)
+		case SQL_GUID:
+#endif
             return "string";
         case SQL_BIGINT: case SQL_TINYINT: 
         case SQL_INTEGER: case SQL_SMALLINT: 
