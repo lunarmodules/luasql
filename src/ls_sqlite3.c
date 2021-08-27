@@ -369,6 +369,100 @@ static int conn_escape(lua_State *L)
   return 1;
 }
 
+
+/*
+** Bind one parameter.
+** Supported are the data types nil, string, boolean, number.
+*/
+static int set_param(lua_State *L, sqlite3_stmt *vm, int param_nr, int arg)
+{
+  int tt = lua_type(L, arg);
+  int rc = 0;
+
+  switch (tt) {
+    case LUA_TNIL:
+    rc = sqlite3_bind_null(vm, param_nr);
+    break;
+
+    case LUA_TSTRING: {
+    size_t s_len;
+    const char *s = lua_tolstring(L, arg, &s_len);
+    rc = sqlite3_bind_null(vm, param_nr);
+    rc = sqlite3_bind_text(vm, param_nr, s, s_len, SQLITE_TRANSIENT);
+    break;
+    }
+
+    case LUA_TBOOLEAN: {
+      int val = lua_tointeger(L, arg);
+      rc = sqlite3_bind_int(vm, param_nr, val);
+    }
+    break;
+
+    case LUA_TNUMBER:
+    if (lua_isinteger(L, arg)) {
+      lua_Integer val = lua_tointeger(L, arg);
+      rc = sqlite3_bind_int64(vm, param_nr, val);
+    } else {
+      double val = lua_tonumber(L, arg);
+      rc = sqlite3_bind_double(vm, param_nr, val);
+    }
+    break;
+
+    default:
+    luaL_error(L, LUASQL_PREFIX"unhandled data type %s in paramter binding",
+      lua_typename(L, tt));
+  }
+
+  return rc;
+}
+
+static int raw_readparams_args(lua_State *L, sqlite3_stmt *vm, int arg, int ltop)
+{
+  int param_count, param_nr, rc = 0;
+
+  param_count = sqlite3_bind_parameter_count(vm);
+  if (ltop - arg + 1 != param_count)
+    luaL_error(L, LUASQL_PREFIX"wrong number of parameters: expected=%d, given=%d",
+      param_count, ltop - arg + 1);
+
+  for (param_nr=1; param_nr <= param_count; param_nr ++, arg ++) {
+    rc = set_param(L, vm, param_nr, arg);
+    if (rc)
+      break;
+  }
+
+  return rc;
+}
+
+/*
+** Bind all parameters from the given table.
+** The table indices can be integers or strings.
+** Unbound parameters, or duplicate bindings are not detected.
+*/
+static int raw_readparams_table(lua_State *L, sqlite3_stmt *vm, int arg)
+{
+  int param_nr, rc = 0, tt;
+
+  lua_pushnil(L);
+
+  while (lua_next(L, arg)) {		// [arg]=table, [-2]=key, [-1]=val
+    tt = lua_type(L, -2);
+    if (tt == LUA_TNUMBER && lua_isinteger(L, -2)) {
+      param_nr = lua_tointeger(L, -2);
+    } else {
+      const char *param_name = lua_tostring(L, -2);
+      param_nr = sqlite3_bind_parameter_index(vm, param_name);
+      if (param_nr == 0)
+        luaL_error(L, LUASQL_PREFIX"binding to invalid parameter name %s\n",
+          param_name);
+    }
+    set_param(L, vm, param_nr, -1);
+    lua_pop(L, 1);
+  }
+
+  return rc;
+}
+
 /*
 ** Execute an SQL statement.
 ** Return a Cursor object if the statement is a query, otherwise
@@ -394,6 +488,20 @@ static int conn_execute(lua_State *L)
       errmsg = sqlite3_errmsg(conn->sql_conn);
       return luasql_faildirect(L, errmsg);
     }
+
+  /* Bind parameters (if any) */
+  int ltop = lua_gettop(L);
+  if (ltop > 2) {
+    if (ltop == 3 && lua_type(L, 3) == LUA_TTABLE) {
+      res = raw_readparams_table(L, vm, 3);
+    } else if (ltop >= 3) {
+      res = raw_readparams_args(L, vm, 3, ltop);
+    } else {
+      luaL_error(L, LUASQL_PREFIX"parameters are either one table or positional");
+    }
+    if (res)
+      return res;
+  }
 
   /* process first result to retrive query information and type */
   res = sqlite3_step(vm);
@@ -650,6 +758,7 @@ static void create_metatables (lua_State *L)
     {"__gc", conn_gc},
     {"close", conn_close},
     {"escape", conn_escape},
+//    {"prepare", conn_prepare},
     {"execute", conn_execute},
     {"commit", conn_commit},
     {"rollback", conn_rollback},
