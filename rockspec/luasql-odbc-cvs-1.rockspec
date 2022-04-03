@@ -1,7 +1,7 @@
 package = "LuaSQL-ODBC"
 version = "cvs-1"
 source = {
-  url = "git://github.com/keplerproject/luasql.git"
+  url = "git+https://github.com/keplerproject/luasql.git"
 }
 description = {
    summary = "Database connectivity for Lua (ODBC driver)",

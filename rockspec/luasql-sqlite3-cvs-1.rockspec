@@ -1,7 +1,7 @@
 package = "LuaSQL-SQLite3"
 version = "cvs-1"
 source = {
-  url = "git://github.com/keplerproject/luasql.git"
+  url = "git+https://github.com/keplerproject/luasql.git"
 }
 description = {
    summary = "Database connectivity for Lua (SQLite3 driver)",

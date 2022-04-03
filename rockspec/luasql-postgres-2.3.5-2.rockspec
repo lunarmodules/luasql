@@ -1,7 +1,7 @@
 package = "LuaSQL-Postgres"
 version = "2.3.5-2"
 source = {
-  url = "git://github.com/keplerproject/luasql.git",
+  url = "git+https://github.com/keplerproject/luasql.git",
   branch = "v2.3.5",
 }
 description = {

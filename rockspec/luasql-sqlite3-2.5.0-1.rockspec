@@ -1,7 +1,7 @@
 package = "LuaSQL-SQLite3"
 version = "2.5.0-1"
 source = {
-  url = "git://github.com/keplerproject/luasql.git",
+  url = "git+https://github.com/keplerproject/luasql.git",
   branch = "2.5.0",
 }
 description = {
