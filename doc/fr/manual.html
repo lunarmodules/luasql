@@ -53,7 +53,7 @@
         <li><a href="http://github.com/keplerproject/luasql">Project</a>
             <ul>
                 <li><a href="http://github.com/keplerproject/luasql/issues">Bug Tracker</a></li>
-                
+
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -97,7 +97,7 @@ as Lua 5.1.
 a pair of common source and header files (<code>luasql.h</code> and <code>luasql.c</code>);
 and one source file for each driver.
 Each driver should be compiled with the luasql.c file to generate a library.
-This library can be linked to the application or dynamically loaded. 
+This library can be linked to the application or dynamically loaded.
 The initialization function is <code>luaopen_luasql<em>drivername</em></code> and it is a Lua
 <a href="http://www.lua.org/manual/5.1/manual.html#pdf-require"><code>open-library</code></a> compatible function.
 </p>
@@ -187,7 +187,7 @@ local env = driver.odbc()
 	the object is already closed.</dd>
 	
 	<dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
-	<dd>Connects to a data source specified in <code>sourcename</code> using 
+	<dd>Connects to a data source specified in <code>sourcename</code> using
 	<code>username</code> and <code>password</code> if they are supplied.<br/>
 	The <code>sourcename</code> may vary according to each driver.
 	Some use a simple database name, like PostgreSQL, MySQL and SQLite;
@@ -430,4 +430,4 @@ the SQLite3 driver also offers this extra feature:</p>
 </div> <!-- id="container" -->
 
 </body>
-</html> 
+</html>
