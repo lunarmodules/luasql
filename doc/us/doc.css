@@ -1,4 +1,4 @@
-body { 
+body {
     color: #47555c;
     font-size: 16px;
     font-family: "Open Sans", sans-serif;
@@ -24,18 +24,18 @@ hr {
 }
 
 code {
-    font-family: "Open Sans Mono", "Andale Mono", monospace; 
+    font-family: "Open Sans Mono", "Andale Mono", monospace;
 }
 
 tt {
-    font-family: "Open Sans Mono", "Andale Mono", monospace; 
+    font-family: "Open Sans Mono", "Andale Mono", monospace;
 }
 
 body, td, th {
 }
 
 textarea, pre, tt {
-    font-family: "Open Sans Mono", "Andale Mono", monospace; 
+    font-family: "Open Sans Mono", "Andale Mono", monospace;
 }
 
 img {
@@ -205,7 +205,7 @@ dl.reference dd {
         display: none;
     }
     .example {
-        font-family: "Andale Mono", monospace; 
+        font-family: "Andale Mono", monospace;
         font-size: 8pt;
         page-break-inside: avoid;
     }

@@ -53,7 +53,7 @@
         <li><a href="http://github.com/keplerproject/luasql">Projeto</a>
             <ul>
                 <li><a href="http://github.com/keplerproject/luasql/issues">Bug Tracker</a></li>
-                
+
             </ul>
         </li>
 		<li><a href="license.html">Licen&ccedil;a</a></li>
@@ -85,16 +85,16 @@ A conex&atilde;o pode executar comandos SQL e, eventualmente, criar um
 um arquivo fonte e um arquivo cabe&ccedil;alho comuns a todos os drivers
 (<code>luasql.h</code> e <code>luasql.c</code>) &ndash; e um arquivo fonte para cada driver.
 Cada driver deve ser compilado juntamente com o arquivo <code>luasql.c</code>
-para gerar uma biblioteca. Essa biblioteca pode ser linkada &agrave; aplica&ccedil;&atilde;o  
+para gerar uma biblioteca. Essa biblioteca pode ser linkada &agrave; aplica&ccedil;&atilde;o
 ou carregada dinamicamente. A fun&ccedil;&atilde;o de inicializa&ccedil;&atilde;o &eacute;
-<code>luaopen_luasql<em>nomedriver</em></code> e &eacute; compat&iacute;vel com o formato 
+<code>luaopen_luasql<em>nomedriver</em></code> e &eacute; compat&iacute;vel com o formato
 <a href="http://www.lua.org/manual/5.1/manual.html#pdf-require"><code>open-library</code></a> de Lua.</p>
 
 <h2><a name="installation"></a>Instala&ccedil;&atilde;o</h2>
 
-<p>Todos os drivers LuaSQL seguem a 
+<p>Todos os drivers LuaSQL seguem a
 <a href="http://www.keplerproject.org/compat">proposta de pacotes</a>
-para Lua 5.1. Logo, esse pacote deve ser "instalado". Consulte a se&ccedil;&atilde;o de 
+para Lua 5.1. Logo, esse pacote deve ser "instalado". Consulte a se&ccedil;&atilde;o de
 <a href="http://www.keplerproject.org/compat/manual.html#configuration">
 configura&ccedil;&atilde;o do Compat-5.1</a> para saber como instalar os pacotes bin&aacute;rios
 da maneira correta.
@@ -193,7 +193,7 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
     </dd>
 
     <dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
-    <dd>Conecta &agrave; fonte de dados especificada em <code>sourcename</code> usando 
+    <dd>Conecta &agrave; fonte de dados especificada em <code>sourcename</code> usando
         <code>username</code> e <code>password</code> se eles s&atilde;o fornecidos.<br/>
         O <code>sourcename</code> pode variar de acordo com cada driver.
         Alguns usam simplesmente o nome do banco de dados, como PostgreSQL, MySQL e SQLite;
@@ -210,7 +210,7 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
 
 <h2><a name="connection_object"></a>Conex&atilde;o</h2>
 
-<p>Uma conex&atilde;o cont&eacute;m atributos e par&acirc;metros espec&iacute;ficos de uma 
+<p>Uma conex&atilde;o cont&eacute;m atributos e par&acirc;metros espec&iacute;ficos de uma
 &uacute;nica conex&atilde;o de base de dados. Uma conex&atilde;o &eacute; criada chamando
 o m&eacute;todo <code><a href="#env_connect">environment:connect</a></code>.</p>
 
@@ -278,7 +278,7 @@ e <a href="#oracle_extensions">Oracle</a>.</p>
         chamado com uma tabela, os resultados s&atilde;o copiados para a tabela e a tabela
         &eacute; retornada. Neste caso, pode ser usado um
         par&acirc;metro opcional de modo (<code>modestring</code>): uma seq&uuml;&ecirc;ncia
-        de caracteres indicando como deve ser constru&iacute;da a tabela de resultados. 
+        de caracteres indicando como deve ser constru&iacute;da a tabela de resultados.
         A seq&uuml;&ecirc;ncia de caracteres do modo pode conter:
         <dl>
             <dt><strong>"n"</strong></dt><dd>a tabela resultante ter&aacute; &iacute;ndices num&eacute;ricos (padr&atilde;o)</dd>
@@ -320,7 +320,7 @@ o driver Postgres oferece as seguintes funcionalidades adicionais:</p>
     <dd>No driver PostgreSQL este m&eacute;todo tem mais dois par&acirc;metros opcionais que indicam
         o <code>hostname</code> e a <code>port</code> a serem utilizados na conex&atilde;o.
         Al&eacute;m disso, o primeiro par&acirc;metro tamb&eacute;m pode conter todas as informa&ccedil;&otilde;es
-        de conex&atilde;o, como &eacute; dito na documenta&ccedil;&atilde;o 
+        de conex&atilde;o, como &eacute; dito na documenta&ccedil;&atilde;o
         para a fun&ccedil;&atilde;o <code>PQconnectdb</code> no manual do PostgreSQL
         (ex. <small><code>environment:connect("dbname=&lt;<em>name</em>&gt; user=&lt;<em>username</em>&gt;")</code></small>)<br/>
         Veja tamb&eacute;m: <a href="#environment_object">ambiente</a><br/>
@@ -404,4 +404,4 @@ o driver para SQLite3 ainda oferece uma funcionalidade adicional:</p>
 </div> <!-- id="container" -->
 
 </body>
-</html> 
+</html>

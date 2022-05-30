@@ -1,16 +1,16 @@
-body { 
-    margin-left: 1em; 
-    margin-right: 1em; 
+body {
+    margin-left: 1em;
+    margin-right: 1em;
     font-family: arial, helvetica, geneva, sans-serif;
     background-color:#ffffff; margin:0px;
 }
 
 code {
-    font-family: "Andale Mono", monospace; 
+    font-family: "Andale Mono", monospace;
 }
 
 tt {
-    font-family: "Andale Mono", monospace; 
+    font-family: "Andale Mono", monospace;
 }
 
 body, td, th { font-size: 11pt; }
@@ -35,10 +35,10 @@ h3 { padding-top: 1em; }
 
 p { margin-left: 1em; }
 
-p.name { 
-    font-family: "Andale Mono", monospace; 
+p.name {
+    font-family: "Andale Mono", monospace;
     padding-top: 1em;
-    margin-left: 0em; 
+    margin-left: 0em;
 }
 
 blockquote { margin-left: 3em; }
@@ -60,13 +60,13 @@ blockquote { margin-left: 3em; }
     padding: 1em;
     margin-left: 1em;
     margin-right: 1em;
-    font-family: "Andale Mono", monospace; 
+    font-family: "Andale Mono", monospace;
     font-size: smaller;
 }
 
-hr { 
+hr {
     margin-left: 0em;
-    background: #00007f; 
+    background: #00007f;
     border: 0px;
     height: 1px;
 }
@@ -205,7 +205,7 @@ div.header, div.footer { margin-left: 0em; }
         display: none;
     }
     .example {
-        font-family: "Andale Mono", monospace; 
+        font-family: "Andale Mono", monospace;
         font-size: 8pt;
         page-break-inside: avoid;
     }
