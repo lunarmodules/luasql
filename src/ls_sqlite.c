@@ -98,7 +98,7 @@ static void cur_nullify(lua_State *L, cur_data *cur) {
 
 /*
 ** Finalizes the vm
-** Return nil + errmsg or nil in case of sucess
+** Return nil + errmsg or nil in case of success
 */
 static int finalize(lua_State *L, cur_data *cur) {
 	char *errmsg;
@@ -331,7 +331,7 @@ static int conn_execute(lua_State *L) {
 		return 2;
 	}
 
-	/* process first result to retrive query information and type */
+	/* process first result to retrieve query information and type */
 	res = sqlite_step(vm, &numcols, NULL, &col_info);
 
 	/* real query? if empty, must have numcols!=0 */

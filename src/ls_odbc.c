@@ -66,7 +66,7 @@ typedef struct {
 	SQLHSTMT      hstmt;              /* statement handle */
 	SQLSMALLINT   numparams;          /* number of input parameters */
 	int           paramtypes;         /* reference to param type table */
-	param_data    *params;            /* array of parater data */
+	param_data    *params;            /* array of parameter data */
 } stmt_data;
 
 typedef struct {
@@ -327,7 +327,7 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
 **   hstmt: statement handle
 **   i: column number
 ** Returns:
-**   0 if successfull, non-zero otherwise;
+**   0 if successful, non-zero otherwise;
 */
 static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
         SQLUSMALLINT i) {
@@ -1066,7 +1066,7 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc)
 **   source: data source
 **   user, pass: data source authentication information
 ** Lua Returns:
-**   connection object if successfull
+**   connection object if successful
 **   nil and error message otherwise.
 */
 static int env_connect (lua_State *L) {
