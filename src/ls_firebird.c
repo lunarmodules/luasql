@@ -27,21 +27,21 @@ typedef struct {
 
 typedef struct {
 	short			closed;
-	env_data*		env;			/* the DB enviroment this is in */
+	env_data*		env;			/* the DB environment this is in */
 	isc_db_handle	db;				/* the database handle */
-	char			dpb_buffer[256];/* holds the database paramet buffer */
+	char			dpb_buffer[256];/* holds the database parameter buffer */
 	short			dpb_length;		/* the used amount of the dpb */
 	isc_tr_handle	transaction;	/* the transaction handle */
 	int				lock;			/* lock count for open cursors */
-	int				autocommit;		/* should each statement be commited */
+	int				autocommit;		/* should each statement be committed */
 } conn_data;
 
 typedef struct {
 	short			closed;
-	env_data*		env;			/* the DB enviroment this is in */
+	env_data*		env;			/* the DB environment this is in */
 	conn_data*		conn;			/* the DB connection this cursor is from */
 	isc_stmt_handle stmt;			/* the statement handle */
-	int			stmt_type;			/* the type of the statment */
+	int			stmt_type;			/* the type of the statement */
 	XSQLDA			*out_sqlda;		/* the cursor data array */
 } cur_data;
 
@@ -139,7 +139,7 @@ static int cur_shut(lua_State *L, cur_data *cur)
 	/* free the cursor data */
 	free_cur(cur);
 
-	/* remove cursor from lock count and check if statment can be unregistered */
+	/* remove cursor from lock count and check if statement can be unregistered */
 	cur->closed = 1;
 	--cur->conn->lock;
 
@@ -481,7 +481,7 @@ static int conn_execute (lua_State *L) {
 
 		lua_pushnumber(L, count);
 
-		/* totaly finnished with the cursor */
+		/* totally finished with the cursor */
 		isc_dsql_free_statement(conn->env->status_vector, &cur.stmt, DSQL_drop);
 		free(cur.out_sqlda);
 	}
@@ -506,7 +506,7 @@ static int conn_commit(lua_State *L) {
 /*
 ** Rolls back the current transaction
 ** Lua Returns:
-**   1 if rollback is sucsessful
+**   1 if rollback is successful
 **   nil and error message otherwise.
 */
 static int conn_rollback(lua_State *L) {
@@ -711,7 +711,7 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 												LUAL_BUFFERSIZE, buffer );
 			}
 
-			/* finnished, close the BLOB */
+			/* finished, close the BLOB */
 			isc_close_blob(cur->env->status_vector, &blob_handle);
 			blob_handle = 0;
 
@@ -940,7 +940,7 @@ static int create_environment (lua_State *L) {
 **   source: data source
 **   user, pass: data source authentication information
 ** Lua Returns:
-**   connection object if successfull
+**   connection object if successful
 **   nil and error message otherwise.
 */
 static int env_connect (lua_State *L) {

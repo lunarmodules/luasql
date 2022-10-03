@@ -269,7 +269,7 @@ static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
 			break;
 		default:
 			luaL_error (L, LUASQL_PREFIX"unknown type");
-			/*printf("free_buffers(): Unknow Type: %d count: %d\n",cols.item[count].type, count );*/
+			/*printf("free_buffers(): Unknown Type: %d count: %d\n",cols.item[count].type, count );*/
 			break;
 	}
     return 0;

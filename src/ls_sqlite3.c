@@ -104,7 +104,7 @@ static void cur_nullify(lua_State *L, cur_data *cur)
 
 /*
 ** Finalizes the vm
-** Return nil + errmsg or nil in case of sucess
+** Return nil + errmsg or nil in case of success
 */
 static int finalize(lua_State *L, cur_data *cur) {
   const char *errmsg;
@@ -409,7 +409,7 @@ static int set_param(lua_State *L, sqlite3_stmt *vm, int param_nr, int arg)
     break;
 
     default:
-    luaL_error(L, LUASQL_PREFIX"unhandled data type %s in paramter binding",
+    luaL_error(L, LUASQL_PREFIX"unhandled data type %s in parameter binding",
       lua_typename(L, tt));
   }
 
@@ -503,7 +503,7 @@ static int conn_execute(lua_State *L)
       return res;
   }
 
-  /* process first result to retrive query information and type */
+  /* process first result to retrieve query information and type */
   res = sqlite3_step(vm);
   numcols = sqlite3_column_count(vm);
 

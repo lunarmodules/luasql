@@ -16,7 +16,7 @@ SPACE= $(EMPTY) $(EMPTY)
 all : 
 	@echo "usage: make { $(subst $(SPACE),$(SPACE)|$(SPACE),$(DRIVER_LIST)) }"
 
-# explicity matches against the list of avilable driver names
+# explicitly matches against the list of available driver names
 $(DRIVER_LIST) : % : src/%.so
 
 # builds the specified driver

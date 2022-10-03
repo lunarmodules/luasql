@@ -11,7 +11,7 @@ local orig_create_table = create_table
 local orig_drop_table = drop_table
 
 ---------------------------------------------------------------------
--- New metadata needs to be commited before it is used
+-- New metadata needs to be committed before it is used
 ---------------------------------------------------------------------
 function create_table ()
 	orig_create_table()
@@ -20,7 +20,7 @@ end
 
 function drop_table ()
 	-- Firebird prefers to keep DDL stuff (CREATE TABLE, etc.) 
-	-- seperate. So we need a new transaction i.e. connection
+	-- separate. So we need a new transaction i.e. connection
 	-- to work in
 	assert(CONN:close ())
 	CONN = assert(ENV:connect (datasource, username, password))
