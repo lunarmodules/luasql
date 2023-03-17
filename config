@@ -46,9 +46,8 @@ DRIVER_LIBS_firebird ?= -L/usr/local/firebird -lfbclient
 DRIVER_INCS_firebird ?=
 
 # general compilation parameters
-WARN = -Wall -Wmissing-prototypes -Wmissing-declarations -pedantic
+WARN= -fPIC $(OPTFLAGS) -Wmissing-prototypes -Wmissing-declarations -ansi -pedantic
 INCS = -I$(LUA_INC)
-DEFS =
-CFLAGS = -O2 -std=gnu99 $(WARN) -fPIC $(DRIVER_INCS) $(INCS) \
-         -DLUASQL_VERSION_NUMBER='"$V"' $(DEFS)
+DEFS = -std=gnu99 -fPIC
+CFLAGS=$(WARN) $(DRIVER_INCS) $(INCS) -DLUASQL_VERSION_NUMBER='"$V"' $(DEFS)
 CC= gcc
