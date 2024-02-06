@@ -399,13 +399,17 @@ static int set_param(lua_State *L, sqlite3_stmt *vm, int param_nr, int arg)
     break;
 
     case LUA_TNUMBER:
+#if defined(lua_isinteger)
     if (lua_isinteger(L, arg)) {
       lua_Integer val = lua_tointeger(L, arg);
       rc = sqlite3_bind_int64(vm, param_nr, val);
     } else {
+#endif
       double val = lua_tonumber(L, arg);
       rc = sqlite3_bind_double(vm, param_nr, val);
+#if defined(lua_isinteger)
     }
+#endif
     break;
 
     default:
@@ -447,15 +451,19 @@ static int raw_readparams_table(lua_State *L, sqlite3_stmt *vm, int arg)
 
   while (lua_next(L, arg)) {		// [arg]=table, [-2]=key, [-1]=val
     tt = lua_type(L, -2);
+#if defined(lua_isinteger)
     if (tt == LUA_TNUMBER && lua_isinteger(L, -2)) {
       param_nr = lua_tointeger(L, -2);
     } else {
+#endif
       const char *param_name = lua_tostring(L, -2);
       param_nr = sqlite3_bind_parameter_index(vm, param_name);
       if (param_nr == 0)
         luaL_error(L, LUASQL_PREFIX"binding to invalid parameter name %s\n",
           param_name);
+#if defined(lua_isinteger)
     }
+#endif
     set_param(L, vm, param_nr, -1);
     lua_pop(L, 1);
   }
