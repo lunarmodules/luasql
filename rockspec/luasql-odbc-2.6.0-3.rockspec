@@ -1,7 +1,7 @@
 package = "LuaSQL-ODBC"
 version = "2.6.0-3"
 source = {
-  url = "git+https://github.com/keplerproject/luasql.git",
+  url = "git+https://github.com/lunarmodules/luasql.git",
   branch = "2.6.0",
 }
 description = {
@@ -12,7 +12,7 @@ description = {
       and retrieve results in a row-by-row cursor fashion.
    ]],
    license = "MIT/X11",
-   homepage = "http://www.keplerproject.org/luasql/"
+   homepage = "https://lunarmodules.github.io/luasql/"
 }
 dependencies = {
    "lua >= 5.1"
