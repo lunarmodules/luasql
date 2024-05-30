@@ -276,7 +276,11 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 			 sqlite3_stmt *sql_vm, int numcols)
 {
   int i;
-  cur_data *cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
+#if LUA_VERSION_NUM >= 504
+    cur_data *cur = (cur_data*)lua_newuserdatauv(L, sizeof(cur_data), 0);
+#else 
+    cur_data *cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
+#endif
   luasql_setmeta (L, LUASQL_CURSOR_SQLITE);
 
   /* increment cursor count for the connection creating this cursor */
@@ -638,7 +642,11 @@ static int conn_setautocommit(lua_State *L)
 */
 static int create_connection(lua_State *L, int env, sqlite3 *sql_conn)
 {
-  conn_data *conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
+#if LUA_VERSION_NUM >= 504
+    conn_data *conn = (conn_data*)lua_newuserdatauv(L, sizeof(conn_data), 0);
+#else
+    conn_data *conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
+#endif
   luasql_setmeta(L, LUASQL_CONNECTION_SQLITE);
 
   /* fill in structure */
@@ -793,7 +801,11 @@ static void create_metatables (lua_State *L)
 */
 static int create_environment (lua_State *L)
 {
-  env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
+#if LUA_VERSION_NUM >= 504
+    env_data *env = (env_data*)lua_newuserdatauv(L, sizeof(env_data), 0);
+#else
+    env_data *env = (env_data*)lua_newuserdata(L, sizeof(env_data));
+#endif
   luasql_setmeta(L, LUASQL_ENVIRONMENT_SQLITE);
 
   /* fill in structure */
