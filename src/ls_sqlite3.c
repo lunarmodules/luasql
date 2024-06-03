@@ -22,6 +22,13 @@
 #define LUASQL_CONNECTION_SQLITE "SQLite3 connection"
 #define LUASQL_CURSOR_SQLITE "SQLite3 cursor"
 
+// Macro to handle userdata creation across Lua versions
+#if LUA_VERSION_NUM >= 504                        
+#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
+#else
+#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
+#endif
+
 typedef struct
 {
   short       closed;
@@ -276,11 +283,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 			 sqlite3_stmt *sql_vm, int numcols)
 {
   int i;
-#if LUA_VERSION_NUM >= 504
-    cur_data *cur = (cur_data*)lua_newuserdatauv(L, sizeof(cur_data), 0);
-#else 
-    cur_data *cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
-#endif
+  cur_data *cur = (cur_data*)LUASQL_NEWUD(L, sizeof(cur_data));
   luasql_setmeta (L, LUASQL_CURSOR_SQLITE);
 
   /* increment cursor count for the connection creating this cursor */
@@ -642,11 +645,7 @@ static int conn_setautocommit(lua_State *L)
 */
 static int create_connection(lua_State *L, int env, sqlite3 *sql_conn)
 {
-#if LUA_VERSION_NUM >= 504
-    conn_data *conn = (conn_data*)lua_newuserdatauv(L, sizeof(conn_data), 0);
-#else
-    conn_data *conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
-#endif
+  conn_data *conn = (conn_data*)LUASQL_NEWUD(L, sizeof(conn_data));
   luasql_setmeta(L, LUASQL_CONNECTION_SQLITE);
 
   /* fill in structure */
@@ -801,11 +800,7 @@ static void create_metatables (lua_State *L)
 */
 static int create_environment (lua_State *L)
 {
-#if LUA_VERSION_NUM >= 504
-    env_data *env = (env_data*)lua_newuserdatauv(L, sizeof(env_data), 0);
-#else
-    env_data *env = (env_data*)lua_newuserdata(L, sizeof(env_data));
-#endif
+  env_data *env = (env_data *)LUASQL_NEWUD(L, sizeof(env_data));
   luasql_setmeta(L, LUASQL_ENVIRONMENT_SQLITE);
 
   /* fill in structure */
