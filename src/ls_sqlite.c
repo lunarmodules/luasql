@@ -20,6 +20,13 @@
 #define LUASQL_CONNECTION_SQLITE "SQLite connection"
 #define LUASQL_CURSOR_SQLITE "SQLite cursor"
 
+// Macro to handle userdata creation across Lua versions
+#if LUA_VERSION_NUM >= 504                        
+#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
+#else
+#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
+#endif
+
 typedef struct {
 	short       closed;
 } env_data;
@@ -235,7 +242,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 		sqlite_vm *sql_vm, int numcols, const char **col_info)
 {
 	int i;
-	cur_data *cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
+	cur_data *cur = (cur_data*)LUASQL_NEWUD(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_SQLITE);
 
 	/* increment cursor count for the connection creating this cursor */
@@ -447,7 +454,7 @@ static int conn_setautocommit(lua_State *L) {
 ** Create a new Connection object and push it on top of the stack.
 */
 static int create_connection(lua_State *L, int env, sqlite *sql_conn) {
-	conn_data *conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
+	conn_data *conn = (conn_data*)LUASQL_NEWUD(L, sizeof(conn_data));
 	luasql_setmeta(L, LUASQL_CONNECTION_SQLITE);
 
 	/* fill in structure */
@@ -562,7 +569,7 @@ static void create_metatables (lua_State *L) {
 ** Creates an Environment and returns it.
 */
 static int create_environment (lua_State *L) {
-	env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
+	env_data *env = (env_data *)LUASQL_NEWUD(L, sizeof(env_data));
 	luasql_setmeta(L, LUASQL_ENVIRONMENT_SQLITE);
 
 	/* fill in structure */

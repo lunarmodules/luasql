@@ -32,6 +32,13 @@
 #define LUASQL_STATEMENT_ODBC "ODBC statement"
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
+// Macro to handle userdata creation across Lua versions
+#if LUA_VERSION_NUM >= 504                        
+#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
+#else
+#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
+#endif
+
 /* holds data for parameter binding */
 typedef struct {
 	SQLPOINTER buf;
@@ -577,7 +584,7 @@ static int create_cursor (lua_State *L, int stmt_i, stmt_data *stmt,
 
 	lock_obj(L, stmt_i, stmt);
 
-	cur = (cur_data *) lua_newuserdata(L, sizeof(cur_data));
+	cur = (cur_data *) LUASQL_NEWUD(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_ODBC);
 
 	/* fill in structure */
@@ -912,7 +919,7 @@ static int conn_prepare(lua_State *L)
 		return ret;
 	}
 
-	stmt = (stmt_data *)lua_newuserdata(L, sizeof(stmt_data));
+	stmt = (stmt_data *)LUASQL_NEWUD(L, sizeof(stmt_data));
 	memset(stmt, 0, sizeof(stmt_data));
 
 	stmt->closed = 0;
@@ -1037,7 +1044,7 @@ static int conn_setautocommit (lua_State *L) {
 */
 static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc)
 {
-	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
+	conn_data *conn = (conn_data *)LUASQL_NEWUD(L, sizeof(conn_data));
 
 	/* set auto commit mode */
 	SQLRETURN ret = SQLSetConnectAttr(hdbc, SQL_ATTR_AUTOCOMMIT,
@@ -1184,7 +1191,7 @@ static int create_environment (lua_State *L)
 		return ret;
 	}
 
-	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
+	env = (env_data *)LUASQL_NEWUD (L, sizeof (env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_ODBC);
 	/* fill in structure */
 	env->closed = 0;
