@@ -19,13 +19,6 @@
 #define LUASQL_CONNECTION_FIREBIRD "Firebird connection"
 #define LUASQL_CURSOR_FIREBIRD "Firebird cursor"
 
-// Macro to handle userdata creation across Lua versions
-#if LUA_VERSION_NUM >= 504                        
-#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
-#else
-#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
-#endif
-
 typedef struct {
 	short closed;
 	ISC_STATUS status_vector[20];	/* for error results */

@@ -27,13 +27,6 @@
 #define LUASQL_CONNECTION_MYSQL "MySQL connection"
 #define LUASQL_CURSOR_MYSQL "MySQL cursor"
 
-// Macro to handle userdata creation across Lua versions
-#if LUA_VERSION_NUM >= 504                        
-#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
-#else
-#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
-#endif
-
 /* For compat with old version 4.0 */
 #if (MYSQL_VERSION_ID < 40100) 
 #define MYSQL_TYPE_VAR_STRING   FIELD_TYPE_VAR_STRING 

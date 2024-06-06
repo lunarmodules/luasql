@@ -24,13 +24,6 @@
 #define LUASQL_CONNECTION_OCI8 "Oracle connection"
 #define LUASQL_CURSOR_OCI8 "Oracle cursor"
 
-// Macro to handle userdata creation across Lua versions
-#if LUA_VERSION_NUM >= 504                        
-#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
-#else
-#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
-#endif
-
 typedef struct {
 	short         closed;
 	int           conn_counter;

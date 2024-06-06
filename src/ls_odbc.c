@@ -32,13 +32,6 @@
 #define LUASQL_STATEMENT_ODBC "ODBC statement"
 #define LUASQL_CURSOR_ODBC "ODBC cursor"
 
-// Macro to handle userdata creation across Lua versions
-#if LUA_VERSION_NUM >= 504                        
-#define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
-#else
-#define LUASQL_NEWUD(L, size) lua_newuserdata(L, size)
-#endif
-
 /* holds data for parameter binding */
 typedef struct {
 	SQLPOINTER buf;
