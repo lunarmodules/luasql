@@ -24,7 +24,6 @@
 #define LUASQL_CONNECTION_OCI8 "Oracle connection"
 #define LUASQL_CURSOR_OCI8 "Oracle cursor"
 
-
 typedef struct {
 	short         closed;
 	int           conn_counter;
@@ -554,7 +553,7 @@ static int conn_close (lua_State *L) {
 static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt, const char *text) {
 	int i;
 	env_data *env;
-	cur_data *cur = (cur_data *)lua_newuserdata(L, sizeof(cur_data));
+	cur_data *cur = (cur_data *)LUASQL_NEWUD(L, sizeof(cur_data));
 	luasql_setmeta (L, LUASQL_CURSOR_OCI8);
 
 	conn->cur_counter++;
@@ -726,7 +725,7 @@ static int env_connect (lua_State *L) {
 	size_t userlen = (username) ? strlen(username) : 0;
 	size_t passlen = (password) ? strlen(password) : 0;
 	/* Alloc connection object */
-	conn_data *conn = (conn_data *)lua_newuserdata(L, sizeof(conn_data));
+	conn_data *conn = (conn_data *)LUASQL_NEWUD(L, sizeof(conn_data));
 
 	/* fill in structure */
 	luasql_setmeta (L, LUASQL_CONNECTION_OCI8);
@@ -790,7 +789,7 @@ static int env_close (lua_State *L) {
 ** Creates an Environment and returns it.
 */
 static int create_environment (lua_State *L) {
-	env_data *env = (env_data *)lua_newuserdata(L, sizeof(env_data));
+	env_data *env = (env_data *)LUASQL_NEWUD(L, sizeof(env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_OCI8);
 	/* fill in structure */
 	env->closed = 0;

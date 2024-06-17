@@ -454,7 +454,7 @@ static int conn_execute (lua_State *L) {
 	/* what do we return? a cursor or a count */
 	if(cur.out_sqlda->sqld > 0) { /* a cursor */
 		char cur_name[32];
-		cur_data* user_cur = (cur_data*)lua_newuserdata(L, sizeof(cur_data));
+		cur_data* user_cur = (cur_data*)LUASQL_NEWUD(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
 
 		sprintf(cur_name, "dyn_cursor_%p", (void *)user_cur);
@@ -923,7 +923,7 @@ static int create_environment (lua_State *L) {
 	int i;
 	env_data *env;
 
-	env = (env_data *)lua_newuserdata (L, sizeof (env_data));
+	env = (env_data *)LUASQL_NEWUD (L, sizeof (env_data));
 	luasql_setmeta (L, LUASQL_ENVIRONMENT_FIREBIRD);
 	/* fill in structure */
 	for(i=0; i<20; i++)
@@ -1000,7 +1000,7 @@ static int env_connect (lua_State *L) {
 		return return_db_error(L, conn.env->status_vector);
 
 	/* create the lua object and add the connection to the lock */
-	res_conn = (conn_data*)lua_newuserdata(L, sizeof(conn_data));
+	res_conn = (conn_data*)LUASQL_NEWUD(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_FIREBIRD);
 	memcpy(res_conn, &conn, sizeof(conn_data));
 	res_conn->closed = 0;   /* connect now officially open */
