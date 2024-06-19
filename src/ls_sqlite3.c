@@ -758,12 +758,14 @@ static void create_metatables (lua_State *L)
 {
   struct luaL_Reg environment_methods[] = {
     {"__gc", env_gc},
+    {"__close", env_close},
     {"close", env_close},
     {"connect", env_connect},
     {NULL, NULL},
   };
   struct luaL_Reg connection_methods[] = {
     {"__gc", conn_gc},
+    {"__close", conn_close},
     {"close", conn_close},
     {"escape", conn_escape},
 //    {"prepare", conn_prepare},
@@ -776,6 +778,7 @@ static void create_metatables (lua_State *L)
   };
   struct luaL_Reg cursor_methods[] = {
     {"__gc", cur_gc},
+    {"__close", cur_close},
     {"close", cur_close},
     {"getcolnames", cur_getcolnames},
     {"getcoltypes", cur_getcoltypes},
