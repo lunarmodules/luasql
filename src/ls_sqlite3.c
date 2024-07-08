@@ -385,32 +385,33 @@ static int set_param(lua_State *L, sqlite3_stmt *vm, int param_nr, int arg)
     break;
 
     case LUA_TSTRING: {
-    size_t s_len;
-    const char *s = lua_tolstring(L, arg, &s_len);
-    rc = sqlite3_bind_null(vm, param_nr);
-    rc = sqlite3_bind_text(vm, param_nr, s, s_len, SQLITE_TRANSIENT);
-    break;
+      size_t s_len;
+      const char *s = lua_tolstring(L, arg, &s_len);
+      rc = sqlite3_bind_null(vm, param_nr);
+      rc = sqlite3_bind_text(vm, param_nr, s, s_len, SQLITE_TRANSIENT);
+      break;
     }
 
     case LUA_TBOOLEAN: {
       int val = lua_tointeger(L, arg);
       rc = sqlite3_bind_int(vm, param_nr, val);
+      break;
     }
-    break;
 
-    case LUA_TNUMBER:
+    case LUA_TNUMBER: {
 #if defined(lua_isinteger)
-    if (lua_isinteger(L, arg)) {
-      lua_Integer val = lua_tointeger(L, arg);
-      rc = sqlite3_bind_int64(vm, param_nr, val);
-    } else {
+      if (lua_isinteger(L, arg)) {
+        lua_Integer val = lua_tointeger(L, arg);
+        rc = sqlite3_bind_int64(vm, param_nr, val);
+      } else {
 #endif
-      double val = lua_tonumber(L, arg);
-      rc = sqlite3_bind_double(vm, param_nr, val);
+        double val = lua_tonumber(L, arg);
+        rc = sqlite3_bind_double(vm, param_nr, val);
 #if defined(lua_isinteger)
+      }
+#endif
+      break;
     }
-#endif
-    break;
 
     default:
     luaL_error(L, LUASQL_PREFIX"unhandled data type %s in parameter binding",
@@ -758,12 +759,14 @@ static void create_metatables (lua_State *L)
 {
   struct luaL_Reg environment_methods[] = {
     {"__gc", env_gc},
+    {"__close", env_close},
     {"close", env_close},
     {"connect", env_connect},
     {NULL, NULL},
   };
   struct luaL_Reg connection_methods[] = {
     {"__gc", conn_gc},
+    {"__close", conn_close},
     {"close", conn_close},
     {"escape", conn_escape},
 //    {"prepare", conn_prepare},
@@ -776,6 +779,7 @@ static void create_metatables (lua_State *L)
   };
   struct luaL_Reg cursor_methods[] = {
     {"__gc", cur_gc},
+    {"__close", cur_close},
     {"close", cur_close},
     {"getcolnames", cur_getcolnames},
     {"getcoltypes", cur_getcoltypes},

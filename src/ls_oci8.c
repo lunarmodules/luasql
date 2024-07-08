@@ -818,12 +818,14 @@ static int create_environment (lua_State *L) {
 static void create_metatables (lua_State *L) {
 	struct luaL_Reg environment_methods[] = {
 		{"__gc", env_close}, /* Should this method be changed? */
+		{"__close", env_close},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
 	struct luaL_Reg connection_methods[] = {
 		{"__gc", conn_close}, /* Should this method be changed? */
+		{"__close", conn_close},
 		{"close", conn_close},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
@@ -833,6 +835,7 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_close}, /* Should this method be changed? */
+		{"__close", cur_close},
 		{"close", cur_close},
 		{"getcolnames", cur_getcolnames},
 		{"getcoltypes", cur_getcoltypes},

@@ -476,6 +476,7 @@ function column_info ()
 	for i = 1, table.getn(names) do
 		assert2 ("f"..i, string.lower(names[i]), "incorrect column names table")
 		local type_i = types[i]
+		type_i = string.lower(type_i)
 		assert (type_i == QUERYING_STRING_TYPE_NAME, "incorrect column types table")
 	end
 	-- check if the tables are being reused.
@@ -546,6 +547,12 @@ function check_close()
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
 	conn:close ()
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function to_be_closed_support ()
+       assert (loadfile"to_be_closed_support.lua")()
 end
 
 ---------------------------------------------------------------------
@@ -677,6 +684,9 @@ if string.find(_VERSION, " 5.0") then
 	end
 else
 	luasql = require ("luasql."..driver)
+	if string.find(_VERSION, " 5.4") then
+		table.insert (tests, 10, { "to-be-closed support", to_be_closed_support })
+	end
 end
 assert (luasql, "Could not load driver: no luasql table.")
 io.write (luasql._VERSION.." "..driver)
