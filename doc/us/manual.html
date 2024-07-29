@@ -35,6 +35,7 @@
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
+				<li><a href="manual.html#to_be_closed">To-be-closed Variables</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -302,6 +303,35 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 	
 	<dt><a name="cur_coltypes"></a><strong><code>cur:getcoltypes()</code></strong></dt>
 	<dd>Returns: a list (table) of column types.</dd>
+
+</dl>
+
+<h2><a name="to_be_closed"></a>To-be-closed Objects</h2>
+
+<p>
+	<strong style="color: red;">Compatibility Note:</strong>
+	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL is compiled against Lua version 5.4 or higher.
+</p>
+
+<p>In Lua 5.4, the <code><a href="https://www.lua.org/manual/5.4/manual.html#3.3.8" target="_blank">to-be-closed variables</a></code> were introduced, allowing resources to be automatically closed when they go out of scope. At present LuaSQL supports to-be-closed variation of <a href="#connection_object">Connection</a>, <a href="#cursor_object">Cursor</a> and <a href="#environment_object">Environment</a> Objects. When a to-be-closed object goes out of scope, its <strong><code>__close()</code></strong> metamethod is automatically called.</p>
+
+<p><strong>Note: </strong>If multiple to-be-closed variables go out of scope simultaneously, they are closed in the reverse order of their declaration.</p>
+
+<h3>Syntax</h3>
+
+<p>To initialize a to-be-closed LuaSQL object, you need to use the <strong>&lt;close&gt;</strong> attribute when declaring the local variable. This attribute ensures that the variable will be closed automatically when it goes out of scope.</p>
+
+<pre class="example">
+local object &lt;close&gt; = --(Required Expression)--
+</pre>
+
+<dl class="reference">
+
+	<dt><a name="env_close"></a><strong><code>object:__close</code></strong></dt>
+	<dd>Same Method as <code>object:close()</code> </dd>
+	<dd>Closes the To-be-closed <code>object</code>.
+	Returns: <code>true</code> in case of success; <code>false</code> when
+	the object is already closed.</dd>
 
 </dl>
 
