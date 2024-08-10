@@ -324,9 +324,6 @@ static int conn_gc(lua_State *L)
   conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
   if (conn != NULL && !(conn->closed))
     {
-      if (conn->cur_counter > 0)
-        return luaL_error (L, LUASQL_PREFIX"there are open cursors");
-
       /* Nullify structure fields. */
       conn->closed = 1;
       luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
@@ -344,11 +341,23 @@ static int conn_close(lua_State *L)
   conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
   luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
   if (conn->closed)
-    {
-      lua_pushboolean(L, 0);
-      return 1;
-    }
-  conn_gc(L);
+  {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "Connection is already closed");
+    return 2;
+  }
+  
+  if (conn->cur_counter > 0)
+  {
+    lua_pushboolean(L, 0);
+    lua_pushstring(L, "There are open cursors");
+    return 2;
+  }
+  
+  conn->closed = 1;
+  luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+  sqlite3_close(conn->sql_conn);
+  
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -735,7 +744,7 @@ static int env_close (lua_State *L)
     lua_pushboolean(L, 0);
     return 1;
   }
-  env_gc(L);
+  env->closed = 1;
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -759,14 +768,14 @@ static void create_metatables (lua_State *L)
 {
   struct luaL_Reg environment_methods[] = {
     {"__gc", env_gc},
-    {"__close", env_close},
+    {"__close", env_gc},
     {"close", env_close},
     {"connect", env_connect},
     {NULL, NULL},
   };
   struct luaL_Reg connection_methods[] = {
     {"__gc", conn_gc},
-    {"__close", conn_close},
+    {"__close", conn_gc},
     {"close", conn_close},
     {"escape", conn_escape},
 //    {"prepare", conn_prepare},
@@ -779,7 +788,7 @@ static void create_metatables (lua_State *L)
   };
   struct luaL_Reg cursor_methods[] = {
     {"__gc", cur_gc},
-    {"__close", cur_close},
+    {"__close", cur_gc},
     {"close", cur_close},
     {"getcolnames", cur_getcolnames},
     {"getcoltypes", cur_getcoltypes},
