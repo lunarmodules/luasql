@@ -174,7 +174,7 @@ static int cur_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-	cur_nullify (L, cur); /* == cur_gc (L); */
+	cur_nullify (L, cur); 
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -353,7 +353,10 @@ static int conn_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-	conn_gc (L);
+	conn->closed = 1;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	PQfinish (conn->pg_conn);
+
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -549,7 +552,7 @@ static int env_close (lua_State *L) {
 		lua_pushboolean (L, 0);
 		return 1;
 	}
-	env_gc (L);
+	env->closed = 1;
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -562,14 +565,14 @@ static int env_close (lua_State *L) {
 static void create_metatables (lua_State *L) {
 	struct luaL_Reg environment_methods[] = {
 		{"__gc",    env_gc},
-		{"__close", env_close},
+		{"__close", env_gc},
 		{"close",   env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
 	struct luaL_Reg connection_methods[] = {
 		{"__gc",          conn_gc},
-		{"__close", 	  conn_close},
+		{"__close", 	  conn_gc},
 		{"close",         conn_close},
 		{"escape",        conn_escape},
 		{"execute",       conn_execute},
@@ -580,7 +583,7 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc",        cur_gc},
-		{"__close", 	cur_close},
+		{"__close", 	cur_gc},
 		{"close",       cur_close},
 		{"getcolnames", cur_getcolnames},
 		{"getcoltypes", cur_getcoltypes},
