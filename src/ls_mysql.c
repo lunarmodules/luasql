@@ -437,8 +437,6 @@ static int conn_close (lua_State *L) {
 	}
 	
 	conn->closed = 1;
-	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
-	mysql_close (conn->my_conn);
 
 	lua_pushboolean (L, 1);
 	return 1;
