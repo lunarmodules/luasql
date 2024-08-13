@@ -551,7 +551,8 @@ static int conn_close (lua_State *L) {
 	/* already closed */
 	if(conn->closed != 0) {
 		lua_pushboolean(L, 0);
-		return 1;
+		lua_pushstring(L, "Connection is already closed");
+		return 2;
 	}
 
 	/* are all related cursors closed? */
@@ -899,7 +900,8 @@ static int cur_close (lua_State *L) {
 	}
 
 	lua_pushboolean(L, 0);
-	return 1;
+	lua_pushstring(L, "cursor is already closed");
+	return 2;
 }
 
 /*
@@ -1023,9 +1025,10 @@ static int env_close (lua_State *L) {
 	luaL_argcheck (L, env != NULL, 1, "environment expected");
 	
 	/* already closed? */
-	if(env->closed == 1) {
+	if(env->closed) {
 		lua_pushboolean(L, 0);
-		return 1;
+		lua_pushstring(L, "env is already closed");
+		return 2;
 	}
 
 	/* check the lock */
@@ -1056,14 +1059,14 @@ static int env_gc (lua_State *L) {
 static void create_metatables (lua_State *L) {
 	struct luaL_Reg environment_methods[] = {
 		{"__gc", env_gc},
-		{"__close", env_close},
+		{"__close", env_gc},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
 	};
 	struct luaL_Reg connection_methods[] = {
 		{"__gc", conn_gc},
-		{"__close", conn_close},
+		{"__close", conn_gc},
 		{"close", conn_close},
 		{"execute", conn_execute},
 		{"commit", conn_commit},
@@ -1074,7 +1077,7 @@ static void create_metatables (lua_State *L) {
 	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_gc},
-		{"__close", cur_close},
+		{"__close", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},
