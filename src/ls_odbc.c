@@ -503,7 +503,8 @@ static int cur_close (lua_State *L)
 
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		return 1;
+		lua_pushstring(L, "cursor is already closed");
+		return 2;
 	}
 
 	if((res = cur_shut(L, cur)) != 0) {
@@ -637,11 +638,14 @@ static int conn_close (lua_State *L)
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean (L, 0);
-		return 1;
+		lua_pushboolean(L, 0);
+    	lua_pushstring(L, "Connection is already closed");
+    	return 2;
 	}
 	if (conn->lock > 0) {
-		return luaL_error (L, LUASQL_PREFIX"there are open statements/cursors");
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "There are open statements/cursors");
+		return 2;
 	}
 
 	/* Decrement connection counter on environment object */
@@ -1105,10 +1109,13 @@ static int env_close (lua_State *L)
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		return 1;
+		lua_pushstring(L, "env is already closed");
+		return 2;
 	}
 	if (env->lock > 0) {
-		return luaL_error (L, LUASQL_PREFIX"there are open connections");
+		lua_pushboolean(L, 0);
+    	lua_pushstring(L, "There are open connections");
+    	return 2;
 	}
 
 	env->closed = 1;
