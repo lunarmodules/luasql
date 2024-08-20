@@ -134,7 +134,7 @@ end
 
 <pre class="example">
 local function getName(db)
-  local cur <close> = db:execute("SELECT name FROM accounts")
+  local cur &lt;close&gt; = db:execute("SELECT name FROM accounts")
   return cur:fetch()
 end
 </pre>
