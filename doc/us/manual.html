@@ -35,7 +35,6 @@
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
-				<li><a href="manual.html#to_be_closed">To-be-closed Objects</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -304,16 +303,6 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 
 </dl>
 
-<h2><a name="to_be_closed"></a>To-be-closed Objects</h2>
-
-<p>
-	<strong style="color: red;">Compatibility Note:</strong>
-	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL is compiled against Lua version 5.4 or higher. LuaSQL (version > 2.6) will be compliant by providing a <strong><code>__close()</code></strong> metamethod for all objects.
-</p>
-
-<p>In Lua 5.4, the <code><a href="https://www.lua.org/manual/5.4/manual.html#3.3.8" target="_blank">to-be-closed variables</a></code> were introduced, allowing resources to be automatically closed when they go out of scope. At present LuaSQL supports to-be-closed variation of <a href="#connection_object">Connection</a>, <a href="#cursor_object">Cursor</a> and <a href="#environment_object">Environment</a> Objects. When a to-be-closed object goes out of scope, its <strong><code>__close()</code></strong> metamethod is automatically called by the Lua interpreter.</p>
-
-
 <p><a name="extensions"></a></p>
 
 <h2><a name="postgres_extensions"></a>PostgreSQL Extensions</h2>
@@ -440,7 +429,8 @@ the Oracle driver also offers this extra feature:</p>
 <p>Besides the basic functionality provided by all drivers,
 the SQLite3 driver also offers this extra feature:</p>
 
-<dt><strong><code>env:connect(sourcename[,locktimeout,readOnlyMode])</code></strong></dt>
+<dl class="reference">
+  <dt><strong><code>env:connect(sourcename[,locktimeout,readOnlyMode])</code></strong></dt>
   <dd>In the SQLite3 driver, this method adds an optional parameter
     that indicate the amount of milliseconds to wait for a write lock if one cannot be obtained immediately.
 	  To connect in readOnlyMode, set readOnlyMode to true.<br/>
@@ -453,7 +443,7 @@ the SQLite3 driver also offers this extra feature:</p>
     See also: Official documentation of function <a href="http://www.sqlite.org/c3ref/mprintf.html">sqlite3_mprintf</a><br/>
     Returns: the escaped string.
   </dd>
-
+</dl>
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->
