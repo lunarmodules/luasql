@@ -133,8 +133,9 @@ end
 </p>
 
 <pre class="example">
-local function getName(db)
-  local cur &lt;close&gt; = db:execute("SELECT name FROM accounts")
+function getName(db, id)
+  -- This code requires Lua 5.4 or higher due to the use of to-be-closed variables.
+  local cur &lt;close&gt; = db:execute("SELECT name FROM contacts WHERE id = " .. id)
   return cur:fetch()
 end
 </pre>
