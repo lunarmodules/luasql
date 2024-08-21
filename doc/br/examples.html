@@ -160,7 +160,7 @@ se ainda existem mais linhas).</p>
 <pre class="example">
 function getName(db, id)
   -- Este código requer Lua 5.4 ou superior devido ao uso de variáveis a serem fechadas.
-  local cur <close> = db:execute("SELECT name FROM contacts WHERE id = " .. id)
+  local cur &lt;close&gt; = db:execute("SELECT name FROM contacts WHERE id = " .. id)
   return cur:fetch()
 end
 </pre>
