@@ -42,7 +42,6 @@
 				<li><a href="manual.html#environment_object">Ambiente</a></li>
 				<li><a href="manual.html#connection_object">Conex&atilde;o</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
-                <li><a href="manual.html#to_be_closed">Objetos a Serem Fechados</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -306,15 +305,6 @@ e <a href="#oracle_extensions">Oracle</a>.</p>
     <dd>Retorna: uma tabela com os tipos das colunas.
     </dd>
 </dl>
-
-<h2><a name="to_be_closed"></a>Objetos a Serem Fechados</h2>
-
-<p><strong style="color: red;">Nota de Compatibilidade:</strong> As variáveis a serem fechadas são um recurso introduzido no Lua 5.4. Portanto, essa funcionalidade só pode ser usada se o LuaSQL for compilado com a versão 5.4 do Lua ou superior. O LuaSQL (versão &gt; 2.6) será compatível fornecendo um método <code>__close()</code> para todos os objetos.</p>
-
-
-<p>Com Lua 5.4, objetos de ambiente, conexão e cursor podem ser declarados como <code>__close</code> usando o método <code>:close</code> como seu destrutor. Isso permite que eles sejam automaticamente fechados quando saírem do escopo, como em situações de erro ou ao final de um bloco de código.
-</p>
-
 
 <p><a name="extensions"></a></p>
 
