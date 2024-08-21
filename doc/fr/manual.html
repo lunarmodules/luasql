@@ -42,7 +42,6 @@
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
-				<li><a href="manual.html#to_be_closed">To-be-closed Objects</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -310,16 +309,6 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 	<dd>Returns: a list (table) of column types.</dd>
 
 </dl>
-
-<h2><a name="to_be_closed"></a>To-be-closed Objects</h2>
-
-<p>
-	<strong style="color: red;">Compatibility Note:</strong>
-	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL is compiled against Lua version 5.4 or higher. LuaSQL (version > 2.6) will be compliant by providing a <strong><code>__close()</code></strong> metamethod for all objects.
-</p>
-
-<p>In Lua 5.4, the <code><a href="https://www.lua.org/manual/5.4/manual.html#3.3.8" target="_blank">to-be-closed variables</a></code> were introduced, allowing resources to be automatically closed when they go out of scope. At present LuaSQL supports to-be-closed variation of <a href="#connection_object">Connection</a>, <a href="#cursor_object">Cursor</a> and <a href="#environment_object">Environment</a> Objects. When a to-be-closed object goes out of scope, its <strong><code>__close()</code></strong> metamethod is automatically called by the Lua interpreter.</p>
-
 
 <p><a name="extensions"></a></p>
 
