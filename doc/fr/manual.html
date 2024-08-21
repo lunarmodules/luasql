@@ -42,6 +42,7 @@
 				<li><a href="manual.html#environment_object">Environment</a></li>
 				<li><a href="manual.html#connection_object">Connection</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
+				<li><a href="manual.html#to_be_closed">To-be-closed Objects</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -183,8 +184,7 @@ local env = driver.odbc()
 	<dt><a name="env_close"></a><strong><code>env:close()</code></strong></dt>
 	<dd>Closes the environment <code>env</code>.
 	Only successful if all connections pertaining to it were closed first.<br/>
-	Returns: <code>true</code> in case of success; <code>false</code> when
-	the object is already closed.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	<dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
 	<dd>Connects to a data source specified in <code>sourcename</code> using
@@ -215,7 +215,7 @@ method.</p>
 	<dt><a name="conn_close"></a><strong><code>conn:close()</code></strong></dt>
 	<dd>Closes the connection <code>conn</code>.
 	Only successful if all cursors pertaining to it have been closed and the connection is still open.<br/>
-	Returns: <code>true</code> in case of success and <code>false</code> in case of failure.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	
 	<dt><a name="conn_commit"></a><strong><code>conn:commit()</code></strong></dt>
@@ -268,8 +268,7 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 
 	<dt><a name="cur_close"></a><strong><code>cur:close()</code></strong></dt>
 	<dd>Closes this cursor.<br/>
-	Returns: <code>true</code> in case of success and <code>false</code> when
-	the object is already closed.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	
 	<dt><a name="cur_fetch"></a><strong><code>cur:fetch([table[,modestring]])</code></strong></dt>
@@ -311,6 +310,16 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 	<dd>Returns: a list (table) of column types.</dd>
 
 </dl>
+
+<h2><a name="to_be_closed"></a>To-be-closed Objects</h2>
+
+<p>
+	<strong style="color: red;">Compatibility Note:</strong>
+	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL is compiled against Lua version 5.4 or higher. LuaSQL (version > 2.6) will be compliant by providing a <strong><code>__close()</code></strong> metamethod for all objects.
+</p>
+
+<p>In Lua 5.4, the <code><a href="https://www.lua.org/manual/5.4/manual.html#3.3.8" target="_blank">to-be-closed variables</a></code> were introduced, allowing resources to be automatically closed when they go out of scope. At present LuaSQL supports to-be-closed variation of <a href="#connection_object">Connection</a>, <a href="#cursor_object">Cursor</a> and <a href="#environment_object">Environment</a> Objects. When a to-be-closed object goes out of scope, its <strong><code>__close()</code></strong> metamethod is automatically called by the Lua interpreter.</p>
+
 
 <p><a name="extensions"></a></p>
 
