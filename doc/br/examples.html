@@ -150,6 +150,21 @@ mensagens de erro mais adequadas (incluindo o statement SQL por
 exemplo) ou para fechar explicitamente o cursor (verificando
 se ainda existem mais linhas).</p>
 
+<h3><a name="To_be_closed"></a>Objetos a serem fechados</h3>
+
+<p>
+	<strong style="color: red;">Nota de Compatibilidade:</strong>
+	Variáveis a serem fechadas é um recurso introduzido no Lua 5.4. Portanto, essa funcionalidade só pode ser usada se o LuaSQL (versão > 2.6) for compilado contra a versão 5.4 ou superior do Lua.
+</p>
+
+<pre class="example">
+function getName(db, id)
+  -- Este código requer Lua 5.4 ou superior devido ao uso de variáveis a serem fechadas.
+  local cur <close> = db:execute("SELECT name FROM contacts WHERE id = " .. id)
+  return cur:fetch()
+end
+</pre>
+
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->

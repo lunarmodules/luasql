@@ -42,6 +42,7 @@
 				<li><a href="manual.html#environment_object">Ambiente</a></li>
 				<li><a href="manual.html#connection_object">Conex&atilde;o</a></li>
 				<li><a href="manual.html#cursor_object">Cursor</a></li>
+                <li><a href="manual.html#to_be_closed">Objetos a Serem Fechados</a></li>
 				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
 				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
 				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
@@ -188,8 +189,7 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
     <dt><a name="env_close"></a><strong><code>env:close()</code></strong></dt>
     <dd>Fecha o ambiente <code>env</code>. S&oacute; &eacute; bem sucedido se todas as suas
         conex&otilde;es j&aacute; tiverem sido fechadas anteriormente.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code>, quando o ambiente
-        j&aacute; estiver fechado.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
@@ -220,7 +220,7 @@ o m&eacute;todo <code><a href="#env_connect">environment:connect</a></code>.</p>
     <dt><a name="conn_close"></a><strong><code>conn:close()</code></strong></dt>
     <dd>Fecha a conex&atilde;o <code>conn</code>. S&oacute; &eacute; bem sucedido se todos
         os seus cursores tiverem sido fechados anteriormente e se a conex&atilde;o ainda estiver aberta.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code> em caso de fracasso.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="conn_commit"></a><strong><code>conn:commit()</code></strong></dt>
@@ -267,8 +267,7 @@ e <a href="#oracle_extensions">Oracle</a>.</p>
 <dl class="reference">
     <dt><a name="cur_close"></a><strong><code>cur:close()</code></strong></dt>
     <dd>Fecha esse cursor.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code>, quando o cursor
-        j&aacute; est&aacute; fechado.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="cur_fetch"></a><strong><code>cur:fetch([table[,modestring]])</code></strong></dt>
@@ -307,6 +306,15 @@ e <a href="#oracle_extensions">Oracle</a>.</p>
     <dd>Retorna: uma tabela com os tipos das colunas.
     </dd>
 </dl>
+
+<h2><a name="to_be_closed"></a>Objetos a Serem Fechados</h2>
+
+<p><strong>Nota de Compatibilidade:</strong> As variáveis a serem fechadas são um recurso introduzido no Lua 5.4. Portanto, essa funcionalidade só pode ser usada se o LuaSQL for compilado com a versão 5.4 do Lua ou superior. O LuaSQL (versão &gt; 2.6) será compatível fornecendo um método <code>__close()</code> para todos os objetos.</p>
+
+
+<p>Com Lua 5.4, objetos de ambiente, conexão e cursor podem ser declarados como <code>__close</code> usando o método <code>:close</code> como seu destrutor. Isso permite que eles sejam automaticamente fechados quando saírem do escopo, como em situações de erro ou ao final de um bloco de código.
+</p>
+
 
 <p><a name="extensions"></a></p>
 
