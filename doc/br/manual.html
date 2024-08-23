@@ -188,8 +188,7 @@ env = luasql.jdbc ("com.mysql.jdbc.Driver")
     <dt><a name="env_close"></a><strong><code>env:close()</code></strong></dt>
     <dd>Fecha o ambiente <code>env</code>. S&oacute; &eacute; bem sucedido se todas as suas
         conex&otilde;es j&aacute; tiverem sido fechadas anteriormente.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code>, quando o ambiente
-        j&aacute; estiver fechado.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
@@ -220,7 +219,7 @@ o m&eacute;todo <code><a href="#env_connect">environment:connect</a></code>.</p>
     <dt><a name="conn_close"></a><strong><code>conn:close()</code></strong></dt>
     <dd>Fecha a conex&atilde;o <code>conn</code>. S&oacute; &eacute; bem sucedido se todos
         os seus cursores tiverem sido fechados anteriormente e se a conex&atilde;o ainda estiver aberta.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code> em caso de fracasso.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="conn_commit"></a><strong><code>conn:commit()</code></strong></dt>
@@ -267,8 +266,7 @@ e <a href="#oracle_extensions">Oracle</a>.</p>
 <dl class="reference">
     <dt><a name="cur_close"></a><strong><code>cur:close()</code></strong></dt>
     <dd>Fecha esse cursor.<br/>
-        Retorna: <code>true</code>, em caso de sucesso; <code>false</code>, quando o cursor
-        j&aacute; est&aacute; fechado.
+        Retorna: <code>true</code> em caso de sucesso e em caso de falha retorna <code>false</code> com uma <code>mensagem de string</code> indicando o motivo da falha.
     </dd>
 
     <dt><a name="cur_fetch"></a><strong><code>cur:fetch([table[,modestring]])</code></strong></dt>

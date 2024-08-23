@@ -146,6 +146,21 @@ end
 
 <p>Obviously, the code above only works if there is a table called contacts with the columns id, name and address in this order. At the end of the loop the cursor will be automatically closed by the driver.</p>
 
+<h3><a name="To_be_closed"></a>To-be-closed Objects</h3>
+
+<p>
+	<strong style="color: red;">Compatibility Note:</strong>
+	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL (version > 2.6) is compiled against Lua version 5.4 or higher.
+</p>
+
+<pre class="example">
+function getName(db, id)
+  -- This code requires Lua 5.4 or higher due to the use of to-be-closed variables.
+  local cur &lt;close&gt; = db:execute("SELECT name FROM contacts WHERE id = " .. id)
+  return cur:fetch()
+end
+</pre>
+
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->
