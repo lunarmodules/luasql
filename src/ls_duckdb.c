@@ -409,11 +409,15 @@ static int create_connection(lua_State *L, int env, duckdb_connection *const con
 */
 static int env_connect(lua_State *L) {
     const char *sourcename = luaL_checkstring(L, 2);
-	  // const char *config = luaL_gettable(L, 7, NULL);
     duckdb_database db;
     duckdb_connection con;
     duckdb_config conf;
     duckdb_create_config(&conf);
+    // Changes luasql API so the 7th argument is a config table
+    // Ex: dado.connect("db", nil, nil, "duckdb", nil, nil, {access_mode = "READ_ONLY", memory_limit = '69GB'})
+    // Used 7th argument because as far as I know ls_postgres.c uses 5th and 6th:
+	  //  const char *pghost = luaL_optstring(L, 5, NULL);
+    // 	const char *pgport = luaL_optstring(L, 6, NULL);
     if (lua_gettop(L) >= 7 && !lua_isnil(L, 7)) {
         luaL_checktype(L, 7, LUA_TTABLE);
         lua_pushnil(L); // First key
