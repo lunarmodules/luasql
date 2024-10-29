@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 
+#define SQL_NOUNICODEMAP
 #if defined(_WIN32)
 #include <windows.h>
 #include <sqlext.h>
