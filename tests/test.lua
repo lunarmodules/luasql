@@ -232,7 +232,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	row, err = cur:fetch(fetch_table())
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -249,7 +249,7 @@ function fetch_new_table ()
 	io.write ("reusing a table...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch(fetch_table())
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
 	assert2 ('c', row[3])
@@ -259,7 +259,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	row, err = cur:fetch (row)
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -276,7 +276,7 @@ function fetch_new_table ()
 	io.write ("with alpha keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch (fetch_table(), "a")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 (nil, row[1])
 	assert2 (nil, row[2])
 	assert2 (nil, row[3])
@@ -303,7 +303,7 @@ function fetch_new_table ()
 	io.write ("with both keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch (fetch_table(), "an")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
 	assert2 ('c', row[3])
@@ -313,7 +313,7 @@ function fetch_new_table ()
 	assert2 ('c', row.f3)
 	assert2 ('d', row.f4)
 	row, err = cur:fetch (row, "an")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -477,7 +477,7 @@ function column_info ()
 		assert2 ("f"..i, string.lower(names[i]), "incorrect column names table")
 		local type_i = types[i]
 		type_i = string.lower(type_i)
-		assert (type_i == QUERYING_STRING_TYPE_NAME, "incorrect column types table")
+		assert2 (QUERYING_STRING_TYPE_NAME, type_i, "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
@@ -505,14 +505,15 @@ function escape ()
 	local s1 = string.rep("'", n)
 	local s2 = CONN:escape(s1)
 	local s3 = s1:gsub ("'", "\\'")
-	assert (s1:len() == n)
-	assert (s2:len() == 2*n)
+	assert2 (n, s1:len(), "incorrect escaping of '"..s1.."': expected "..n.." bytes, but got "..s1:len())
+	assert2 (2*n, s2:len(), "incerrect escaping of '"..s2.."': expected "..(2*n).." bytes, but got "..s2:len())
 	assert (s2 == s1..s1 or s2 == s3)
 
 	io.write (" escape")
 end
 
 ---------------------------------------------------------------------
+-- Check closing of various objects.
 ---------------------------------------------------------------------
 function check_close()
 	-- an object with references to it can't be closed
@@ -538,21 +539,34 @@ function check_close()
 	collectgarbage ()
 	assert2(nil, a.CONN, "connection not collected")
 
-	-- check cursor integrity after trying to close a connection
+	-- check cursor integrity after trying to close its connection
 	local conn = CONN_OK (ENV:connect (datasource, username, password))
 	assert2 (1, conn:execute"insert into t (f1) values (1)", "could not insert a new record")
 	local cur = CUR_OK (conn:execute (cmd))
-	local ok, err = pcall (conn.close, conn)
+	local ok, err, msg = pcall (conn.close, conn)
+	assert2 (true, ok, "couldn´t try to close the connection")
+	-- err could be true if the driver DOESN'T care about closing a connection with open cursors
+	-- err could be false if the driver DOES care about closing a connection with open cursors
 	CUR_OK (cur)
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
 	conn:close ()
+
+	-- check connection integrity after trying to close an environment
+	local conn = CONN_OK (ENV:connect (datasource, username, password))
+	assert2 (true, ENV:close(), "couldn't close the environment!")
+	CONN_OK (conn)
+	ENV = ENV_OK (luasql[driver] ())
 end
 
 ---------------------------------------------------------------------
+-- Check support for to-be-closed variables.
+-- Since this feature depends on a syntax construction not available
+-- in versions prior to 5.4, this check should be written in another
+-- file (or in a string).
 ---------------------------------------------------------------------
 function to_be_closed_support ()
-       assert (loadfile"to_be_closed_support.lua")()
+	assert (loadfile"to_be_closed_support.lua")()
 end
 
 ---------------------------------------------------------------------
@@ -566,8 +580,8 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function close_conn ()
-	assert (true, CONN:close())
-	assert (true, ENV:close())
+	assert2 (true, CONN:close())
+	assert2 (true, ENV:close())
 end
 
 ---------------------------------------------------------------------
