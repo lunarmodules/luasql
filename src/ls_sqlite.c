@@ -197,10 +197,9 @@ static int cur_close(lua_State *L) {
 	luaL_argcheck(L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "cursor is already closed");
 		return 2;
 	}
-	cur->closed = 1;
 	sqlite_finalize(cur->sql_vm, NULL);
 	cur_nullify(L, cur);
 	lua_pushboolean(L, 1);
@@ -293,26 +292,25 @@ static int conn_gc(lua_State *L) {
 /*
 ** Close a Connection object.
 */
-static int conn_close(lua_State *L) {
+static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_SQLITE);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
-	if (conn->closed)
-	{
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "Connection is already closed");
+	if (conn->closed) {
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
 		return 2;
 	}
 	
-	if (conn->cur_counter > 0)
-	{
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "There are open cursors");
+	if (conn->cur_counter > 0) {
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open cursors");
 		return 2;
 	}
-	
 	conn->closed = 1;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	sqlite_close (conn->sql_conn);
 	
-	lua_pushboolean(L, 1);
+	lua_pushboolean (L, 1);
 	return 1;
 }
 
@@ -513,11 +511,10 @@ static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_SQLITE);
 	luaL_argcheck(L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "env is already closed");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
-
 	env->closed = 1;
 
 	lua_pushboolean(L, 1);
