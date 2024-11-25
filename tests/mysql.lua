@@ -2,7 +2,7 @@
 -- MySQL specific tests and configurations.
 ---------------------------------------------------------------------
 
-QUERYING_STRING_TYPE_NAME = "binary(65535)"
+QUERYING_STRING_TYPE_NAME = "binary(262140)"
 
 ---------------------------------------------------------------------
 -- Seeks to an arbitrary row in a query result set.
