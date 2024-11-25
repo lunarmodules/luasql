@@ -130,6 +130,7 @@ function basic_test ()
 	assert2 (false, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
+
 	-- Check connection object.
 	local conn, err = ENV:connect (datasource, username, password)
 	assert (conn, (err or '').." ("..datasource..")")
@@ -545,8 +546,10 @@ function check_close()
 	local cur = CUR_OK (conn:execute (cmd))
 	local ok, err, msg = pcall (conn.close, conn)
 	assert2 (true, ok, "couldn´t try to close the connection")
-	-- err could be true if the driver DOESN'T care about closing a connection with open cursors
-	-- err could be false if the driver DOES care about closing a connection with open cursors
+	-- err could be true if the driver DOESN'T care about closing a connection
+	--	that has open cursors
+	-- err could be false if the driver DOES care about closing a connection
+	--	that has open cursors
 	CUR_OK (cur)
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
