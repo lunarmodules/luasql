@@ -236,8 +236,8 @@ static int cur_close(lua_State *L)
   luaL_argcheck(L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
   if (cur->closed) {
     lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
-		return 2;
+    lua_pushstring(L, "cursor is already closed");
+    return 2;
   }
 
   cur->closed = 1;
