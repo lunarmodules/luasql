@@ -503,7 +503,7 @@ static int cur_close (lua_State *L)
 
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "Cursor is already closed");
 		return 2;
 	}
 
@@ -638,13 +638,13 @@ static int conn_close (lua_State *L)
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "Connection is already closed");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
+		return 2;
 	}
 	if (conn->lock > 0) {
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "There are open statements/cursors");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open cursors");
 		return 2;
 	}
 
@@ -1100,6 +1100,26 @@ static int env_connect (lua_State *L) {
 }
 
 /*
+** Environment object collector function
+*/
+static int env_gc (lua_State *L)
+{
+	SQLRETURN ret;
+	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_ODBC);
+	if (env != NULL && !(env->closed)) {
+		env->closed = 1;
+		ret = SQLFreeHandle (hENV, env->henv);
+		if (error (ret)) {
+			int ret2 = fail (L, hENV, env->henv);
+			env->henv = NULL;
+			return ret2;
+		}
+	}
+	return 0;
+}
+
+
+/*
 ** Closes an environment object
 */
 static int env_close (lua_State *L)
@@ -1109,13 +1129,13 @@ static int env_close (lua_State *L)
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "env is already closed");
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
 	if (env->lock > 0) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "There are open connections");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open connections");
+		return 2;
 	}
 
 	env->closed = 1;
@@ -1134,8 +1154,8 @@ static int env_close (lua_State *L)
 */
 static void create_metatables (lua_State *L) {
 	struct luaL_Reg environment_methods[] = {
-		{"__gc", env_close}, /* Should this method be changed? */
-		{"__close", env_close},
+		{"__gc", env_gc},
+		{"__close", env_gc},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
@@ -1160,8 +1180,8 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
-		{"__gc", cur_close}, /* Should this method be changed? */
-		{"__close", cur_close},
+		{"__gc", cur_gc}, /* Should this method be changed? */
+		{"__close", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},

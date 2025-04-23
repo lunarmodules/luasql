@@ -325,7 +325,7 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "Cursor is already closed");
 		return 2;
 	}
 	cur_nullify (L, cur);
@@ -431,13 +431,14 @@ static int conn_close (lua_State *L) {
 	conn_data *conn=(conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_MYSQL);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "Connection is already closed");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
 		return 2;
 	}
-	
+	/* Nullify structure fields. */
 	conn->closed = 1;
-
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	mysql_close (conn->my_conn);
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -613,8 +614,11 @@ static int env_connect (lua_State *L) {
 **
 */
 static int env_gc (lua_State *L) {
-	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);	if (env != NULL && !(env->closed))
+	env_data *env= (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_MYSQL);
+	if (env != NULL && !(env->closed)) {
 		env->closed = 1;
+		mysql_library_end();
+	}
 	return 0;
 }
 
@@ -627,11 +631,11 @@ static int env_close (lua_State *L) {
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "env is already closed");
+		lua_pushstring(L, "Environment is already closed");
 		return 2;
 	}
-	mysql_library_end();
 	env->closed = 1;
+	mysql_library_end();
 	lua_pushboolean (L, 1);
 	return 1;
 }
@@ -642,22 +646,22 @@ static int env_close (lua_State *L) {
 */
 static void create_metatables (lua_State *L) {
     struct luaL_Reg environment_methods[] = {
-        {"__gc", env_gc},
+		{"__gc", env_gc},
 		{"__close", env_gc},
-        {"close", env_close},
-        {"connect", env_connect},
+		{"close", env_close},
+		{"connect", env_connect},
 		{NULL, NULL},
 	};
     struct luaL_Reg connection_methods[] = {
-        {"__gc", conn_gc},
+		{"__gc", conn_gc},
 		{"__close", conn_gc},
-        {"close", conn_close},
-        {"ping", conn_ping},
-        {"escape", escape_string},
-        {"execute", conn_execute},
-        {"commit", conn_commit},
-        {"rollback", conn_rollback},
-        {"setautocommit", conn_setautocommit},
+		{"close", conn_close},
+		{"ping", conn_ping},
+		{"escape", escape_string},
+		{"execute", conn_execute},
+		{"commit", conn_commit},
+		{"rollback", conn_rollback},
+		{"setautocommit", conn_setautocommit},
 		{"getlastautoid", conn_getlastautoid},
 		{NULL, NULL},
     };

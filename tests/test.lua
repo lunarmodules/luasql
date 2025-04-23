@@ -173,6 +173,7 @@ end
 function create_table ()
 	-- Check SQL statements.
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
+	CONN:execute"drop table t"
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
 	assert2 (CREATE_TABLE_RETURN_VALUE, CONN:execute (cmd))
@@ -182,6 +183,9 @@ end
 -- Fetch 2 values.
 ---------------------------------------------------------------------
 function fetch2 ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 	-- insert a record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
 	-- retrieve data.
@@ -210,6 +214,9 @@ function fetch2 ()
 	assert2 (false, cur:close())
 	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 end
 
 ---------------------------------------------------------------------
@@ -217,6 +224,9 @@ end
 -- indexing.
 ---------------------------------------------------------------------
 function fetch_new_table ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 	-- insert elements.
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
@@ -328,12 +338,18 @@ function fetch_new_table ()
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 end
 
 ---------------------------------------------------------------------
 -- Fetch many values
 ---------------------------------------------------------------------
 function fetch_many ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 	-- insert values.
 	local fields, values = "f1", "'v1'"
 	for i = 2, TOTAL_FIELDS do
@@ -396,11 +412,17 @@ function fetch_many ()
 	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'v1'"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 	-- begin transaction
 	assert2 (true, CONN:setautocommit (false), "couldn't disable autocommit")
 	-- insert a record and commit the operation.
@@ -517,6 +539,9 @@ end
 -- Check closing of various objects.
 ---------------------------------------------------------------------
 function check_close()
+	local cur0 = CUR_OK(CONN:execute"select count(*) from t")
+	assert2 (0, tonumber(cur0:fetch()))
+	cur0:close()
 	-- an object with references to it can't be closed
 	local cmd = "select * from t"
 	local cur = CUR_OK(CONN:execute (cmd))
@@ -554,12 +579,33 @@ function check_close()
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
 	conn:close ()
+	-- The following check is failing in Firebird
+    --local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+    --assert2 (1, tonumber (cur0:fetch()))
+	--cur0:close()
 
 	-- check connection integrity after trying to close an environment
 	local conn = CONN_OK (ENV:connect (datasource, username, password))
-	assert2 (true, ENV:close(), "couldn't close the environment!")
-	CONN_OK (conn)
-	ENV = ENV_OK (luasql[driver] ())
+	local closed = ENV:close()
+	--assert2 (true, ENV:close(), "couldn't close the environment!")
+	if closed then
+		-- Some drivers can close the environment with open connections
+		CONN_OK (conn)
+		local cmd = "select * from t"
+		local cur = CUR_OK(CONN:execute (cmd))
+		assert2 ('1', cur:fetch(), "couldn't retrieve a row from `t`")
+		assert2 (true, cur:close(), "couldn't close the cursor!")
+    local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+    assert2 (1, tonumber (cur0:fetch()))
+	cur0:close()
+
+		assert2 (true, conn:close(), "couldn't close the connection!")
+		ENV = ENV_OK (luasql[driver] ())
+	else
+		-- Some drivers cannot close the environment with open connections
+		conn:close()
+		ENV:close()
+	end
 end
 
 ---------------------------------------------------------------------
@@ -575,6 +621,12 @@ end
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function drop_table ()
+	-- check number of lines
+	-- The following check is failing with Firebird
+	--local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	--assert2 (1, tonumber (cur0:fetch()))
+	--assert2 (true, cur0:close(), "couldn't close the cursor")
+
 	assert2 (true, CONN:setautocommit(true), "couldn't enable autocommit")
 	-- Postgres retorns 0, ODBC retorns -1, sqlite returns 1
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
@@ -599,9 +651,17 @@ end
 EXTENSIONS = {
 }
 function extensions_test ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+
 	for i, f in ipairs (EXTENSIONS) do
 		f ()
 	end
+
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
 end
 
 ---------------------------------------------------------------------
@@ -687,6 +747,7 @@ tests = {
 	{ "get column information", column_info },
 	{ "extensions", extensions_test },
 	{ "close objects", check_close },
+-- to-be-closed variables could be inserted here
 	{ "drop table", drop_table },
 	{ "close connection", close_conn },
 	{ "finalization", finalization },

@@ -399,7 +399,7 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "Cursor is already closed");
 		return 2;
 	}
 
@@ -521,13 +521,13 @@ static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_OCI8);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "Connection is already closed");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
+		return 2;
 	}
 	if (conn->cur_counter > 0){
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "There are open cursors");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open cursors");
 		return 2;
 	}
 
@@ -774,17 +774,17 @@ static int env_close (lua_State *L) {
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "env is already closed");
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
 	if (env->conn_counter > 0){
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "There are open connections");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open connections");
+		return 2;
 	}
 
 	env->closed = 1;
-	/* desalocar: env->errhp e env->envhp */
+	/* release resources */
 	if (env->envhp)
 		OCIHandleFree ((dvoid *)env->envhp, OCI_HTYPE_ENV);
 	if (env->errhp)

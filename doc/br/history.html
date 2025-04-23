@@ -1,8 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt" lang="pt">
 <head>
-    <title>LuaSQL: Conectividade de banco de dados para a linguagem de programa&ccedil;&atilde;o Lua</title>
+    <title>LuaSQL: Conectividade de banco de dados para a linguagem de programação Lua</title>
     <link rel="stylesheet" href="doc.css" type="text/css"/>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 </head>
@@ -16,7 +16,7 @@
 		<img alt="LuaSQL logo" src="luasql.png"/>
 	</a></div>
 	<div id="product_name"><big><strong>LuaSQL</strong></big></div>
-	<div id="product_description">Conectividade de banco de dados para a linguagem de programa&ccedil;&atilde;o Lua</div>
+	<div id="product_description">Conectividade de banco de dados para a linguagem de programação Lua</div>
 </div> <!-- id="product" -->
 
 <div id="main">
@@ -25,55 +25,49 @@
 <h1>LuaSQL</h1>
 	<ul>
 		<li><a href="index.html">Home</a>
-			<ul>
-				<li><a href="index.html#overview">Vis&atilde;o Geral</a></li>
-				<li><a href="index.html#status">Status</a></li>
-				<li><a href="index.html#download">Download</a></li>
-				<li><a href="index.html#credits">Cr&eacute;ditos</a></li>
-				<li><a href="index.html#contact">Contato</a></li>
-			</ul>
 		</li>
 		<li><a href="manual.html">Manual</a>
-			<ul>
-				<li><a href="manual.html#introduction">Introdu&ccedil;&atilde;o</a></li>
-				<li><a href="manual.html#compiling">Compilando</a></li>
-				<li><a href="manual.html#installation">Instala&ccedil;&atilde;o</a></li>
-				<li><a href="manual.html#errors">Tratamento de erros</a></li>
-				<li><a href="manual.html#drivers">Drivers</a></li>
-				<li><a href="manual.html#environment_object">Ambiente</a></li>
-				<li><a href="manual.html#connection_object">Conex&atilde;o</a></li>
-				<li><a href="manual.html#cursor_object">Cursor</a></li>
-				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
-				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
-				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
-				<li><a href="manual.html#sqlite3_extensions">SQLite3</a></li>
-			</ul>
 		</li>
 		<li><a href="examples.html">Exemplos</a></li>
-		<li><strong>Hist&oacute;rico</strong></li>
+		<li><strong>Histórico</strong></li>
         <li><a href="http://github.com/keplerproject/luasql">Projeto</a>
             <ul>
                 <li><a href="https://github.com/lunarmodules/luasql/issues">Bug Tracker</a></li>
 
             </ul>
         </li>
-		<li><a href="license.html">Licen&ccedil;a</a></li>
+		<li><a href="license.html">Licença</a></li>
 	</ul>
 </div> <!-- id="navigation" -->
 
 <div id="content">
 
-<h2><a name="history"></a>Hist&oacute;ria</h2>
+<h2><a name="history"></a>História</h2>
 
 <dl class="history">
+    <dt><strong>LuaSQL 2.7.0</strong> [23/04/2025]</dt>
+    <dd>
+      <ul>
+        <li>Adaptação de todos os drivers para a versão 5.4 de Lua com suporte a variáveis <i>to-be-closed</i></li>
+        <li>Padronização da implementação do método <code>:close()</code> para retornar false seguido de uma string quando houver objetos relacionados ainda abertos.</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.6.1</strong> [07/02/2024]</dt>
+    <dd>
+      <ul>
+        <li>Correção na compatibilidade do driver SQLite3 para versões anteriores a Lua 5.3 (agradecimento a Daniel McCarney)</li>
+      </ul>
+    </dd>
+
     <dt><strong>2.0.2</strong> [26/06/2006]</dt>
-    <dd>M&eacute;todo <a href="manual.html#mysql_extensions">numrows</a> acrescentado ao driver MySQL.<br />
+    <dd>Método <a href="manual.html#mysql_extensions">numrows</a> acrescentado ao driver MySQL.<br />
     Adicionado um arquivo <code>config</code> para o <code>makefile</code>.<br />
-    Adicionada configura&ccedil;&atilde;o do driver LinuxODBC.<br />
+    Adicionada configuração do driver LinuxODBC.<br />
     Corrigiu um bug no driver SQLite (bug encontrado por Mike Petersen).<br />
     Corrigiu bugs nos drivers JDBC, OCI8 e ADO.<br />
     Testes melhorados.<br />
-    Documenta&ccedil;&atilde;o melhorada.<br />
+    Documentação melhorada.<br />
     </dd>
 
     <dt><strong>2.0.1</strong> [02/06/2005]</dt>
@@ -90,7 +84,7 @@
     Utiliza a
     <a href="http://www.keplerproject.org/compat/">proposta de pacotes</a>
     para Lua 5.1. Veja mais detalhes em
-    <a href="manual.html#installation">Instala&ccedil;&atilde;o</a>.
+    <a href="manual.html#installation">Instalação</a>.
     </dd>
 
     <dt><strong>2.0 beta</strong> [10/12/2003]</dt>
@@ -98,14 +92,14 @@
 
 
 <p>
-A vers&atilde;o 2.0 apresenta algumas modifica&ccedil;&otilde;es no design e aprimoramentos
-na implementa&ccedil;&atilde;o em rela&ccedil;&atilde;o &agrave; vers&atilde;o 1.0:
+A versão 2.0 apresenta algumas modificações no design e aprimoramentos
+na implementação em relação à versão 1.0:
 </p>
 <ul>
-  <li>Novo m&eacute;todo de <code>fetch</code>: mais eficiente e mais flex&iacute;vel;</li>
-  <li>Novo m&eacute;todo de <code>setautocommit</code>;</li>
-  <li>Compat&iacute;vel com Lua 5.0 e 5.1;</li>
-  <li>Carreg&aacute;vel dinamicamente ou estaticamente;</li>
+  <li>Novo método de <code>fetch</code>: mais eficiente e mais flexível;</li>
+  <li>Novo método de <code>setautocommit</code>;</li>
+  <li>Compatível com Lua 5.0 e 5.1;</li>
+  <li>Carregável dinamicamente ou estaticamente;</li>
   <li>Novos drivers para bancos de dados Oracle e MySQL.</li>
 </ul>
 

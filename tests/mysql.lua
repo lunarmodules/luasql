@@ -21,6 +21,8 @@ function seek ()
     assert2('c', cur:fetch())
     assert2(nil, cur:fetch())
     cur:close()
+	-- Delete inserted rows
+	assert2 (3, CONN:execute"delete from t", "Couldn't delete inserted rows!")
 
 	io.write (" seek")
 end

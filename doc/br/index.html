@@ -1,22 +1,21 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt" lang="pt">
 <head>
-    <title>LuaSQL: Conectividade de banco de dados para a linguagem de programa&ccedil;&atilde;o Lua</title>
+    <title>LuaSQL: Conectividade de banco de dados para a linguagem de programação Lua</title>
     <link rel="stylesheet" href="doc.css" type="text/css"/>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 </head>
-
 <body>
 
 <div id="container">
 	
 <div id="product">
-	<div id="product_logo"><a href="http://www.keplerproject.org">
+	<div id="product_logo"><a href="https://github.com/lunarmodules/luasql">
 		<img alt="LuaSQL logo" src="luasql.png"/>
 	</a></div>
 	<div id="product_name"><big><strong>LuaSQL</strong></big></div>
-	<div id="product_description">Conectividade de banco de dados para a linguagem de programa&ccedil;&atilde;o Lua</div>
+	<div id="product_description">Conectividade de banco de dados para a linguagem de programação Lua</div>
 </div> <!-- id="product" -->
 
 <div id="main">
@@ -26,123 +25,126 @@
 	<ul>
 		<li><strong>Home</strong>
 			<ul>
-				<li><a href="index.html#overview">Vis&atilde;o Geral</a></li>
+				<li><a href="index.html#overview">Visão Geral</a></li>
 				<li><a href="index.html#status">Status</a></li>
 				<li><a href="index.html#download">Download</a></li>
-				<li><a href="index.html#credits">Cr&eacute;ditos</a></li>
+				<li><a href="index.html#credits">Créditos</a></li>
 				<li><a href="index.html#contact">Contato</a></li>
 			</ul>
 		</li>
 		<li><a href="manual.html">Manual</a>
-			<ul>
-				<li><a href="manual.html#introduction">Introdu&ccedil;&atilde;o</a></li>
-				<li><a href="manual.html#compiling">Compilando</a></li>
-				<li><a href="manual.html#installation">Instala&ccedil;&atilde;o</a></li>
-				<li><a href="manual.html#errors">Tratamento de erros</a></li>
-				<li><a href="manual.html#drivers">Drivers</a></li>
-				<li><a href="manual.html#environment_object">Ambiente</a></li>
-				<li><a href="manual.html#connection_object">Conex&atilde;o</a></li>
-				<li><a href="manual.html#cursor_object">Cursor</a></li>
-				<li><a href="manual.html#postgres_extensions">PostgreSQL</a></li>
-				<li><a href="manual.html#mysql_extensions">MySQL</a></li>
-				<li><a href="manual.html#oracle_extensions">Oracle</a></li>
-				<li><a href="manual.html#sqlite3_extensions">SQLite3</a></li>
-			</ul>
 		</li>
 		<li><a href="examples.html">Exemplos</a></li>
-		<li><a href="history.html">Hist&oacute;rico</a></li>
-        <li><a href="https://github.com/lunarmodules/luasql">Project</a>
+		<li><a href="history.html">Histórico</a></li>
+        <li><a href="https://github.com/lunarmodules/luasql">Projeto</a>
             <ul>
                 <li><a href="https://github.com/lunarmodules/luasql/issues">Bug tracker</a></li>
             </ul>
         </li>
-		<li><a href="license.html">Licen&ccedil;a</a></li>
+		<li><a href="license.html">Licença</a></li>
 	</ul>
 </div> <!-- id="navigation" -->
 
 <div id="content">
-<h2><a name="overview"></a>Vis&atilde;o Geral</h2>
+
+<h2><a name="overview"></a>Visão Geral</h2>
+
 <p>
-LuaSQL &eacute; uma interface simples entre Lua e um sistema gerenciador de banco de dados (DBMS). Ela permite que um programa Lua:
+LuaSQL é uma interface simples entre Lua e um sistema gerenciador de banco de dados (DBMS). Ela permite que um programa Lua:
 </p>
+
 <ul>
 	<li> Conecte-se aos bancos de dados ODBC, ADO, Oracle, MySQL, SQLite, JDBC e PostgreSQL;</li>
-	<li> Execute comandos arbrit&aacute;rios do SQL;</li>
+	<li> Execute comandos arbritários através de SQL;</li>
 	<li> Recupere resultados no modo linha-a-linha de um cursor SQL.</li>
 </ul>
 
 <p>
-LuaSQL &eacute; um software livre e utiliza a mesma <a href="license.html">licen&ccedil;a</a>
-do Lua 5.0.
+LuaSQL é um software livre e utiliza a mesma <a href="license.html">licença</a>
+de Lua 5.1.
 </p>
 
 <h2><a name="status"></a>Status</h2>
-<p>A vers&atilde;o LuaSQL 2.0.2 (para Lua 5.0) est&aacute; dispon&iacute;vel para
-<a href="#download">download</a>.
-</p>
 
-<p>O driver PostgreSQL foi testado em Windows, Linux e MacOS X e &eacute; compat&iacute;vel com
-PostgreSQL 7.x e 8.x.</p>
-<p>O driver ODBC foi testado em Windows (drivers SQLServer e Microsoft Access).</p>
-<p>O driver MySQL foi testado em Windows, Linux e &eacute; compat&iacute;vel com as vers&otilde;es 4.0, 4.1 e 5.0.</p>
-<p>O driver Oracle foi testado em Windows e &eacute; compat&iacute;vel com OCI 8 API.</p>
-<p>O driver SQLite foi testado em Windows e Linux e &eacute; compat&iacute;vel com as vers&otilde;es 2.x.</p>
-<p>O driver JDBC foi testado em Windows com LuaJava 1.0 e JDK 1.4 (driver MySQL).</p>
-<p>O driver ADO foi testado em Windows, com LuaCOM 1.3 (driver Microsoft Access).</p>
+<p>
+A versão LuaSQL 2.7.0 (para Lua 5.X) está disponível para <a href="#download">download</a>.
+Para mais detalhes sobre as funcionalidades de cada versão, confira o <a href="history.html">histórico</a>.
+</p>
 
 <h2><a name="download"></a>Download</h2>
 <p>
 LuaSQL pode ser instalado via <a href="https://luarocks.org">LuaRocks</a>, usando
-o driver do seu banco de dados escolhido:
+o driver do banco de dados de sua escolha:
 
-<pre>
-luarocks install luasql-sqlite3
-luarocks install luasql-postgres
+<pre class="example">
+luarocks install luasql-firebird
 luarocks install luasql-mysql
-luarocks install luasql-sqlite
+luarocks install luasql-oci8
 luarocks install luasql-odbc
+luarocks install luasql-postgres
+luarocks install luasql-sqlite
+luarocks install luasql-sqlite3
 </pre>
 
-O código fonte do LuaSQL pode ser baixado do seu repositório no <a href=
-"http://github.com/keplerproject/luasql">GitHub</a>.
+O código fonte da LuaSQL pode ser baixado do seu repositório no <a href="https://github.com/lunarmodules/luasql">GitHub</a>.
 </p>
 
-<h2><a name="credits"></a>Cr&eacute;ditos</h2>
+<h2><a name="credits"></a>Créditos</h2>
 
-<h4>LuaSQL 2.0</h4>
+<h4>LuaSQL 2.x</h4>
+
 <p>
-A Vers&atilde;o 2.0 foi redesenhada por Roberto Ierusalimschy, Andr&eacute; Carregal
-e Tom&aacute;s Guisasola como parte do
+A versão 2.7 introduz suporte a variáveis <a href="https://lua.org/manual/5.4/">To-be-closed</a> além de adaptar todos os drivers para a versão 5.4 de Lua. <br>Esta versão foi implementada por Chaitanya Deshmukh durante o GSoC 2024 sob a orientação de Tomás Guisasola.
+</p>
+
+<p>
+A versão 2.5 incorpora suporte a busca no resultado no driver MySQL.
+</p>
+<p>
+A versão 2.3.5 incorpora algumas correções e pequenas melhorias (agradecimento a IR4T4 e tomatolog).
+Essa versão funciona com as versões 5.1, 5.2 and 5.3 de Lua.
+</p>
+<p>
+A versão 2.3 é apenas uma adaptação do código para funcionar com as versões 5.0, 5.1 e 5.2 de Lua.
+</p>
+<p>
+A partir da versão 2.2 começou o desenvolvimento distribuído com todas as discussões sobre o projeto acontecendo na <a href="https://groups.google.com/forum/#!forum/kepler-project">lista de interesse do Projeto Kepler</a>.
+Novos desenvolvedores: Hisham Muhammad, Ignacio Burgueño, Luis Eduardo Jason Santos, Marc Nijdam, Mauricio Bomfim and Scott Morgan.
+</p>
+<h4>LuaSQL 2.0 e 2.1</h4>
+<p>
+A versão 2.0 foi redesenhada por Roberto Ierusalimschy, André Carregal
+e Tomás Guisasola como parte do
 <a href="http://www.keplerproject.org">Projeto Kepler</a>.
-A implementa&ccedil;&atilde;o &eacute; compat&iacute;vel com Lua 5.0 e foi codificada por Tom&aacute;s Guisasola, Eduardo Quint&atilde;o, Thiago Ponte, Fabio Mascarenhas, Danilo Tuler,
-com inestim&aacute;veis contribui&ccedil;&otilde;es de Michael Roth, Tiago Dionizio e Leonardo Godinho.
+A implementação das versões 2.0 e 2.1 é compatível com Lua 5.0 e foi codificada
+por Tomás Guisasola, Eduardo Quintão, Thiago Ponte, Fabio Mascarenhas, Danilo Tuler,
+com inestimáveis contribuições de Michael Broughton, Pedro Maia, Klaus Ripke, Michael Roth, Tiago Dionizio e Leonardo Godinho.
 </p>
 
 <h4>LuaSQL 1.0</h4>
 <p>
-LuaSQL foi projetado por Pedro Miller Rabinovitch e Roberto
-Ierusalimschy.
-A primeira implementa&ccedil;&atilde;o era compat&iacute;vel com Lua 4.0a.
-Muitas modifica&ccedil;&otilde;es foram feitas, mas n&atilde;o distribu&iacute;das, por Diego Nehab (ODBC),
-Carlos Cassino, Tom&aacute;s Guisasola and Eduardo Quint&atilde;o (PostgreSQL).
+LuaSQL foi projetado por Pedro Miller Rabinovitch e Roberto Ierusalimschy.
+A primeira implementação era compatível com Lua 4.0a.
+Muitas modificações foram feitas, mas não distribuídas, por Diego Nehab (ODBC),
+Carlos Cassino, Tomás Guisasola and Eduardo Quintão (PostgreSQL).
 </p>
 <p>
-O desenvolvimento de LuaSQL foi patrocinado pela
-<a href="http://www.fabricadigital.com.br">F&aacute;brica Digital</a>, FINEP e CNPq.
+O desenvolvimento da LuaSQL foi patrocinado pela
+<a href="http://www.fabricadigital.com.br">Fábrica Digital</a>, FINEP e CNPq.
 </p>
 
 <h2><a name="contact"></a>Contato</h2>
 
 <p>
-Para mais informa&ccedil;&otilde;es, entre em
+Para mais informações, entre em
 <a href="mailto:info-NO-SPAM-THANKS@keplerproject.org">contato</a> conosco.
-Coment&aacute;rios s&atilde;o muito bem-vindos!
+Comentários são muito bem-vindos!
 </p>
 
 <p>
-A <a href="https://groups.google.com/forum/#!forum/kepler-project">lista de discuss&atilde;o</a>
-do projeto Kepler &eacute; outra forma de entrar em contato com desenvolvedores
-e usu&aacute;rios da plataforma Kepler.
+A <a href="https://groups.google.com/forum/#!forum/kepler-project">lista de discussão</a>
+do projeto Kepler é outra forma de entrar em contato com desenvolvedores
+e usuários da plataforma Kepler.
 </p>
 
 </div> <!-- id="content" -->
