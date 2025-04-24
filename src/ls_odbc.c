@@ -360,7 +360,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 #if LUA_VERSION_NUM>=503
 		/* iNteger */
 		case 'n': {
-			SQLINTEGER num;
+			SQLLEN num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
 			if (error(rc))
@@ -781,6 +781,7 @@ static int set_param(lua_State *L, stmt_data *stmt, int i, param_data *data)
 */
 static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 {
+	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
@@ -808,6 +809,7 @@ static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 */
 static int raw_readparams_args(lua_State *L, stmt_data *stmt, int arg, int ltop)
 {
+	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
