@@ -531,7 +531,6 @@ static int conn_execute(lua_State *L)
   /* real query? if empty, must have numcols!=0 */
   if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols))
     {
-  //    sqlite3_reset(vm); We should not use this
       return create_cursor(L, 1, conn, vm, numcols);
     }
 
