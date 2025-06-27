@@ -41,6 +41,7 @@ typedef struct
 typedef struct
 {
   short       closed;
+  short       first_fetch;
   int         conn;               /* reference to connection */
   int         numcols;            /* number of columns */
   int         colnames, coltypes; /* reference to column information tables */
@@ -162,14 +163,14 @@ static int cur_fetch (lua_State *L) {
   if (vm == NULL)
     return 0;
 
-  res = sqlite3_step(vm);
-
-  /* no more results? */
-  if (res == SQLITE_DONE)
-    return finalize(L, cur);
-
-  if (res != SQLITE_ROW)
-    return finalize(L, cur);
+    if (!cur->first_fetch) {
+      res = sqlite3_step(vm);
+  
+      if (res == SQLITE_DONE || res != SQLITE_ROW)
+          return finalize(L, cur);
+   } else {
+      cur->first_fetch = 0;
+   }
 
   if (lua_istable (L, 2))
     {
@@ -287,6 +288,7 @@ static int create_cursor(lua_State *L, int o, conn_data *conn,
 
   /* fill in structure */
   cur->closed = 0;
+  cur->first_fetch = 1;
   cur->conn = LUA_NOREF;
   cur->numcols = numcols;
   cur->colnames = LUA_NOREF;
@@ -529,7 +531,7 @@ static int conn_execute(lua_State *L)
   /* real query? if empty, must have numcols!=0 */
   if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols))
     {
-      sqlite3_reset(vm);
+  //    sqlite3_reset(vm); We should not use this
       return create_cursor(L, 1, conn, vm, numcols);
     }
 
