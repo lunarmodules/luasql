@@ -688,7 +688,11 @@ static int raw_execute(lua_State *L, int istmt)
 			return fail(L, hSTMT, stmt->hstmt);
 		}
 
-		lua_pushnumber(L, numrows);
+#if LUA_VERSION_NUM >= 503
+		lua_pushinteger(L, (lua_Integer)numrows);
+#else
+		lua_pushnumber(L, (lua_Number)numrows);
+#endif
 		return 1;
 	}
 }
