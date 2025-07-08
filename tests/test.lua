@@ -762,7 +762,8 @@ if string.find(_VERSION, " 5.0") then
 	end
 else
 	luasql = require ("luasql."..driver)
-	if string.find(_VERSION, " 5.4") then
+	if string.find(_VERSION, " 5.4")
+		or string.find(_VERSION, " 5.5") then
 		table.insert (tests, 10, { "to-be-closed support", to_be_closed_support })
 	end
 end
