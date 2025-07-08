@@ -435,6 +435,41 @@ end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
+function unicode_values ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+	-- insert values.
+	local cmd = "insert into t (f1, f2) values ('1', 'Áêìõü')"
+	assert2 (1, CONN:execute (cmd))
+	-- fetch values
+	local cur = CUR_OK (CONN:execute ("select f1, f2 from t where f1 = '1'"))
+	local row = { cur:fetch () }
+	assert2 ("string", type(row[1]), "error while trying to fetch values")
+	assert2 ("1", row[1], "wrong value: expecting '1', got '"..tostring (row[1]).."'")
+	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[1]).."'")
+	assert2 (nil, cur:fetch (row))
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
+	-- fetch row based on Unicode value
+	local cur = CUR_OK (CONN:execute ("select f1, f2 from t where f2 = 'Áêìõü'"))
+	local row = { cur:fetch () }
+	assert2 ("string", type(row[1]), "error while trying to fetch values")
+	assert2 ("1", row[1], "wrong value: expecting '1', got '"..tostring (row[1]).."'")
+	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[1]).."'")
+	assert2 (nil, cur:fetch (row))
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
+	-- clean the table.
+	assert2 (1, CONN:execute ("delete from t where f1 = '1'"))
+
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
 function rollback ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
@@ -767,6 +802,7 @@ tests = {
 	{ "fetch two values", fetch2 },
 	{ "fetch new table", fetch_new_table },
 	{ "fetch many", fetch_many },
+	{ "unicode values", unicode_values },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
 	{ "extensions", extensions_test },
@@ -788,7 +824,7 @@ else
 	luasql = require ("luasql."..driver)
 	if string.find(_VERSION, " 5.4")
 		or string.find(_VERSION, " 5.5") then
-		table.insert (tests, 10, { "to-be-closed support", to_be_closed_support })
+		table.insert (tests, 11, { "to-be-closed support", to_be_closed_support })
 	end
 end
 assert (luasql, "Could not load driver: no luasql table.")
