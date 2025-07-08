@@ -2,7 +2,7 @@
 -- SQLite specific tests and configurations.
 ---------------------------------------------------------------------
 
-DROP_TABLE_RETURN_VALUE = 1
+DROP_TABLE_RETURN_VALUE = 0
 
 ---------------------------------------------------------------------
 -- Produces a SQL statement which completely erases a table.
