@@ -83,7 +83,7 @@ end
 ---------------------------------------------------------------------
 function test_object (obj, objmethods)
 	-- checking object type.
-	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type")
+	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type: expecting a table or a userdata, but got "..type(obj))
 
 	-- trying to get metatable.
 	assert2 ("LuaSQL: you're not allowed to get this metatable",
@@ -100,15 +100,18 @@ function test_object (obj, objmethods)
 end
 
 ENV_METHODS = { "close", "connect", }
-ENV_OK = function (obj)
+ENV_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, ENV_METHODS)
 end
 CONN_METHODS = { "close", "commit", "execute", "rollback", "setautocommit", }
-CONN_OK = function (obj)
+CONN_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, CONN_METHODS)
 end
 CUR_METHODS = { "close", "fetch", "getcolnames", "getcoltypes", }
-CUR_OK = function (obj)
+CUR_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, CUR_METHODS)
 end
 
@@ -186,6 +189,11 @@ function fetch2 ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+
+	assert (CONN:close(), "couldn't close the connection after creating a table!")
+	CONN = CONN_OK (ENV:connect (datasource, username, password))
+
 	-- insert a record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
 	-- retrieve data.
@@ -217,6 +225,10 @@ function fetch2 ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+
+	assert (CONN:close(), "couldn't close the connection after creating a table!")
+	CONN = CONN_OK (ENV:connect (datasource, username, password))
 end
 
 ---------------------------------------------------------------------
@@ -227,6 +239,7 @@ function fetch_new_table ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- insert elements.
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
@@ -341,6 +354,7 @@ function fetch_new_table ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 end
 
 ---------------------------------------------------------------------
@@ -350,6 +364,7 @@ function fetch_many ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- insert values.
 	local fields, values = "f1", "'v1'"
 	for i = 2, TOTAL_FIELDS do
@@ -415,6 +430,7 @@ function fetch_many ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 end
 
 ---------------------------------------------------------------------
@@ -423,6 +439,7 @@ function rollback ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- begin transaction
 	assert2 (true, CONN:setautocommit (false), "couldn't disable autocommit")
 	-- insert a record and commit the operation.
@@ -515,6 +532,9 @@ function column_info ()
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
+
+	assert (CONN:close(), "couldn't close the connection after deleting rows from the table")
+	CONN = ENV:connect (datasource, username, password)
 end
 
 ---------------------------------------------------------------------
@@ -595,9 +615,9 @@ function check_close()
 		local cur = CUR_OK(CONN:execute (cmd))
 		assert2 ('1', cur:fetch(), "couldn't retrieve a row from `t`")
 		assert2 (true, cur:close(), "couldn't close the cursor!")
-    local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
-    assert2 (1, tonumber (cur0:fetch()))
-	cur0:close()
+		local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+		assert2 (1, tonumber (cur0:fetch()))
+		cur0:close()
 
 		assert2 (true, conn:close(), "couldn't close the connection!")
 		ENV = ENV_OK (luasql[driver] ())
@@ -628,8 +648,10 @@ function drop_table ()
 	--assert2 (true, cur0:close(), "couldn't close the cursor")
 
 	assert2 (true, CONN:setautocommit(true), "couldn't enable autocommit")
-	-- Postgres retorns 0, ODBC retorns -1, sqlite returns 1
+	-- Postgres and SQLite3 returns 0, ODBC retorns -1, others returns 1
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
+	-- Dropping an already dropped table should return 0
+	assert2 (nil, CONN:execute ("drop table t"))
 end
 
 ---------------------------------------------------------------------
@@ -654,6 +676,7 @@ function extensions_test ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	cur0:close()
 
 	for i, f in ipairs (EXTENSIONS) do
 		f ()
@@ -662,6 +685,7 @@ function extensions_test ()
 	-- check number of lines
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
+	cur0:close()
 end
 
 ---------------------------------------------------------------------
