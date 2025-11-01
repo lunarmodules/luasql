@@ -11,9 +11,9 @@
 <div id="container">
 	
 <div id="product">
-	<div id="product_logo">
+	<div id="product_logo"><a href="https://github.com/lunarmodules/luasql">
 		<img alt="LuaSQL logo" src="luasql.png"/>
-	</div>
+	</a></div>
 	<div id="product_name"><big><strong>LuaSQL</strong></big></div>
 	<div id="product_description">Database connectivity for the Lua programming language</div>
 </div> <!-- id="product" -->
@@ -67,7 +67,7 @@ as Lua 5.1.
 <h2><a name="status"></a>Status</h2>
 
 <p>
-LuaSQL version 2.6.0 (for Lua 5.X) is now available for <a href="#download">download</a>.
+LuaSQL version 2.7.0 (for Lua 5.X) is now available for <a href="#download">download</a>.
 For more details on the features list please check the product
 <a href="history.html">history</a>.
 </p>
@@ -78,16 +78,16 @@ LuaSQL can be installed via <a href="https://luarocks.org">LuaRocks</a>, using t
 driver for your database of choice:
 
 <pre class="example">
-luarocks install luasql-sqlite3
-luarocks install luasql-postgres
-luarocks install luasql-mysql
-luarocks install luasql-sqlite
-luarocks install luasql-odbc
 luarocks install luasql-firebird
+luarocks install luasql-mysql
+luarocks install luasql-oci8
+luarocks install luasql-odbc
+luarocks install luasql-postgres
+luarocks install luasql-sqlite
+luarocks install luasql-sqlite3
 </pre>
 
-Source code for LuaSQL can be downloaded from its <a href=
-"https://github.com/lunarmodules/luasql">GitHub</a> repository.
+Source code for LuaSQL can be downloaded from its <a href="https://github.com/lunarmodules/luasql">GitHub</a> repository.
 </p>
 
 <h2><a name="credits"></a>Credits</h2>
@@ -95,7 +95,7 @@ Source code for LuaSQL can be downloaded from its <a href=
 <h4>LuaSQL 2.x</h4>
 
 <p>
-Version __ introduces support for To-be-closed variables and all the Drivers are adapted to Lua version 5.4. <br>This was developed by Chaitanya Deshmukh (GSoC 2024) under the mentorship of Tom&aacute;s Guisasola.
+Version 2.7 introduces support for To-be-closed variables and all the Drivers are adapted to Lua version 5.4. <br>This was developed by Chaitanya Deshmukh (GSoC 2024) under the mentorship of Tomás Guisasola.
 </p>
 
 <p>
@@ -110,13 +110,13 @@ Version 2.3 is just an adaptation of the code to work with Lua 5.0, 5.1 and 5.2.
 </p>
 <p>
 Version 2.2 started a distributed development, with all project discussions happening through the <a href="https://groups.google.com/forum/#!forum/kepler-project">Kepler's mailing list</a>.
-New developers: Hisham Muhammad, Ignacio Burgue&ntilde;o, Luis Eduardo Jason Santos, Marc Nijdam, Mauricio Bomfim and Scott Morgan.
+New developers: Hisham Muhammad, Ignacio Burgueño, Luis Eduardo Jason Santos, Marc Nijdam, Mauricio Bomfim and Scott Morgan.
 <p>
-Version 2.1 and 2.0 were redesigned by Roberto Ierusalimschy, Andr&eacute; Carregal
-and Tom&aacute;s Guisasola as part of the
+Version 2.1 and 2.0 were redesigned by Roberto Ierusalimschy, André Carregal
+and Tomás Guisasola as part of the
 <a href="http://www.keplerproject.org">Kepler Project</a>.
 The implementation was coded by
-Tom&aacute;s Guisasola, Eduardo Quint&atilde;o, Thiago Ponte, Fabio Mascarenhas and
+Tomás Guisasola, Eduardo Quintão, Thiago Ponte, Fabio Mascarenhas and
 Danilo Tuler, with many contributions from Michael Broughton, Tiago Dionizio, Leonardo Godinho, Pedro Maia, Klaus Ripke, Michael Roth and others.</p>
 
 <h4>LuaSQL 1.0</h4>
@@ -124,10 +124,10 @@ Danilo Tuler, with many contributions from Michael Broughton, Tiago Dionizio, Le
 <p>LuaSQL was originally designed by Pedro Miller Rabinovitch and Roberto Ierusalimschy.
 The first implementation was compatible with Lua 4.0a.
 Many modifications were made but not distributed by Diego Nehab (ODBC),
-Carlos Cassino, Tom&aacute;s Guisasola and Eduardo Quint&atilde;o (PostgreSQL).</p>
+Carlos Cassino, Tomás Guisasola and Eduardo Quintão (PostgreSQL).</p>
 
 <p>LuaSQL development was sponsored by
-<a href="http://www.fabricadigital.com.br">F&aacute;brica Digital</a>, FINEP and CNPq.</p>
+<a href="http://www.fabricadigital.com.br">Fábrica Digital</a>, FINEP and CNPq.</p>
 
 <h2><a name="contact"></a>Contact us</h2>
 

@@ -2,7 +2,7 @@
 -- MySQL specific tests and configurations.
 ---------------------------------------------------------------------
 
-QUERYING_STRING_TYPE_NAME = "binary(65535)"
+QUERYING_STRING_TYPE_NAME = "binary(262140)"
 
 ---------------------------------------------------------------------
 -- Seeks to an arbitrary row in a query result set.
@@ -21,6 +21,8 @@ function seek ()
     assert2('c', cur:fetch())
     assert2(nil, cur:fetch())
     cur:close()
+	-- Delete inserted rows
+	assert2 (3, CONN:execute"delete from t", "Couldn't delete inserted rows!")
 
 	io.write (" seek")
 end

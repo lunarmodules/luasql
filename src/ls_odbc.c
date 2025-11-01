@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 
+#define SQL_NOUNICODEMAP
 #if defined(_WIN32)
 #include <windows.h>
 #include <sqlext.h>
@@ -292,15 +293,6 @@ static int cur_shut(lua_State *L, cur_data *cur)
 */
 static const char *sqltypetolua (const SQLSMALLINT type) {
     switch (type) {
-        case SQL_UNKNOWN_TYPE: case SQL_CHAR: case SQL_VARCHAR: 
-        case SQL_TYPE_DATE: case SQL_TYPE_TIME: case SQL_TYPE_TIMESTAMP: 
-        case SQL_DATE: case SQL_INTERVAL: case SQL_TIMESTAMP: 
-        case SQL_LONGVARCHAR:
-        case SQL_WCHAR: case SQL_WVARCHAR: case SQL_WLONGVARCHAR:
-#if (ODBCVER >= 0x0350)
-		case SQL_GUID:
-#endif
-            return "string";
         case SQL_BIGINT: case SQL_TINYINT: 
         case SQL_INTEGER: case SQL_SMALLINT: 
 #if LUA_VERSION_NUM>=503
@@ -314,8 +306,7 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
         case SQL_BIT:
             return "boolean";
         default:
-            assert(0);
-            return NULL;
+            return "string";
     }
 }
 
@@ -360,7 +351,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 #if LUA_VERSION_NUM>=503
 		/* iNteger */
 		case 'n': {
-			SQLINTEGER num;
+			SQLLEN num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
 			if (error(rc))
@@ -493,6 +484,16 @@ static int cur_fetch (lua_State *L)
 }
 
 /*
+** Cursor object collector function
+*/
+static int cur_gc (lua_State *L) {
+	cur_data *cur = (cur_data *) luaL_checkudata (L, 1, LUASQL_CURSOR_ODBC);
+	if (cur != NULL && !(cur->closed))
+		cur_shut(L, cur);
+	return 0;
+}
+
+/*
 ** Closes a cursor.
 */
 static int cur_close (lua_State *L)
@@ -503,7 +504,7 @@ static int cur_close (lua_State *L)
 
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "Cursor is already closed");
 		return 2;
 	}
 
@@ -638,13 +639,13 @@ static int conn_close (lua_State *L)
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_ODBC);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "Connection is already closed");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
+		return 2;
 	}
 	if (conn->lock > 0) {
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "There are open statements/cursors");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open cursors");
 		return 2;
 	}
 
@@ -697,7 +698,11 @@ static int raw_execute(lua_State *L, int istmt)
 			return fail(L, hSTMT, stmt->hstmt);
 		}
 
-		lua_pushnumber(L, numrows);
+#if LUA_VERSION_NUM >= 503
+		lua_pushinteger(L, (lua_Integer)numrows);
+#else
+		lua_pushnumber(L, (lua_Number)numrows);
+#endif
 		return 1;
 	}
 }
@@ -781,6 +786,7 @@ static int set_param(lua_State *L, stmt_data *stmt, int i, param_data *data)
 */
 static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 {
+	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
@@ -808,6 +814,7 @@ static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 */
 static int raw_readparams_args(lua_State *L, stmt_data *stmt, int arg, int ltop)
 {
+	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
@@ -1100,6 +1107,26 @@ static int env_connect (lua_State *L) {
 }
 
 /*
+** Environment object collector function
+*/
+static int env_gc (lua_State *L)
+{
+	SQLRETURN ret;
+	env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_ODBC);
+	if (env != NULL && !(env->closed)) {
+		env->closed = 1;
+		ret = SQLFreeHandle (hENV, env->henv);
+		if (error (ret)) {
+			int ret2 = fail (L, hENV, env->henv);
+			env->henv = NULL;
+			return ret2;
+		}
+	}
+	return 0;
+}
+
+
+/*
 ** Closes an environment object
 */
 static int env_close (lua_State *L)
@@ -1109,13 +1136,13 @@ static int env_close (lua_State *L)
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "env is already closed");
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
 	if (env->lock > 0) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "There are open connections");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open connections");
+		return 2;
 	}
 
 	env->closed = 1;
@@ -1134,8 +1161,8 @@ static int env_close (lua_State *L)
 */
 static void create_metatables (lua_State *L) {
 	struct luaL_Reg environment_methods[] = {
-		{"__gc", env_close}, /* Should this method be changed? */
-		{"__close", env_close},
+		{"__gc", env_gc},
+		{"__close", env_gc},
 		{"close", env_close},
 		{"connect", env_connect},
 		{NULL, NULL},
@@ -1160,8 +1187,8 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
-		{"__gc", cur_close}, /* Should this method be changed? */
-		{"__close", cur_close},
+		{"__gc", cur_gc}, /* Should this method be changed? */
+		{"__close", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},

@@ -172,7 +172,7 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "cursor is already closed");
 		return 2;
 	}
 	cur_nullify (L, cur);
@@ -353,9 +353,11 @@ static int conn_close (lua_State *L) {
 	if (conn->closed) {
 		lua_pushboolean (L, 0);
 		lua_pushstring(L, "Connection is already closed");
-    	return 2;
+		return 2;
 	}
 	conn->closed = 1;
+	luaL_unref (L, LUA_REGISTRYINDEX, conn->env);
+	PQfinish (conn->pg_conn);
 
 	lua_pushboolean (L, 1);
 	return 1;
@@ -549,8 +551,8 @@ static int env_close (lua_State *L) {
 	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_PG);
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "env is already closed");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
 	env->closed = 1;

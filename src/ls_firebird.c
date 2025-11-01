@@ -782,7 +782,10 @@ static int cur_fetch (lua_State *L) {
 		/* close cursor for procedures/returnings as they (currently) only
 		   return one result, and error on subsequent fetches */
 		if (cur->stmt_type == isc_info_sql_stmt_exec_procedure) {
-			cur_shut(L, cur);
+			int shut_res = cur_shut(L, cur);
+			if (shut_res != 0) {
+				return shut_res;
+			}
 		}
 
 		return res;
@@ -888,13 +891,12 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
 	int shut_res;
 
-	if(cur->closed == 0) {
+	if (cur->closed == 0) {
 		shut_res = cur_shut(L, cur);
-		if(shut_res > 0) {
+		if (shut_res > 0) {
 			return shut_res;
 		}
 
-		/* return sucsess */
 		lua_pushboolean(L, 1);
 		return 1;
 	}
@@ -912,7 +914,10 @@ static int cur_gc (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
 
 	if(cur->closed == 0) {
-		cur_shut(L, cur);
+		int shut_res = cur_shut(L, cur);
+		if (shut_res > 0) {
+			return shut_res;
+		}
 	}
 
 	return 0;
@@ -1032,8 +1037,15 @@ static int env_close (lua_State *L) {
 	}
 
 	/* check the lock */
+/*
 	if(env->lock > 0)
 		return luasql_faildirect(L, "there are still open connections");
+*/
+	if(env->lock > 0) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "there are open connections");
+		return 2;
+	}
 
 	/* unregister */
 	lua_unregisterobj(L, env);
@@ -1049,7 +1061,7 @@ static int env_close (lua_State *L) {
 ** GCs an environment object
 */
 static int env_gc (lua_State *L) {
-	/* nothing to be done for the FB envronment */
+	/* nothing to be done for the FB environment */
 	return 0;
 }
 

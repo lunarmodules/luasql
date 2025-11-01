@@ -47,6 +47,12 @@ typedef union {
 	int     i;
 	char   *s;
 	double  d;
+#ifdef SQLT_DAT
+	OCIDate date;
+#endif
+#ifdef SQLT_TIMESTAMP
+	OCIDateTime *datetime;
+#endif
 } column_value;
 
 
@@ -209,6 +215,68 @@ static int alloc_column_buffer (lua_State *L, cur_data *cur, int i) {
 				SQLT_STR /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
 				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
 			break;
+#ifdef SQLT_DAT
+		case SQLT_DAT:
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define),
+				cur->errhp, (ub4)i, &(col->val.date), sizeof(col->val.date),
+				SQLT_ODT /*col->type*/, (dvoid *)&(col->null), (ub2 *)0,
+				(ub2 *)0, (ub4) OCI_DEFAULT), cur->errhp);
+			break;
+#endif
+#ifdef SQLT_TIMESTAMP
+		case SQLT_TIMESTAMP: {
+			env_data *env;
+			conn_data *conn;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = (conn_data *)lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = (env_data *)lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCIDescriptorAlloc (env->envhp,(dvoid*)&(col->val.datetime),
+				OCI_DTYPE_TIMESTAMP, 0, (void **)0), cur->errhp);
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define), cur->errhp,
+				(ub4)i, &(col->val.datetime), sizeof(col->val.datetime),
+				SQLT_TIMESTAMP, (dvoid *)&(col->null), (ub2 *)0, (ub2 *)0, (ub4)
+				OCI_DEFAULT), cur->errhp);
+			break;
+		}
+#endif
+#ifdef SQLT_TIMESTAMP_TZ
+		case SQLT_TIMESTAMP_TZ: {
+			env_data *env;
+			conn_data *conn;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = (conn_data *)lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = (env_data *)lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCIDescriptorAlloc (env->envhp,(dvoid*)&(col->val.datetime),
+				OCI_DTYPE_TIMESTAMP_TZ, 0, (void **)0), cur->errhp);
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define), cur->errhp,
+				(ub4)i, &(col->val.datetime), sizeof(col->val.datetime),
+				SQLT_TIMESTAMP_TZ, (dvoid *)&(col->null), (ub2 *)0, (ub2 *)0, (ub4)
+				OCI_DEFAULT), cur->errhp);
+			break;
+		}
+#endif
+#ifdef SQLT_TIMESTAMP_LTZ
+		case SQLT_TIMESTAMP_LTZ: {
+			env_data *env;
+			conn_data *conn;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = (conn_data *)lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = (env_data *)lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			ASSERT (L, OCIDescriptorAlloc (env->envhp,(dvoid*)&(col->val.datetime),
+				OCI_DTYPE_TIMESTAMP_LTZ, 0, (void **)0), cur->errhp);
+			ASSERT (L, OCIDefineByPos (cur->stmthp, &(col->define), cur->errhp,
+				(ub4)i, &(col->val.datetime), sizeof(col->val.datetime),
+				SQLT_TIMESTAMP_LTZ, (dvoid *)&(col->null), (ub2 *)0, (ub2 *)0,
+				(ub4) OCI_DEFAULT), cur->errhp);
+			break;
+		}
+#endif
 		case SQLT_NUM:
 		case SQLT_FLT:
 		case SQLT_INT:
@@ -262,6 +330,28 @@ static int free_column_buffers (lua_State *L, cur_data *cur, int i) {
 		case SQLT_AVC:
 			free(col->val.s);
 			break;
+#ifdef SQLT_DAT
+		case SQLT_DAT:
+			break;
+#endif
+#ifdef SQLT_TIMESTAMP
+		case SQLT_TIMESTAMP:
+			ASSERT (L, OCIDescriptorFree (col->val.datetime,
+				OCI_DTYPE_TIMESTAMP), cur->errhp);
+			break;
+#endif
+#ifdef SQLT_TIMESTAMP_TZ
+		case SQLT_TIMESTAMP_TZ:
+			ASSERT (L, OCIDescriptorFree (col->val.datetime,
+				OCI_DTYPE_TIMESTAMP_TZ), cur->errhp);
+			break;
+#endif
+#ifdef SQLT_TIMESTAMP_LTZ
+		case SQLT_TIMESTAMP_LTZ:
+			ASSERT (L, OCIDescriptorFree (col->val.datetime,
+				OCI_DTYPE_TIMESTAMP_LTZ), cur->errhp);
+			break;
+#endif
 		case SQLT_CLOB:
 			ASSERT (L, OCIDescriptorFree (col->val.s,
 				OCI_DTYPE_LOB), cur->errhp);
@@ -300,6 +390,39 @@ static int pushvalue (lua_State *L, cur_data *cur, int i) {
 		case SQLT_AVC:
 			lua_pushstring (L, (char *)(col->val.s));
 			break;
+#ifdef SQLT_DAT
+		case SQLT_DAT: {
+			text buf[65];
+			ub4 buflen = sizeof(buf);
+			ASSERT (L, OCIDateToText (cur->errhp, &(col->val.date), NULL, 0, NULL, 0,
+				&buflen, buf), cur->errhp);
+			lua_pushstring (L, (char *)(buf));
+			break;
+		}
+#endif
+#ifdef SQLT_TIMESTAMP_LTZ
+		case SQLT_TIMESTAMP_LTZ:
+#endif
+#ifdef SQLT_TIMESTAMP_TZ
+		case SQLT_TIMESTAMP_TZ:
+#endif
+#ifdef SQLT_TIMESTAMP
+		case SQLT_TIMESTAMP: {
+			conn_data *conn;
+			env_data *env;
+			lua_rawgeti (L, LUA_REGISTRYINDEX, cur->conn);
+			conn = lua_touserdata (L, -1);
+			lua_rawgeti (L, LUA_REGISTRYINDEX, conn->env);
+			env = lua_touserdata (L, -1);
+			lua_pop (L, 2);
+			text buf[65];
+			ub4 buflen = sizeof(buf);
+			ASSERT (L, OCIDateTimeToText (env->envhp, cur->errhp, col->val.datetime,
+				NULL, 0, 6, NULL, 0, &buflen, buf), cur->errhp);
+			lua_pushstring (L, (char *)(buf));
+			break;
+		}
+#endif
 		case SQLT_CLOB: {
 			ub4 lob_len;
 			conn_data *conn;
@@ -399,7 +522,7 @@ static int cur_close (lua_State *L) {
 	luaL_argcheck (L, cur != NULL, 1, LUASQL_PREFIX"cursor expected");
 	if (cur->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "cursor is already closed");
+		lua_pushstring (L, "Cursor is already closed");
 		return 2;
 	}
 
@@ -464,6 +587,20 @@ static char *getcolumntype (column_data *col) {
 		case SQLT_AFC:
 		case SQLT_AVC:
 			return "string";
+#ifdef SQLT_DAT
+		case SQLT_DAT:
+			return "date";
+#endif
+#ifdef SQLT_TIMESTAMP_LTZ
+		case SQLT_TIMESTAMP_LTZ:
+#endif
+#ifdef SQLT_TIMESTAMP_TZ
+		case SQLT_TIMESTAMP_TZ:
+#endif
+#ifdef SQLT_TIMESTAMP
+		case SQLT_TIMESTAMP:
+			return "timestamp";
+#endif
 		case SQLT_NUM:
 		case SQLT_FLT:
 		case SQLT_INT:
@@ -521,13 +658,13 @@ static int conn_close (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata (L, 1, LUASQL_CONNECTION_OCI8);
 	luaL_argcheck (L, conn != NULL, 1, LUASQL_PREFIX"connection expected");
 	if (conn->closed) {
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "Connection is already closed");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "Connection is already closed");
+		return 2;
 	}
 	if (conn->cur_counter > 0){
-		lua_pushboolean(L, 0);
-		lua_pushstring(L, "There are open cursors");
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open cursors");
 		return 2;
 	}
 
@@ -774,17 +911,17 @@ static int env_close (lua_State *L) {
 	luaL_argcheck (L, env != NULL, 1, LUASQL_PREFIX"environment expected");
 	if (env->closed) {
 		lua_pushboolean (L, 0);
-		lua_pushstring(L, "env is already closed");
+		lua_pushstring (L, "Environment is already closed");
 		return 2;
 	}
 	if (env->conn_counter > 0){
-		lua_pushboolean(L, 0);
-    	lua_pushstring(L, "There are open connections");
-    	return 2;
+		lua_pushboolean (L, 0);
+		lua_pushstring (L, "There are open connections");
+		return 2;
 	}
 
 	env->closed = 1;
-	/* desalocar: env->errhp e env->envhp */
+	/* release resources */
 	if (env->envhp)
 		OCIHandleFree ((dvoid *)env->envhp, OCI_HTYPE_ENV);
 	if (env->errhp)

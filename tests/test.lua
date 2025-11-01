@@ -83,7 +83,7 @@ end
 ---------------------------------------------------------------------
 function test_object (obj, objmethods)
 	-- checking object type.
-	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type")
+	assert2 (true, type(obj) == "userdata" or type(obj) == "table", "incorrect object type: expecting a table or a userdata, but got "..type(obj))
 
 	-- trying to get metatable.
 	assert2 ("LuaSQL: you're not allowed to get this metatable",
@@ -100,15 +100,18 @@ function test_object (obj, objmethods)
 end
 
 ENV_METHODS = { "close", "connect", }
-ENV_OK = function (obj)
+ENV_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, ENV_METHODS)
 end
 CONN_METHODS = { "close", "commit", "execute", "rollback", "setautocommit", }
-CONN_OK = function (obj)
+CONN_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, CONN_METHODS)
 end
 CUR_METHODS = { "close", "fetch", "getcolnames", "getcoltypes", }
-CUR_OK = function (obj)
+CUR_OK = function (obj, ...)
+	assert (obj, ...)
 	return test_object (obj, CUR_METHODS)
 end
 
@@ -130,6 +133,7 @@ function basic_test ()
 	assert2 (false, ENV:close())
 	-- Reopen the environment.
 	ENV = ENV_OK (luasql[driver] ())
+
 	-- Check connection object.
 	local conn, err = ENV:connect (datasource, username, password)
 	assert (conn, (err or '').." ("..datasource..")")
@@ -173,6 +177,7 @@ end
 function create_table ()
 	-- Check SQL statements.
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
+	CONN:execute"drop table t"
 	-- Create t.
 	local cmd = define_table(TOTAL_FIELDS)
 	assert2 (CREATE_TABLE_RETURN_VALUE, CONN:execute (cmd))
@@ -182,6 +187,14 @@ end
 -- Fetch 2 values.
 ---------------------------------------------------------------------
 function fetch2 ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+
+	assert (CONN:close(), "couldn't close the connection after creating a table!")
+	CONN = CONN_OK (ENV:connect (datasource, username, password))
+
 	-- insert a record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
 	-- retrieve data.
@@ -210,6 +223,13 @@ function fetch2 ()
 	assert2 (false, cur:close())
 	-- remove records.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('b', 'd')"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+
+	assert (CONN:close(), "couldn't close the connection after creating a table!")
+	CONN = CONN_OK (ENV:connect (datasource, username, password))
 end
 
 ---------------------------------------------------------------------
@@ -217,6 +237,10 @@ end
 -- indexing.
 ---------------------------------------------------------------------
 function fetch_new_table ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- insert elements.
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('a', 'b', 'c', 'd')"))
 	assert2 (1, CONN:execute ("insert into t (f1, f2, f3, f4) values ('f', 'g', 'h', 'i')"))
@@ -233,7 +257,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	row, err = cur:fetch(fetch_table())
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -250,7 +274,7 @@ function fetch_new_table ()
 	io.write ("reusing a table...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch(fetch_table())
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
 	assert2 ('c', row[3])
@@ -260,7 +284,7 @@ function fetch_new_table ()
 	assert2 (nil, row.f3)
 	assert2 (nil, row.f4)
 	row, err = cur:fetch (row)
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -277,7 +301,7 @@ function fetch_new_table ()
 	io.write ("with alpha keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch (fetch_table(), "a")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 (nil, row[1])
 	assert2 (nil, row[2])
 	assert2 (nil, row[3])
@@ -304,7 +328,7 @@ function fetch_new_table ()
 	io.write ("with both keys...")
 	cur = CUR_OK (CONN:execute ("select f1, f2, f3, f4 from t order by f1"))
 	local row, err = cur:fetch (fetch_table(), "an")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('a', row[1])
 	assert2 ('b', row[2])
 	assert2 ('c', row[3])
@@ -314,7 +338,7 @@ function fetch_new_table ()
 	assert2 ('c', row.f3)
 	assert2 ('d', row.f4)
 	row, err = cur:fetch (row, "an")
-	assert (type(row), "table", err)
+	assert2 (type(row), "table", err)
 	assert2 ('f', row[1])
 	assert2 ('g', row[2])
 	assert2 ('h', row[3])
@@ -328,12 +352,20 @@ function fetch_new_table ()
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (2, CONN:execute ("delete from t where f1 in ('a', 'f')"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 end
 
 ---------------------------------------------------------------------
 -- Fetch many values
 ---------------------------------------------------------------------
 function fetch_many ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- insert values.
 	local fields, values = "f1", "'v1'"
 	for i = 2, TOTAL_FIELDS do
@@ -396,11 +428,54 @@ function fetch_many ()
 	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'v1'"))
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+end
+
+---------------------------------------------------------------------
+---------------------------------------------------------------------
+function unicode_values ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+	-- insert values.
+	local cmd = "insert into t (f1, f2) values ('1', 'Áêìõü')"
+	assert2 (1, CONN:execute (cmd))
+	-- fetch values
+	local cur = CUR_OK (CONN:execute ("select f1, f2 from t where f1 = '1'"))
+	local row = { cur:fetch () }
+	assert2 ("string", type(row[1]), "error while trying to fetch values")
+	assert2 ("1", row[1], "wrong value: expecting '1', got '"..tostring (row[1]).."'")
+	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[1]).."'")
+	assert2 (nil, cur:fetch (row))
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
+	-- fetch row based on Unicode value
+	local cur = CUR_OK (CONN:execute ("select f1, f2 from t where f2 = 'Áêìõü'"))
+	local row = { cur:fetch () }
+	assert2 ("string", type(row[1]), "error while trying to fetch values")
+	assert2 ("1", row[1], "wrong value: expecting '1', got '"..tostring (row[1]).."'")
+	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[1]).."'")
+	assert2 (nil, cur:fetch (row))
+	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
+	-- clean the table.
+	assert2 (1, CONN:execute ("delete from t where f1 = '1'"))
+
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function rollback ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
 	-- begin transaction
 	assert2 (true, CONN:setautocommit (false), "couldn't disable autocommit")
 	-- insert a record and commit the operation.
@@ -478,7 +553,7 @@ function column_info ()
 		assert2 ("f"..i, string.lower(names[i]), "incorrect column names table")
 		local type_i = types[i]
 		type_i = string.lower(type_i)
-		assert (type_i == QUERYING_STRING_TYPE_NAME, "incorrect column types table")
+		assert2 (QUERYING_STRING_TYPE_NAME, type_i, "incorrect column types table")
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
@@ -493,6 +568,9 @@ function column_info ()
 	assert2 (false, cur:close())
 	-- clean the table.
 	assert2 (1, CONN:execute ("delete from t where f1 = 'a'"))
+
+	assert (CONN:close(), "couldn't close the connection after deleting rows from the table")
+	CONN = ENV:connect (datasource, username, password)
 end
 
 ---------------------------------------------------------------------
@@ -506,16 +584,20 @@ function escape ()
 	local s1 = string.rep("'", n)
 	local s2 = CONN:escape(s1)
 	local s3 = s1:gsub ("'", "\\'")
-	assert (s1:len() == n)
-	assert (s2:len() == 2*n)
+	assert2 (n, s1:len(), "incorrect escaping of '"..s1.."': expected "..n.." bytes, but got "..s1:len())
+	assert2 (2*n, s2:len(), "incerrect escaping of '"..s2.."': expected "..(2*n).." bytes, but got "..s2:len())
 	assert (s2 == s1..s1 or s2 == s3)
 
 	io.write (" escape")
 end
 
 ---------------------------------------------------------------------
+-- Check closing of various objects.
 ---------------------------------------------------------------------
 function check_close()
+	local cur0 = CUR_OK(CONN:execute"select count(*) from t")
+	assert2 (0, tonumber(cur0:fetch()))
+	cur0:close()
 	-- an object with references to it can't be closed
 	local cmd = "select * from t"
 	local cur = CUR_OK(CONN:execute (cmd))
@@ -539,36 +621,80 @@ function check_close()
 	collectgarbage ()
 	assert2(nil, a.CONN, "connection not collected")
 
-	-- check cursor integrity after trying to close a connection
+	-- check cursor integrity after trying to close its connection
 	local conn = CONN_OK (ENV:connect (datasource, username, password))
 	assert2 (1, conn:execute"insert into t (f1) values (1)", "could not insert a new record")
 	local cur = CUR_OK (conn:execute (cmd))
-	local ok, err = pcall (conn.close, conn)
+	local ok, err, msg = pcall (conn.close, conn)
+	assert2 (true, ok, "couldn´t try to close the connection")
+	-- err could be true if the driver DOESN'T care about closing a connection
+	--	that has open cursors
+	-- err could be false if the driver DOES care about closing a connection
+	--	that has open cursors
 	CUR_OK (cur)
 	assert (cur:fetch(), "corrupted cursor")
 	cur:close ()
 	conn:close ()
+	-- The following check is failing in Firebird
+    --local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+    --assert2 (1, tonumber (cur0:fetch()))
+	--cur0:close()
+
+	-- check connection integrity after trying to close an environment
+	local conn = CONN_OK (ENV:connect (datasource, username, password))
+	local closed = ENV:close()
+	--assert2 (true, ENV:close(), "couldn't close the environment!")
+	if closed then
+		-- Some drivers can close the environment with open connections
+		CONN_OK (conn)
+		local cmd = "select * from t"
+		local cur = CUR_OK(CONN:execute (cmd))
+		assert2 ('1', cur:fetch(), "couldn't retrieve a row from `t`")
+		assert2 (true, cur:close(), "couldn't close the cursor!")
+		local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+		assert2 (1, tonumber (cur0:fetch()))
+		cur0:close()
+
+		assert2 (true, conn:close(), "couldn't close the connection!")
+		ENV = ENV_OK (luasql[driver] ())
+	else
+		-- Some drivers cannot close the environment with open connections
+		conn:close()
+		ENV:close()
+	end
 end
 
 ---------------------------------------------------------------------
+-- Check support for to-be-closed variables.
+-- Since this feature depends on a syntax construction not available
+-- in versions prior to 5.4, this check should be written in another
+-- file (or in a string).
 ---------------------------------------------------------------------
 function to_be_closed_support ()
-       assert (loadfile"to_be_closed_support.lua")()
+	assert (loadfile"to_be_closed_support.lua")()
 end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function drop_table ()
+	-- check number of lines
+	-- The following check is failing with Firebird
+	--local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	--assert2 (1, tonumber (cur0:fetch()))
+	--assert2 (true, cur0:close(), "couldn't close the cursor")
+
 	assert2 (true, CONN:setautocommit(true), "couldn't enable autocommit")
-	-- Postgres retorns 0, ODBC retorns -1, sqlite returns 1
+	-- Postgres and SQLite3 returns 0, ODBC retorns -1, others returns 1
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute ("drop table t"))
+	-- Dropping an already dropped table should return 0
+	assert2 (nil, CONN:execute ("drop table t"))
 end
 
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 function close_conn ()
-	assert (true, CONN:close())
-	assert (true, ENV:close())
+	assert2 (true, CONN:close())
+	assert2 (true, ENV:close())
 end
 
 ---------------------------------------------------------------------
@@ -583,9 +709,19 @@ end
 EXTENSIONS = {
 }
 function extensions_test ()
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	cur0:close()
+
 	for i, f in ipairs (EXTENSIONS) do
 		f ()
 	end
+
+	-- check number of lines
+	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
+	assert2 (0, tonumber (cur0:fetch()))
+	cur0:close()
 end
 
 ---------------------------------------------------------------------
@@ -667,16 +803,12 @@ tests = {
 	{ "fetch two values", fetch2 },
 	{ "fetch new table", fetch_new_table },
 	{ "fetch many", fetch_many },
+	{ "unicode values", unicode_values },
 	{ "rollback", rollback },
 	{ "get column information", column_info },
 	{ "extensions", extensions_test },
-	-- The following test doesn't pass with DuckDB.
-	-- I suspect this happens because, although the cursor is closed with conn:close(),
-	-- the environment remains open, and DuckDB doesn't allow multiple simultaneous
-	-- connections like SQLite.
-	-- { "close objects", check_close },
-
-	-- This sometimes segmentation faults
+	{ "close objects", check_close },
+-- to-be-closed variables could be inserted here
 	{ "drop table", drop_table },
 	{ "close connection", close_conn },
 	{ "finalization", finalization },
@@ -691,8 +823,9 @@ if string.find(_VERSION, " 5.0") then
 	end
 else
 	luasql = require ("luasql."..driver)
-	if string.find(_VERSION, " 5.4") then
-		table.insert (tests, 10, { "to-be-closed support", to_be_closed_support })
+	if string.find(_VERSION, " 5.4")
+		or string.find(_VERSION, " 5.5") then
+		table.insert (tests, 11, { "to-be-closed support", to_be_closed_support })
 	end
 end
 assert (luasql, "Could not load driver: no luasql table.")
