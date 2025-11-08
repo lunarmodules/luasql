@@ -188,12 +188,15 @@ end
 ---------------------------------------------------------------------
 function fetch2 ()
 	-- check number of lines
+	print"a"
 	local cur0 = CUR_OK (CONN:execute ("select count(*) from t"))
 	assert2 (0, tonumber (cur0:fetch()))
 	assert (cur0:close(), "couldn't close the cursor after counting rows from t")
+	print"b"
 
 	assert (CONN:close(), "couldn't close the connection after creating a table!")
 	CONN = CONN_OK (ENV:connect (datasource, username, password))
+	print"c"
 
 	-- insert a record.
 	assert2 (1, CONN:execute ("insert into t (f1, f2) values ('b', 'c')"))
@@ -485,6 +488,7 @@ function rollback ()
 	assert2 (true, cur:close(), "couldn't close cursor")
 	assert2 (false, cur:close())
 	assert2 (true, CONN:commit(), "couldn't commit transaction")
+	print"here"
 	-- insert a record and roll back the operation.
 	assert2 (1, CONN:execute ("insert into t (f1) values ('b')"))
 	local cur = CUR_OK (CONN:execute ("select count(*) from t"))

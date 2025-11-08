@@ -263,6 +263,17 @@ static int create_cursor(lua_State *L, int conn, duckdb_result *result) {
     return 1;
 }
 
+static void sql_commit(conn_data *conn) {
+    duckdb_query(conn->con, "COMMIT", NULL);
+}
+
+
+static void sql_begin(conn_data *conn) {
+    duckdb_query(conn->con, "BEGIN", NULL);
+}
+
+
+
 /*
 ** Connection object collector function
 */
@@ -273,7 +284,6 @@ static int conn_gc(lua_State *L) {
         conn->closed = 1;
         luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
         duckdb_disconnect(&conn->con);
-        duckdb_close(&conn->db);
     }
     return 0;
 }
@@ -291,7 +301,9 @@ static int conn_close(lua_State *L) {
         lua_pushboolean(L, 0);
         return 1;
     }
-    conn_gc(L);
+    conn->closed = 1;
+    luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+    duckdb_disconnect(&conn->con);
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -328,22 +340,14 @@ static int conn_execute(lua_State *L) {
 */
 static int conn_commit(lua_State *L)
 {
-  char *errmsg;
   conn_data *conn = getconnection(L);
-  duckdb_result res;
-  const char *sql = "COMMIT";
-
-  if (conn->auto_commit == 0) sql = "COMMIT;BEGIN";
-  if (duckdb_query(conn->con, sql, &res) != DuckDBSuccess)
-    {
-      lua_pushnil(L);
-      lua_pushliteral(L, LUASQL_PREFIX);
-      lua_pushstring(L, errmsg);
-      lua_concat(L, 2);
-      return 2;
-    }
-  lua_pushboolean(L, 1);
-  return 1;
+	sql_commit(conn);
+	if (conn->auto_commit == 0) {
+		sql_begin(conn);
+		lua_pushboolean (L, 1);
+	} else
+		lua_pushboolean (L, 0);
+	return 1;
 }
 
 
@@ -465,15 +469,24 @@ static int env_gc(lua_State *L) {
 ** already closed.
 ** Throws an error if the argument is not an environment.
 */
-static int env_close(lua_State *L) {
+static int env_close (lua_State *L) {
     env_data *env = (env_data *)luaL_checkudata(L, 1, LUASQL_ENVIRONMENT_DUCKDB);
     luaL_argcheck(L, env != NULL, 1, LUASQL_PREFIX "environment expected");
     if (env->closed) {
         lua_pushboolean(L, 0);
-        return 1;
+		    lua_pushstring (L, "Environment is already closed");
+        return 2;
     }
-    env_gc(L);
-    lua_pushboolean(L, 1);
+
+    // conn_data *con = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_DUCKDB);
+    // luaL_argcheck(L, con != NULL, 1, LUASQL_PREFIX "connection expected");
+    // if (con->con != NULL) {
+    //     lua_pushboolean(L, 0);
+		  //   lua_pushstring (L, "Cannot close environment with open connections");
+    //     return 2;
+    // }
+    env->closed = 1;
+    lua_pushboolean (L, 1);
     return 1;
 }
 
@@ -538,6 +551,7 @@ LUASQL_API int luaopen_luasql_duckdb(lua_State *L) {
     create_metatables(L);
     lua_newtable(L);
     luaL_setfuncs(L, driver, 0);
+    
     luasql_set_info(L);
     return 1;
 }

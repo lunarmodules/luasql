@@ -4,7 +4,7 @@
 PREFIX ?= /usr
 
 # Lua version and dirs
-LUA_SYS_VER ?= 5.2
+LUA_SYS_VER ?= 5.3
 LUA_LIBDIR ?= $(PREFIX)/lib/lua/$(LUA_SYS_VER)
 LUA_DIR ?= $(PREFIX)/share/lua/$(LUA_SYS_VER)
 LUA_INC ?= $(PREFIX)/include/lua$(LUA_SYS_VER)
@@ -44,6 +44,9 @@ DRIVER_INCS_odbc ?= -DUNIXODBC -I/usr/local/include
 # - Firebird
 DRIVER_LIBS_firebird ?= -L/usr/local/firebird -lfbclient
 DRIVER_INCS_firebird ?=
+# - Firebird
+DRIVER_LIBS_duckdb ?= -L/usr/lib/ -lduckdb
+DRIVER_INCS_duckdb ?= -I/usr/include/
 
 # general compilation parameters
 WARN= -fPIC $(OPTFLAGS) -Wmissing-prototypes -Wmissing-declarations -ansi -pedantic
