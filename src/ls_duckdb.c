@@ -13,6 +13,7 @@
 
 typedef struct {
     short closed;
+    int   open_conns;  /* number of open connections created from this env */
 } env_data;
 
 typedef struct {
@@ -282,7 +283,14 @@ static int conn_gc(lua_State *L) {
     if (conn != NULL && !(conn->closed)) {
         /* Nullify structure fields. */
         conn->closed = 1;
-        luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+         if (conn->env != LUA_NOREF) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, conn->env);
+            env_data *e = (env_data *)luaL_checkudata(L, -1, LUASQL_ENVIRONMENT_DUCKDB);
+            if (e && e->open_conns > 0) e->open_conns -= 1;
+            lua_pop(L, 1);
+            luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+            conn->env = LUA_NOREF;
+        }
         duckdb_disconnect(&conn->con);
     }
     return 0;
@@ -298,11 +306,20 @@ static int conn_close(lua_State *L) {
     conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_DUCKDB);
     luaL_argcheck(L, conn != NULL, 1, LUASQL_PREFIX "connection expected");
     if (conn->closed) {
-        lua_pushboolean(L, 0);
-        return 1;
+        lua_pushboolean (L, 0);
+        lua_pushstring(L, "Connection is already closed");
+        return 2;
     }
     conn->closed = 1;
-    luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+    if (conn->env != LUA_NOREF) {
+        /* load env, decrement counter, then unref */
+        lua_rawgeti(L, LUA_REGISTRYINDEX, conn->env);
+        env_data *e = (env_data *)luaL_checkudata(L, -1, LUASQL_ENVIRONMENT_DUCKDB);
+        if (e && e->open_conns > 0) e->open_conns -= 1;
+        lua_pop(L, 1); /* pop env */
+        luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+        conn->env = LUA_NOREF;
+    }
     duckdb_disconnect(&conn->con);
     lua_pushboolean(L, 1);
     return 1;
@@ -403,8 +420,10 @@ static int create_connection(lua_State *L, int env, duckdb_connection *const con
     conn->env = LUA_NOREF;
     conn->auto_commit = 1;
     conn->con = con;
-    lua_pushvalue(L, env);
-    conn->env = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, env);                       /* push env userdata */
+    env_data *e = (env_data *)luaL_checkudata(L, -1, LUASQL_ENVIRONMENT_DUCKDB);
+    e->open_conns += 1;
+    conn->env = luaL_ref(L, LUA_REGISTRYINDEX);  /* store ref, pops env */
     return 1;
 }
 
@@ -456,14 +475,12 @@ static int env_close (lua_State *L) {
 		    lua_pushstring (L, "Environment is already closed");
         return 2;
     }
+    if (env->open_conns > 0) {
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, "Cannot close environment with open connections");
+        return 2;
+    }
 
-    // conn_data *con = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_DUCKDB);
-    // luaL_argcheck(L, con != NULL, 1, LUASQL_PREFIX "connection expected");
-    // if (con->con != NULL) {
-    //     lua_pushboolean(L, 0);
-		  //   lua_pushstring (L, "Cannot close environment with open connections");
-    //     return 2;
-    // }
     env->closed = 1;
     lua_pushboolean (L, 1);
     return 1;
@@ -512,6 +529,7 @@ static void create_metatables(lua_State *L) {
 static int create_environment(lua_State *L) {
     env_data *env = (env_data *)LUASQL_NEWUD(L, sizeof(env_data));
     luasql_setmeta(L, LUASQL_ENVIRONMENT_DUCKDB);
+    env->open_conns = 0;
 
     /* fill in structure */
     env->closed = 0;
