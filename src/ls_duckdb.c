@@ -415,34 +415,13 @@ static int env_connect(lua_State *L) {
     const char *sourcename = luaL_checkstring(L, 2);
     duckdb_database db;
     duckdb_connection con;
-    duckdb_config conf;
-    duckdb_create_config(&conf);
-    // Changes luasql API so the 7th argument is a config table
-    // Ex: dado.connect("db", nil, nil, "duckdb", nil, nil, {access_mode = "READ_ONLY", memory_limit = '69GB'})
-    // Used 7th argument because as far as I know ls_postgres.c uses 5th and 6th:
-	  //  const char *pghost = luaL_optstring(L, 5, NULL);
-    // 	const char *pgport = luaL_optstring(L, 6, NULL);
-    if (lua_gettop(L) >= 7 && !lua_isnil(L, 7)) {
-        luaL_checktype(L, 7, LUA_TTABLE);
-        lua_pushnil(L); // First key
-        while (lua_next(L, 7) != 0) {
-            // Get the key and value from the table
-            const char *key = lua_tostring(L, -2);
-            const char *val = lua_tostring(L, -1);
-
-            // Set the configuration option
-            duckdb_set_config(conf, key, val);
-
-            lua_pop(L, 1); // Remove value, keep key for the next iteration
-        }
-    }
 
     char * error = NULL;
 
     getenvironment(L);	/* validate environment */
 
     // Needs to pass in db config in third parameter here
-    if (duckdb_open_ext(sourcename, &db, conf, &error) != DuckDBSuccess) {
+    if (duckdb_open_ext(sourcename, &db, NULL, &error) != DuckDBSuccess) {
         return luasql_failmsg(L, "error connecting to database. DuckDB: ", error);
     }
     if (duckdb_connect(db, &con) != DuckDBSuccess) {
