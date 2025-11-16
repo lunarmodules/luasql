@@ -1,0 +1,2 @@
+QUERYING_STRING_TYPE_NAME = "varchar"
+-- DEFAULT_TEST_DATABASE = ":memory:"

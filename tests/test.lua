@@ -145,7 +145,7 @@ function basic_test ()
 	-- it is ok to close a closed object, but false is returned instead of true.
 	assert2 (false, conn:close())
 	-- Check error situation.
-	checkUnknownDatabase(ENV)	
+	checkUnknownDatabase(ENV)
 
 	-- force garbage collection
 	local a = {}
