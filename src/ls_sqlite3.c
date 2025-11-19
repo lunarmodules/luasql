@@ -458,14 +458,13 @@ static int raw_readparams_args(lua_State *L, sqlite3_stmt *vm, int arg, int ltop
 */
 static int raw_readparams_table(lua_State *L, sqlite3_stmt *vm, int arg)
 {
-  int param_nr, rc = 0, tt;
+  int param_nr, rc = 0;
 
   lua_pushnil(L);
 
   while (lua_next(L, arg)) {		// [arg]=table, [-2]=key, [-1]=val
-    tt = lua_type(L, -2);
 #if defined(lua_isinteger)
-    if (tt == LUA_TNUMBER && lua_isinteger(L, -2)) {
+    if (lua_type(L, -2) == LUA_TNUMBER && lua_isinteger(L, -2)) {
       param_nr = lua_tointeger(L, -2);
     } else {
 #endif
