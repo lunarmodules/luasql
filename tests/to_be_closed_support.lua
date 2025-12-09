@@ -10,5 +10,5 @@ CUR_OK (cursor)
 local connection <close> = ENV:connect (datasource, username, password)
 CONN_OK (connection)
 
-local environment <close> = luasql[driver] () 
+local environment <close> = luasql[driver] ()
 ENV_OK (environment)

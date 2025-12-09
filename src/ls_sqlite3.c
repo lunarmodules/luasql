@@ -165,7 +165,7 @@ static int cur_fetch (lua_State *L) {
 
     if (!cur->first_fetch) {
       res = sqlite3_step(vm);
-  
+
       if (res == SQLITE_DONE || res != SQLITE_ROW)
           return finalize(L, cur);
    } else {
@@ -351,16 +351,16 @@ static int conn_close(lua_State *L)
     lua_pushstring(L, "Connection is already closed");
     return 2;
   }
-  
+
   if (conn->cur_counter > 0)
   {
     lua_pushboolean(L, 0);
     lua_pushstring(L, "There are open cursors");
     return 2;
   }
-  
+
   conn->closed = 1;
-  
+
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -746,7 +746,7 @@ static int env_close (lua_State *L)
     lua_pushstring(L, "env is already closed");
 		return 2;
   }
-  
+
   env->closed = 1;
 
   lua_pushboolean(L, 1);

@@ -19,7 +19,7 @@ function create_table ()
 end
 
 function drop_table ()
-	-- Firebird prefers to keep DDL stuff (CREATE TABLE, etc.) 
+	-- Firebird prefers to keep DDL stuff (CREATE TABLE, etc.)
 	-- separate. So we need a new transaction i.e. connection
 	-- to work in
 	assert(CONN:close ())
