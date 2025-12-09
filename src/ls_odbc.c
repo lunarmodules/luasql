@@ -189,7 +189,7 @@ static int pass(lua_State *L) {
 
 /*
 ** Fails with error message from ODBC
-** Inputs: 
+** Inputs:
 **   type: type of handle used in operation
 **   handle: handle used in operation
 */
@@ -205,13 +205,13 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
     luaL_buffinit(L, &b);
     i = 1;
     while (1) {
-        ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg, 
+        ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg,
                 sizeof(Msg), &MsgSize);
         if (ret == SQL_NO_DATA) break;
         luaL_addlstring(&b, (char*)Msg, MsgSize);
         luaL_addchar(&b, '\n');
         i++;
-    } 
+    }
     luaL_pushresult(&b);
     return 2;
 }
@@ -293,12 +293,12 @@ static int cur_shut(lua_State *L, cur_data *cur)
 */
 static const char *sqltypetolua (const SQLSMALLINT type) {
     switch (type) {
-        case SQL_BIGINT: case SQL_TINYINT: 
-        case SQL_INTEGER: case SQL_SMALLINT: 
+        case SQL_BIGINT: case SQL_TINYINT:
+        case SQL_INTEGER: case SQL_SMALLINT:
 #if LUA_VERSION_NUM>=503
 			return "integer";
 #endif
-		case SQL_NUMERIC: case SQL_DECIMAL: 
+		case SQL_NUMERIC: case SQL_DECIMAL:
         case SQL_FLOAT: case SQL_REAL: case SQL_DOUBLE:
             return "number";
         case SQL_BINARY: case SQL_VARBINARY: case SQL_LONGVARBINARY:
@@ -320,7 +320,7 @@ static const char *sqltypetolua (const SQLSMALLINT type) {
 ** Returns:
 **   0 if successful, non-zero otherwise;
 */
-static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt, 
+static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
         SQLUSMALLINT i) {
     const char *tname;
     char type;
@@ -336,7 +336,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
     /* deal with data according to type */
     switch (type) {
         /* nUmber */
-        case 'u': { 
+        case 'u': {
 			SQLDOUBLE num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_DOUBLE, &num, 0, &got);
@@ -364,7 +364,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 		}
 #endif
 		/* bOol */
-        case 'o': { 
+        case 'o': {
 			SQLCHAR b;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_BIT, &b, 0, &got);
@@ -377,9 +377,9 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 			return 0;
 		}
         /* sTring */
-        case 't': 
+        case 't':
         /* bInary */
-        case 'i': { 
+        case 'i': {
 			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
 			SQLLEN got;
 			char *buffer;
@@ -401,7 +401,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 				}
 				luaL_addsize(&b, got);
 				buffer = luaL_prepbuffer(&b);
-				rc = SQLGetData(hstmt, i, stype, buffer, 
+				rc = SQLGetData(hstmt, i, stype, buffer,
 					LUAL_BUFFERSIZE, &got);
 			}
 			/* concat last chunk */
@@ -1000,7 +1000,7 @@ static int conn_execute (lua_State *L)
 }
 
 /*
-** Rolls back a transaction. 
+** Rolls back a transaction.
 */
 static int conn_commit (lua_State *L) {
 	conn_data *conn = (conn_data *) getconnection (L, 1);
@@ -1012,7 +1012,7 @@ static int conn_commit (lua_State *L) {
 }
 
 /*
-** Rollback the current transaction. 
+** Rollback the current transaction.
 */
 static int conn_rollback (lua_State *L) {
 	conn_data *conn = (conn_data *) getconnection (L, 1);
@@ -1094,7 +1094,7 @@ static int env_connect (lua_State *L) {
 		return luasql_faildirect (L, "connection allocation error.");
 
 	/* tries to connect handle */
-	ret = SQLConnect (hdbc, sourcename, SQL_NTS, 
+	ret = SQLConnect (hdbc, sourcename, SQL_NTS,
 		username, SQL_NTS, password, SQL_NTS);
 	if (error(ret)) {
 		ret = fail(L, hDBC, hdbc);
@@ -1246,4 +1246,4 @@ LUASQL_API int luaopen_luasql_odbc (lua_State *L) {
 	luaL_setfuncs (L, driver, 0);
 	luasql_set_info (L);
 	return 1;
-} 
+}

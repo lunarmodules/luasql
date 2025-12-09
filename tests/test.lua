@@ -556,7 +556,7 @@ function column_info ()
 	end
 	-- check if the tables are being reused.
 	local n2, t2 = cur:getcolnames(), cur:getcoltypes()
-	if CHECK_GETCOL_INFO_TABLES then 
+	if CHECK_GETCOL_INFO_TABLES then
 		assert2 (names, n2, "getcolnames is rebuilding the table")
 		assert2 (types, t2, "getcoltypes is rebuilding the table")
 	else

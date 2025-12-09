@@ -232,7 +232,7 @@ static int cur_getcoltypes(lua_State *L) {
 */
 /* static int create_cursor(lua_State *L, int conn, sqlite_vm *sql_vm,
 	int numcols, const char **row, const char **col_info)*/
-static int create_cursor(lua_State *L, int o, conn_data *conn, 
+static int create_cursor(lua_State *L, int o, conn_data *conn,
 		sqlite_vm *sql_vm, int numcols, const char **col_info)
 {
 	int i;
@@ -526,7 +526,7 @@ static int conn_escape(lua_State *L) {
 	char *escaped = sqlite_mprintf("%q", from);
 	if (escaped == NULL) {
 		lua_pushnil(L);
-	} 
+	}
 	else {
 		lua_pushstring(L, escaped);
 		sqlite_freemem(escaped);
