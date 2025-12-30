@@ -360,6 +360,8 @@ static int conn_close(lua_State *L)
   }
 
   conn->closed = 1;
+  luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+  sqlite3_close(conn->sql_conn);
 
   lua_pushboolean(L, 1);
   return 1;
