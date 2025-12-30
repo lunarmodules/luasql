@@ -587,7 +587,7 @@ static int conn_close (lua_State *L) {
 static int conn_gc (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 
-	if(conn->closed == 0) {
+	if (conn != NULL && !(conn->closed)) {
 		if(conn->autocommit != 0)
 			isc_commit_transaction(conn->env->status_vector, &conn->transaction);
 		else
@@ -598,11 +598,8 @@ static int conn_gc (lua_State *L) {
 		conn->closed = 1;
 		--conn->env->lock;
 
-		/* check environment can be GC'd */
-		if(conn->env->lock == 0)
-			lua_unregisterobj(L, conn->env);
+		lua_unregisterobj(L, conn->env);
 	}
-
 	return 0;
 }
 
@@ -911,9 +908,7 @@ static int cur_close (lua_State *L) {
 */
 static int cur_gc (lua_State *L) {
 	cur_data *cur = (cur_data *)luaL_checkudata(L,1,LUASQL_CURSOR_FIREBIRD);
-	luaL_argcheck (L, cur != NULL, 1, "cursor expected");
-
-	if(cur->closed == 0) {
+	if (cur != NULL && !(cur->closed)) {
 		int shut_res = cur_shut(L, cur);
 		if (shut_res > 0) {
 			return shut_res;
@@ -1030,7 +1025,7 @@ static int env_close (lua_State *L) {
 	luaL_argcheck (L, env != NULL, 1, "environment expected");
 	
 	/* already closed? */
-	if(env->closed) {
+	if (env->closed) {
 		lua_pushboolean(L, 0);
 		lua_pushstring(L, "env is already closed");
 		return 2;
@@ -1061,7 +1056,11 @@ static int env_close (lua_State *L) {
 ** GCs an environment object
 */
 static int env_gc (lua_State *L) {
-	/* nothing to be done for the FB environment */
+	env_data *env = (env_data *)luaL_checkudata (L, 1, LUASQL_ENVIRONMENT_FIREBIRD);
+	if (env != NULL && !(env->closed)) {
+		lua_unregisterobj(L, env);
+		env->closed = 1;
+	}
 	return 0;
 }
 
