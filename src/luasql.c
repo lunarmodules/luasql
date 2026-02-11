@@ -128,6 +128,11 @@ LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
+#if ! defined(LUASQL_VERSION_NUMBER)
+#warning "LUASQL_VERSION_NUMBER is not defined, assuming value of 2.7.1!"
+	lua_pushliteral (L, "LuaSQL 2.7.1 (for "LUA_VERSION")");
+#else
 	lua_pushliteral (L, "LuaSQL "LUASQL_VERSION_NUMBER" (for "LUA_VERSION")");
+#endif
 	lua_settable (L, -3);
 }

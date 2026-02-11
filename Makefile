@@ -1,3 +1,4 @@
+# Duplicate this value in the last bit of ./src/luasql.c
 V= 2.7.1
 CONFIG= ./config
 
