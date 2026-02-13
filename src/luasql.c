@@ -122,7 +122,7 @@ LUASQL_API void luasql_setmeta (lua_State *L, const char *name) {
 */
 LUASQL_API void luasql_set_info (lua_State *L) {
 	lua_pushliteral (L, "_COPYRIGHT");
-	lua_pushliteral (L, "Copyright (C) 2003-2025 Kepler Project");
+	lua_pushliteral (L, "Copyright (C) 2003-2026 Lunar Modules Project");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "LuaSQL is a simple interface from Lua to a DBMS");
