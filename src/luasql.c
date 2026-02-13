@@ -1,5 +1,4 @@
 /*
-** $Id: luasql.c,v 1.28 2009/02/11 12:08:50 tomas Exp $
 ** See Copyright Notice in license.html
 */
 
