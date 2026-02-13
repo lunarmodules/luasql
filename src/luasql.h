@@ -42,6 +42,7 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
 #endif
 
 /* Driver initialization functions prototypes */
+LUASQL_API int luaopen_luasql_duckdb (lua_State *L);
 LUASQL_API int luaopen_luasql_firebird (lua_State *L);
 LUASQL_API int luaopen_luasql_mysql (lua_State *L);
 LUASQL_API int luaopen_luasql_oci8 (lua_State *L);

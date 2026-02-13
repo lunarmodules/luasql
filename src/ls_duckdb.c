@@ -411,7 +411,7 @@ static int conn_setautocommit(lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection(lua_State *L, int env, duckdb_connection *const con) {
+static int create_connection(lua_State *L, int env, duckdb_connection const con) {
     conn_data *conn = (conn_data *)LUASQL_NEWUD(L, sizeof(conn_data));
     luasql_setmeta(L, LUASQL_CONNECTION_DUCKDB);
 
