@@ -1,0 +1,233 @@
+name: Test SQLite3
+
+on: [push, pull_request]
+
+jobs:
+  test-unix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lua-version: ["5.1", "5.2", "5.3", "5.4", "5.5", "luajit", "openresty"]
+        os: ["ubuntu-latest", "macos-latest"]
+
+    env:
+      SQLITE3_DOWNLOAD_URL: https://sqlite.org/2026/sqlite-autoconf-3510200.tar.gz
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+      with:
+        lua-version: ${{ matrix.lua-version }}
+
+    - name: Show Lua and LuaRocks version
+      run: |
+        lua -v
+        luarocks --version
+
+    - name: Set environment variable to hold SQLite3 tarball details
+      run: |
+        archive=$(basename ${{ env.SQLITE3_DOWNLOAD_URL }})
+        tarball_name=${archive%%.*}
+
+        echo "_SQLITE3_ARCHIVE=${archive}" >> ${{ github.env }}
+        echo "_SQLITE3_TARBALL_NAME=${tarball_name}" >> ${{ github.env }}
+
+    # Restore / save SQLite3 tarball from cache
+    # to avoid denial of service
+    # on their servers
+    - name: Restore SQLite3 tarball
+      id: sqlite3-tarball
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ${{ env._SQLITE3_ARCHIVE }}
+        key: ${{ env._SQLITE3_ARCHIVE }}
+        enableCrossOsArchive: true
+
+    - name: Download SQLite3
+      if: ${{ steps.sqlite3-tarball.outputs.cache-hit != 'true' }}
+      run: curl -L -O "${{ env.SQLITE3_DOWNLOAD_URL }}"
+
+    - name: Save SQLite3 tarball
+      if: ${{ steps.sqlite3-tarball.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ${{ env._SQLITE3_ARCHIVE }}
+        key: ${{ env._SQLITE3_ARCHIVE }}
+        enableCrossOsArchive: true
+
+    - name: Extract SQLite3 tarball
+      run: tar -C "${{ runner.temp }}" -xf "${{ github.workspace }}/${{ env._SQLITE3_ARCHIVE }}"
+
+    - name: Configure, build and install SQLite3
+      run: |
+        cd "${{ runner.temp }}"
+        mkdir "build-sqlite3"
+        cd "build-sqlite3"
+
+        ../${{ env._SQLITE3_TARBALL_NAME }}/configure --prefix=/usr/local && \
+        make && \
+        sudo make install
+
+    - name: Build and install luasql-sqlite3
+      run: luarocks make "rockspec/luasql-sqlite3-dev-1.rockspec"
+
+  test-windows:
+    runs-on: "windows-latest"
+    defaults:
+      run:
+        shell: cmd
+    strategy:
+      fail-fast: false
+      matrix:
+        lua-version: ["5.1", "5.2", "5.3", "5.4", "5.5", "luajit", "openresty"]
+        toolchain: ["msvc", "gcc"]
+
+    env:
+      SQLITE3_DOWNLOAD_URL: https://sqlite.org/2026/sqlite-amalgamation-3510200.zip
+
+      # This is the usual directory on Windows
+      # that LuaRocks expects dependencies to be
+      #
+      LUAROCKS_DEPS_DIR: C:\external
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      if: ${{ matrix.toolchain == 'msvc' }}
+
+    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+      with:
+        lua-version: ${{ matrix.lua-version }}
+
+    - name: Show Lua and LuaRocks version
+      run: |
+        lua -v
+        luarocks --version
+
+    - name: Set environment variable to hold SQLite3 zip archive details
+      run: |
+        @ECHO OFF
+        @SETLOCAL EnableDelayedExpansion
+        @CD "%ProgramFiles%\Git\usr\bin"
+
+        @FOR /F "tokens=* USEBACKQ" %%I IN (`basename "${{ env.SQLITE3_DOWNLOAD_URL }}"`) DO (
+          @SET "_SQLITE3_ARCHIVE=%%I"
+          @SET "_SQLITE3_EXT=!_SQLITE3_ARCHIVE:~-4!"
+          @IF "!_SQLITE3_EXT!" EQU ".zip" (
+            @SET "_SQLITE3_ZIP_NAME=!_SQLITE3_ARCHIVE:~0,-4!"
+            @ECHO _SQLITE3_ARCHIVE=!_SQLITE3_ARCHIVE!>>${{ github.env }}
+            @ECHO _SQLITE3_ZIP_NAME=!_SQLITE3_ZIP_NAME!>>${{ github.env }}
+          ) ELSE (
+            @ECHO "Unexpected extension ('.zip' expected)"
+            @EXIT /B 1
+          )
+        )
+
+    # Restore / save SQLite3 zip archive from cache
+    # to avoid denial of service
+    # on their servers
+    - name: Restore SQLite3 zip archive
+      id: sqlite3-zip
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ${{ env._SQLITE3_ARCHIVE }}
+        key: ${{ env._SQLITE3_ARCHIVE }}
+        enableCrossOsArchive: true
+
+    - name: Download SQLite3
+      if: ${{ steps.sqlite3-zip.outputs.cache-hit != 'true' }}
+      run: curl -L -O "${{ env.SQLITE3_DOWNLOAD_URL }}"
+
+    - name: Save SQLite3 zip archive
+      if: ${{ steps.sqlite3-zip.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      with:
+        path: ${{ env._SQLITE3_ARCHIVE }}
+        key: ${{ env._SQLITE3_ARCHIVE }}
+        enableCrossOsArchive: true
+
+    - name: Extract SQLite3 zip archive
+      run: |
+        cd "${{ runner.temp }}"
+        "%ProgramFiles%\Git\usr\bin\unzip.exe" "${{ github.workspace }}\${{ env._SQLITE3_ARCHIVE }}"
+
+    - name: Build and install SQLite3 (MSVC)
+      if: ${{ matrix.toolchain == 'msvc' }}
+      run: |
+        @ECHO OFF
+        @SETLOCAL EnableDelayedExpansion
+        SET "_SQLITE3_SRC_DIR=${{ runner.temp }}\${{ env._SQLITE3_ZIP_NAME }}"
+
+        SET "_OUT_DIR=${{ env.LUAROCKS_DEPS_DIR }}"
+        SET "_OUT_BINDIR=!_OUT_DIR!\bin"
+        SET "_OUT_INCDIR=!_OUT_DIR!\include"
+        SET "_OUT_LIBDIR=!_OUT_DIR!\lib"
+
+        IF NOT EXIST "!_OUT_DIR!\." MKDIR "!_OUT_DIR!"
+        IF NOT EXIST "!_OUT_BINDIR!\." MKDIR "!_OUT_BINDIR!"
+        IF NOT EXIST "!_OUT_INCDIR!\." MKDIR "!_OUT_INCDIR!"
+        IF NOT EXIST "!_OUT_LIBDIR!\." MKDIR "!_OUT_LIBDIR!"
+
+        cd "${{ runner.temp }}"
+        mkdir "build-sqlite3"
+        cd "build-sqlite3"
+
+        cl /nologo /c /O2 /W3 /MD "/I!_SQLITE3_SRC_DIR!" "/DSQLITE_API=__declspec(dllexport)" "/Fosqlite3.c.obj" "!_SQLITE3_SRC_DIR!\sqlite3.c"
+        link /nologo /DLL "/IMPLIB:sqlite3.lib" "/OUT:sqlite3.dll" "sqlite3.c.obj"
+
+        cl /nologo /c /O2 /W3 /MD "/I!_SQLITE3_SRC_DIR!" "/Foshell.c.obj" "!_SQLITE3_SRC_DIR!\shell.c"
+        link /nologo "/OUT:sqlite3.exe" "shell.c.obj" "sqlite3.lib"
+
+        FOR %%F IN (!_SQLITE3_SRC_DIR!\sqlite3.h !_SQLITE3_SRC_DIR!\sqlite3ext.h) DO COPY "%%F" "!_OUT_INCDIR!"
+
+        COPY "sqlite3.exe" "!_OUT_BINDIR!"
+        COPY "sqlite3.dll" "!_OUT_BINDIR!"
+        COPY "sqlite3.lib" "!_OUT_LIBDIR!"
+
+        ECHO Placing !_OUT_BINDIR! on PATH
+        ECHO !_OUT_BINDIR!>>${{ github.path }}
+
+    - name: Build and install SQLite3 (MinGW-w64)
+      if: ${{ matrix.toolchain != 'msvc' }}
+      run: |
+        @ECHO OFF
+        @SETLOCAL EnableDelayedExpansion
+        SET "_SQLITE3_SRC_DIR=${{ runner.temp }}\${{ env._SQLITE3_ZIP_NAME }}"
+
+        SET "_OUT_DIR=${{ env.LUAROCKS_DEPS_DIR }}"
+        SET "_OUT_BINDIR=!_OUT_DIR!\bin"
+        SET "_OUT_INCDIR=!_OUT_DIR!\include"
+        SET "_OUT_LIBDIR=!_OUT_DIR!\lib"
+
+        IF NOT EXIST "!_OUT_DIR!\." MKDIR "!_OUT_DIR!"
+        IF NOT EXIST "!_OUT_BINDIR!\." MKDIR "!_OUT_BINDIR!"
+        IF NOT EXIST "!_OUT_INCDIR!\." MKDIR "!_OUT_INCDIR!"
+        IF NOT EXIST "!_OUT_LIBDIR!\." MKDIR "!_OUT_LIBDIR!"
+
+        cd "${{ runner.temp }}"
+        mkdir "build-sqlite3"
+        cd "build-sqlite3"
+
+        gcc -c -O2 -Wall "-I!_SQLITE3_SRC_DIR!" "-DSQLITE_API=__attribute__((dllexport))" -o "sqlite3.c.o" "!_SQLITE3_SRC_DIR!\sqlite3.c"
+        gcc -shared "-Wl,--out-implib,libsqlite3.dll.a" -o "libsqlite3.dll" "sqlite3.c.o"
+
+        gcc -c -O2 -Wall "-I!_SQLITE3_SRC_DIR!" -o "shell.c.o" "!_SQLITE3_SRC_DIR!\shell.c"
+        gcc -o "sqlite3.exe" "shell.c.o" "libsqlite3.dll.a"
+
+        FOR %%F IN (!_SQLITE3_SRC_DIR!\sqlite3.h !_SQLITE3_SRC_DIR!\sqlite3ext.h) DO COPY "%%F" "!_OUT_INCDIR!"
+
+        COPY "sqlite3.exe" "!_OUT_BINDIR!"
+        COPY "libsqlite3.dll" "!_OUT_BINDIR!"
+        COPY "libsqlite3.dll.a" "!_OUT_LIBDIR!"
+
+        ECHO Placing !_OUT_BINDIR! on PATH
+        ECHO !_OUT_BINDIR!>>${{ github.path }}
+
+    - name: Show SQLite3 installation
+      run: tree /F "${{ env.LUAROCKS_DEPS_DIR }}"
+
+    - name: Build and install luasql-sqlite3
+      run: luarocks make "rockspec\luasql-sqlite3-dev-1.rockspec"
