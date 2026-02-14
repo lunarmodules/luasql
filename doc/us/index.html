@@ -54,7 +54,7 @@ LuaSQL is a simple interface from Lua to a DBMS. It enables a Lua program to:
 </p>
 
 <ul>
-	<li> Connect to ODBC, ADO, Oracle, MySQL, SQLite, Firebird and PostgreSQL databases;</li>
+	<li> Connect to ODBC, Oracle, MySQL, SQLite, DuckDB, Firebird and PostgreSQL databases;</li>
 	<li> Execute arbitrary SQL statements;</li>
 	<li> Retrieve results in a row-by-row cursor fashion.</li>
 </ul>
@@ -67,7 +67,7 @@ as Lua 5.1.
 <h2><a name="status"></a>Status</h2>
 
 <p>
-LuaSQL version 2.7.0 (for Lua 5.X) is now available for <a href="#download">download</a>.
+LuaSQL version 2.8.0 (for Lua 5.X) is now available for <a href="#download">download</a>.
 For more details on the features list please check the product
 <a href="history.html">history</a>.
 </p>
@@ -78,6 +78,7 @@ LuaSQL can be installed via <a href="https://luarocks.org">LuaRocks</a>, using t
 driver for your database of choice:
 
 <pre class="example">
+luarocks install luasql-duckdb
 luarocks install luasql-firebird
 luarocks install luasql-mysql
 luarocks install luasql-oci8
@@ -93,6 +94,11 @@ Source code for LuaSQL can be downloaded from its <a href="https://github.com/lu
 <h2><a name="credits"></a>Credits</h2>
 
 <h4>LuaSQL 2.x</h4>
+
+<p>
+Version 2.8 introduces support for DuckDB (thanks to Geraldo Luiz de Carvalho Pereira Junior), adds improvemenents in the tests and corrects some bugs.
+This version works with Lua versions 5.1, 5.2, 5.3, 5.4 and 5.5.
+</p>
 
 <p>
 Version 2.7 introduces support for To-be-closed variables and all the Drivers are adapted to Lua version 5.4. <br>This was developed by Chaitanya Deshmukh (GSoC 2024) under the mentorship of Tomás Guisasola.
