@@ -11,9 +11,9 @@
 <div id="container">
 	
 <div id="product">
-	<div id="product_logo">
+	<div id="product_logo"><a href="http://www.keplerproject.org">
 		<img alt="LuaSQL logo" src="luasql.png"/>
-	</div>
+	</a></div>
 	<div id="product_name"><big><b>LuaSQL</b></big></div>
 	<div id="product_description">Database connectivity for the Lua programming language</div>
 </div> <!-- id="product" -->
@@ -29,10 +29,10 @@
 		</li>
 		<li><strong>Examples</strong></li>
 		<li><a href="history.html">History</a></li>
-        <li><a href="http://github.com/keplerproject/luasql">Project</a>
+        <li><a href="https://github.com/lunarmodules/luasql">Project</a>
             <ul>
-                <li><a href="http://github.com/keplerproject/luasql/issues">Bug Tracker</a></li>
-                
+                <li><a href="https://github.com/lunarmodules/luasql/issues">Bug Tracker</a></li>
+
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -114,7 +114,7 @@ end
 </pre>
 
 <p>Here is how the iterator is used:</p>
- 
+
 <pre class="example">
 env = assert (require"luasql.mysql".mysql())
 con = assert (env:connect"my_db")
@@ -125,13 +125,27 @@ end
 
 <p>Obviously, the code above only works if there is a table called contacts with the columns id, name and address in this order. At the end of the loop the cursor will be automatically closed by the driver.</p>
 
+<h3><a name="To_be_closed"></a>To-be-closed Objects</h3>
+
+<p>
+	<strong style="color: red;">Compatibility Note:</strong>
+	To-be-closed variables is a feature introduced in Lua 5.4. Therefore, this functionality can only be used if LuaSQL (version &gt; 2.6) is compiled against Lua version 5.4 or higher.
+</p>
+
+<pre class="example">
+function getName(db, id)
+  -- This code requires Lua 5.4 or higher due to the use of to-be-closed variables.
+  local cur &lt;close&gt; = db:execute("SELECT name FROM contacts WHERE id = " .. id)
+  return cur:fetch()
+end
+</pre>
+
 </div> <!-- id="content" -->
 
 </div> <!-- id="main" -->
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: examples.html,v 1.16 2008/06/11 00:26:13 jasonsantos Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->

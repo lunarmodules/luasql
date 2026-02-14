@@ -31,8 +31,8 @@
 		<li><strong>History</strong></li>
         <li><a href="http://github.com/keplerproject/luasql">Project</a>
             <ul>
-                <li><a href="http://github.com/keplerproject/luasql/issues">Bug Tracker</a></li>
-                
+                <li><a href="https://github.com/lunarmodules/luasql/issues">Bug Tracker</a></li>
+
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -44,6 +44,60 @@
 <h2><a name="history"></a>History</h2>
 
 <dl class="history">
+    <dt><strong>LuaSQL 2.8.0</strong> [14/Feb/2026]</dt>
+    <dd>
+      <ul>
+        <li>Drivers for DuckDB, Firebird, MySQL, ODBC, PostgreSQL and SQLite3 were tested against Lua 5.1, 5.2, 5.3, 5.4 and 5.5</li>
+        <li>Driver for DuckDB added (thanks to Geraldo Luiz de Carvalho Pereira Junior)</li>
+        <li>Fix bug on Firebird driver on the garbage colletion method</li>
+        <li>Fix bug on SQLite3 driver on the garbage colletion method</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.7.1</strong> [08/Jul/2025]</dt>
+    <dd>
+      <ul>
+        <li>Drivers for Firebird, MySQL, PostgreSQL and SQLite3 were tested against Lua 5.1, 5.2, 5.3, 5.4 and 5.5-beta</li>
+        <li>Fix retrieval of unknown types in ODBC driver (thanks to Huangqinjin)</li>
+        <li>Fix Unicode build in ODBC driver (thanks to Huangqinjin)</li>
+        <li>Conforming to MSYS2 update in ODBC driver (thanks to Saspivey98)</li>
+        <li>Implement dates and timestamp in OCI driver (thanks to Andreaskem)</li>
+        <li>Fix creation of extra rows in SQLite3 driver (thanks to Damin Risho)</li>
+        <li>Improvement of the test script</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.7.0</strong> [23/Apr/2025]</dt>
+    <dd>
+      <ul>
+        <li>LuaSQL is adapted to Lua version 5.4 and all the drivers are compatible with To-be-closed variables.</li>
+        <li>The <code>:close()</code> method now returns false and a string with appropriate message instead of raising an error when there are related open objects.</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.6.1</strong> [07/Feb/2024]</dt>
+    <dd>
+      <ul>
+        <li>Corrected compatibility to Lua versions below 5.3 to SQLite3 (thanks to Daniel McCarney)</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.6.0</strong> [09/Sep/2020]</dt>
+    <dd>
+      <ul>
+        <li>Added read-only mode to SQLite3 and two new methods to MySQL fetch</li>
+        <li>Added library opening functions to ease the initialization process in C applications</li>
+      </ul>
+    </dd>
+
+    <dt><strong>LuaSQL 2.5.0</strong> [14/Jun/2019]</dt>
+    <dd>
+      <ul>
+        <li>Added support in MySQL driver for seeking in the result set</li>
+        <li>Bug-fix on number retrieval on ODBC driver (thanks to Mauro Grassia)</li>
+      </ul>
+    </dd>
+
     <dt><strong>LuaSQL 2.4.0</strong> [30/Oct/2018]</dt>
     <dd>
       <ul>
@@ -144,7 +198,7 @@
         <li>Corrected bug avoiding duplicate access to stack</li>
     </ul>
     </dd>
-    
+
     <dt><strong><a href="http://www.keplerproject.org/luasql/2.0/">LuaSQL 2.0.2</a></strong> [26/Jun/2006]</dt>
     <dd>
     <ul>
@@ -214,10 +268,9 @@
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: history.html,v 1.20 2008/06/11 00:26:13 jasonsantos Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
 
 </body>
-</html> 
+</html>

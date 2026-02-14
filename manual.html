@@ -45,8 +45,8 @@
 		<li><a href="history.html">History</a></li>
         <li><a href="http://github.com/keplerproject/luasql">Project</a>
             <ul>
-                <li><a href="http://github.com/keplerproject/luasql/issues">Bug Tracker</a></li>
-                
+                <li><a href="https://github.com/lunarmodules/luasql/issues">Bug Tracker</a></li>
+
             </ul>
         </li>
 		<li><a href="license.html">License</a></li>
@@ -90,7 +90,7 @@ as Lua 5.1.
 a pair of common source and header files (<code>luasql.h</code> and <code>luasql.c</code>);
 and one source file for each driver.
 Each driver should be compiled with the luasql.c file to generate a library.
-This library can be linked to the application or dynamically loaded. 
+This library can be linked to the application or dynamically loaded.
 The initialization function is <code>luaopen_luasql<em>drivername</em></code> and it is a Lua
 <a href="http://www.lua.org/manual/5.1/manual.html#pdf-require"><code>open-library</code></a> compatible function.
 </p>
@@ -176,11 +176,10 @@ local env = driver.odbc()
 	<dt><a name="env_close"></a><strong><code>env:close()</code></strong></dt>
 	<dd>Closes the environment <code>env</code>.
 	Only successful if all connections pertaining to it were closed first.<br/>
-	Returns: <code>true</code> in case of success; <code>false</code> when
-	the object is already closed.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	<dt><a name="env_connect"></a><strong><code>env:connect(sourcename[,username[,password]])</code></strong></dt>
-	<dd>Connects to a data source specified in <code>sourcename</code> using 
+	<dd>Connects to a data source specified in <code>sourcename</code> using
 	<code>username</code> and <code>password</code> if they are supplied.<br/>
 	The <code>sourcename</code> may vary according to each driver.
 	Some use a simple database name, like PostgreSQL, MySQL and SQLite;
@@ -208,7 +207,7 @@ method.</p>
 	<dt><a name="conn_close"></a><strong><code>conn:close()</code></strong></dt>
 	<dd>Closes the connection <code>conn</code>.
 	Only successful if all cursors pertaining to it have been closed and the connection is still open.<br/>
-	Returns: <code>true</code> in case of success and <code>false</code> in case of failure.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	
 	<dt><a name="conn_commit"></a><strong><code>conn:commit()</code></strong></dt>
@@ -261,8 +260,7 @@ and <a href="#oracle_extensions">Oracle</a> extensions.</p>
 
 	<dt><a name="cur_close"></a><strong><code>cur:close()</code></strong></dt>
 	<dd>Closes this cursor.<br/>
-	Returns: <code>true</code> in case of success and <code>false</code> when
-	the object is already closed.</dd>
+	Returns: <code>true</code> in case of success and in case of failure it returns <code>false</code> with a <code>string message</code> stating the failure reason.</dd>
 	
 	
 	<dt><a name="cur_fetch"></a><strong><code>cur:fetch([table[,modestring]])</code></strong></dt>
@@ -372,9 +370,34 @@ the MySQL driver also offers these extra features:</p>
     Returns: true, if the connection is opened, or false, if it is closed.
   </dd>
 
+  <a name="mysql_numrows"></a>
   <dt><strong><code>cur:numrows()</code></strong></dt>
   <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
     Returns: the number of rows in the query result.</dd>
+
+  <a name="mysql_seek"></a>
+  <dt><strong><code>cur:seek(row_number)</code></strong></dt>
+  <dd>Seeks to an arbitrary row in a query result set. The number of the first row is 1.<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+	Returns: nothing.</dd>
+
+  <a name="mysql_next_result"></a>
+  <dt><strong><code>cur:nextresult()</code></strong></dt>
+  <dd>Retrieves the next result set, if another result is available (e.g. multiple statements)<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+	Returns: true, if next result was selected. false and -1 if no other result is available. false, errno and error message, if an error occured.<br/>
+	To use it you need to pass the <code>CLIENT_MULTI_STATEMENTS = 1<<16</code> flag on connection.
+	Be aware that you need to iterate over all results otherwise you will receive an "out of sync" error.
+  </dd>
+
+  <a name="mysql_has_next_result"></a>
+  <dt><strong><code>cur:hasnextresult()</code></strong></dt>
+  <dd>Checks if next result is available<br/>
+    See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: true or false<br/>
+	To use it you need to pass the <code>CLIENT_MULTI_STATEMENTS = 1<<16</code> flag on connection.
+	Be aware that you need to iterate over all results otherwise you will receive an "out of sync" error.
+  </dd>
 </dl>
 
 <p>Notes:</p>
@@ -406,9 +429,11 @@ the Oracle driver also offers this extra feature:</p>
 <p>Besides the basic functionality provided by all drivers,
 the SQLite3 driver also offers this extra feature:</p>
 
-<dt><strong><code>env:connect(sourcename[,locktimeout])</code></strong></dt>
+<dl class="reference">
+  <dt><strong><code>env:connect(sourcename[,locktimeout,readOnlyMode])</code></strong></dt>
   <dd>In the SQLite3 driver, this method adds an optional parameter
-    that indicate the amount of milisseconds to wait for a write lock if one cannot be obtained immediately.<br/>
+    that indicate the amount of milliseconds to wait for a write lock if one cannot be obtained immediately.
+	  To connect in readOnlyMode, set readOnlyMode to true.<br/>
     See also: <a href="#environment_object">environment objects</a><br/>
     Returns: a <a href="#connection_object">connection object</a></dd>
 
@@ -418,6 +443,18 @@ the SQLite3 driver also offers this extra feature:</p>
     See also: Official documentation of function <a href="http://www.sqlite.org/c3ref/mprintf.html">sqlite3_mprintf</a><br/>
     Returns: the escaped string.
   </dd>
+</dl>
+
+<h2><a name="duckdb_extensions"></a>DuckDB Extensions</h2>
+
+<p>Besides the basic functionality provided by all drivers,
+the DuckDB driver also offers this extra feature:</p>
+
+<dl class="reference">
+  <dt><strong><code>cur:numrows()</code></strong></dt>
+  <dd>See also: <a href="#cursor_object">cursor objects</a><br/>
+    Returns: the number of rows in the query result.</dd>
+</dl>
 
 </div> <!-- id="content" -->
 
@@ -425,10 +462,9 @@ the SQLite3 driver also offers this extra feature:</p>
 
 <div id="about">
 	<p><a href="http://validator.w3.org/check?uri=referer">Valid XHTML 1.0!</a></p>
-	<p><small>$Id: manual.html,v 1.28 2008/06/11 00:26:13 jasonsantos Exp $</small></p>
 </div> <!-- id="about" -->
 
 </div> <!-- id="container" -->
 
 </body>
-</html> 
+</html>
