@@ -1,5 +1,5 @@
+local release = "2.8.0"
 package = "LuaSQL-SQLite3"
-release = "2.8.0"
 version = release.."-1"
 source = {
   url = "git+https://github.com/lunarmodules/luasql.git",
