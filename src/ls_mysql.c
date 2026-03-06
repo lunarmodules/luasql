@@ -598,6 +598,8 @@ static int env_connect (lua_State *L) {
 	if (conn == NULL)
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
+	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");	
+	
 	if (!mysql_real_connect(conn, host, username, password,
 		sourcename, port, unix_socket, client_flag))
 	{
