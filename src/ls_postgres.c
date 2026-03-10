@@ -354,11 +354,23 @@ static int conn_getfd (lua_State *L) {
 static int conn_send_query (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
+	
+	/* Ensure we are in non-blocking mode before sending */
+	PQsetnonblocking(conn->pg_conn, 1);
+	
 	if (PQsendQuery(conn->pg_conn, statement) == 0) {
 		return luasql_failmsg(L, "error sending query. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
 	}
+	
+	/* Flush outgoing buffer. 0 = success, 1 = still flushing, -1 = error */
+	int flush_res = PQflush(conn->pg_conn);
+	if (flush_res == -1) {
+		return luasql_failmsg(L, "error flushing query. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
+	}
+	
 	lua_pushboolean(L, 1);
-	return 1;
+	lua_pushinteger(L, flush_res); /* Return if it's still flushing */
+	return 2;
 }
 
 static int conn_consume_input (lua_State *L) {
@@ -472,6 +484,10 @@ static int conn_escape (lua_State *L) {
 static int conn_execute (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	const char *statement = luaL_checkstring (L, 2);
+	
+	/* Force blocking mode for the classic execute method to maintain compatibility */
+	PQsetnonblocking(conn->pg_conn, 0);
+	
 	PGresult *res = PQexec(conn->pg_conn, statement);
 	if (res && PQresultStatus(res)==PGRES_COMMAND_OK) {
 		/* no tuples returned */
@@ -546,6 +562,9 @@ static int conn_setautocommit (lua_State *L) {
 static int create_connection (lua_State *L, int env, PGconn *const pg_conn) {
 	conn_data *conn = (conn_data *)LUASQL_NEWUD(L, sizeof(conn_data));
 	luasql_setmeta (L, LUASQL_CONNECTION_PG);
+
+	/* Default to non-blocking mode for improved responsiveness */
+	PQsetnonblocking(pg_conn, 1);
 
 	/* fill in structure */
 	conn->closed = 0;
