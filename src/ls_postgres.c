@@ -639,6 +639,11 @@ static void create_metatables (lua_State *L) {
 		{"commit",        conn_commit},
 		{"rollback",      conn_rollback},
 		{"setautocommit", conn_setautocommit},
+		{"getfd",         conn_getfd},
+		{"send_query",    conn_send_query},
+		{"consume_input", conn_consume_input},
+		{"is_busy",       conn_is_busy},
+		{"get_result",    conn_get_result},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
