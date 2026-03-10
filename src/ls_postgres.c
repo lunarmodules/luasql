@@ -340,6 +340,63 @@ static int conn_gc (lua_State *L) {
 	return 0;
 }
 
+/*
+** Asynchronous execution methods
+*/
+static int conn_getfd (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	int fd = PQsocket(conn->pg_conn);
+	if (fd < 0) return luasql_failmsg(L, "invalid socket descriptor", NULL);
+	lua_pushinteger(L, fd);
+	return 1;
+}
+
+static int conn_send_query (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	const char *statement = luaL_checkstring (L, 2);
+	if (PQsendQuery(conn->pg_conn, statement) == 0) {
+		return luasql_failmsg(L, "error sending query. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
+	}
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int conn_consume_input (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	if (PQconsumeInput(conn->pg_conn) == 0) {
+		return luasql_failmsg(L, "error consuming input. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
+	}
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int conn_is_busy (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	lua_pushboolean(L, PQisBusy(conn->pg_conn));
+	return 1;
+}
+
+static int conn_get_result (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	PGresult *res = PQgetResult(conn->pg_conn);
+	if (!res) {
+		lua_pushnil(L);
+		return 1;
+	}
+	if (PQresultStatus(res) == PGRES_COMMAND_OK) {
+		lua_pushnumber(L, atof(PQcmdTuples(res)));
+		PQclear (res);
+		return 1;
+	}
+	else if (PQresultStatus(res) == PGRES_TUPLES_OK) {
+		return create_cursor (L, 1, res);
+	}
+	else {
+		const char *err = PQresultErrorMessage(res);
+		PQclear (res);
+		return luasql_failmsg(L, "error retrieving result. PostgreSQL: ", err);
+	}
+}
 
 /*
 ** Closes the connection on top of the stack.
