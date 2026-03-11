@@ -497,7 +497,7 @@ static int conn_send_query (lua_State *L) {
 	size_t st_len;
 	const char *statement = luaL_checklstring (L, 2, &st_len);
 	int status, ret;
-#ifdef MARIADB_PACKAGE_VERSION
+#ifdef MYSQL_OPT_NONBLOCK
 	status = mysql_real_query_start(&ret, conn->my_conn, statement, st_len);
 #else
 	/* Fallback for standard MySQL without async support */
@@ -513,7 +513,7 @@ static int conn_poll (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	int status = luaL_checkinteger(L, 2);
 	int ret;
-#ifdef MARIADB_PACKAGE_VERSION
+#ifdef MYSQL_OPT_NONBLOCK
 	status = mysql_real_query_cont(&ret, conn->my_conn, status);
 #else
 	ret = 0;
