@@ -534,6 +534,8 @@ static int conn_get_result (lua_State *L) {
 	}
 	else {
 		if(num_cols == 0) { /* no tuples returned */
+			if (mysql_errno(conn->my_conn))
+				return luasql_failmsg(L, "error retrieving result. MySQL: ", mysql_error(conn->my_conn));
 			lua_pushnumber(L, mysql_affected_rows(conn->my_conn));
 			return 1;
 		}
