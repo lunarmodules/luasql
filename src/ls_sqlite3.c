@@ -546,12 +546,7 @@ static int conn_send_query (lua_State *L) {
   return 1;
 }
 
-static int conn_consume_input (lua_State *L) {
-  lua_pushboolean(L, 1);
-  return 1;
-}
-
-static int conn_is_busy (lua_State *L) {
+static int conn_poll (lua_State *L) {
   lua_pushboolean(L, 0);
   return 1;
 }
@@ -892,8 +887,7 @@ static void create_metatables (lua_State *L)
     {"getlastautoid", conn_getlastautoid},
     {"getfd",         conn_getfd},
     {"send_query",    conn_send_query},
-    {"consume_input", conn_consume_input},
-    {"is_busy",       conn_is_busy},
+    {"poll",          conn_poll},
     {"get_result",    conn_get_result},
     {NULL, NULL},
   };
