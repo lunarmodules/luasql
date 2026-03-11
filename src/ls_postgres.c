@@ -373,17 +373,11 @@ static int conn_send_query (lua_State *L) {
 	return 2;
 }
 
-static int conn_consume_input (lua_State *L) {
+static int conn_poll (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	if (PQconsumeInput(conn->pg_conn) == 0) {
-		return luasql_failmsg(L, "error consuming input. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
+		return luasql_failmsg(L, "error polling input. PostgreSQL: ", PQerrorMessage(conn->pg_conn));
 	}
-	lua_pushboolean(L, 1);
-	return 1;
-}
-
-static int conn_is_busy (lua_State *L) {
-	conn_data *conn = getconnection (L);
 	lua_pushboolean(L, PQisBusy(conn->pg_conn));
 	return 1;
 }
@@ -660,8 +654,7 @@ static void create_metatables (lua_State *L) {
 		{"setautocommit", conn_setautocommit},
 		{"getfd",         conn_getfd},
 		{"send_query",    conn_send_query},
-		{"consume_input", conn_consume_input},
-		{"is_busy",       conn_is_busy},
+		{"poll",          conn_poll},
 		{"get_result",    conn_get_result},
 		{NULL, NULL},
 	};
