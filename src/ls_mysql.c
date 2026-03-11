@@ -509,7 +509,7 @@ static int conn_send_query (lua_State *L) {
 	return 2;
 }
 
-static int conn_query_cont (lua_State *L) {
+static int conn_poll (lua_State *L) {
 	conn_data *conn = getconnection (L);
 	int status = luaL_checkinteger(L, 2);
 	int ret;
@@ -519,8 +519,8 @@ static int conn_query_cont (lua_State *L) {
 	ret = 0;
 	status = 0;
 #endif
+	lua_pushboolean(L, status != 0);
 	lua_pushinteger(L, status);
-	lua_pushinteger(L, ret);
 	return 2;
 }
 
@@ -731,7 +731,7 @@ static void create_metatables (lua_State *L) {
 		{"getlastautoid", conn_getlastautoid},
 		{"getfd",         conn_getfd},
 		{"send_query",    conn_send_query},
-		{"query_cont",    conn_query_cont},
+		{"poll",          conn_poll},
 		{"get_result",    conn_get_result},
 		{NULL, NULL},
     };
