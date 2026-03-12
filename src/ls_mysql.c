@@ -482,6 +482,69 @@ static int escape_string (lua_State *L) {
 }
 
 /*
+** Asynchronous execution methods
+*/
+static int conn_getfd (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	int fd = mysql_get_socket(conn->my_conn);
+	if (fd < 0) return luasql_failmsg(L, "invalid socket descriptor", NULL);
+	lua_pushinteger(L, fd);
+	return 1;
+}
+
+static int conn_send_query (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	size_t st_len;
+	const char *statement = luaL_checklstring (L, 2, &st_len);
+	int status, ret;
+#ifdef MYSQL_OPT_NONBLOCK
+	status = mysql_real_query_start(&ret, conn->my_conn, statement, st_len);
+#else
+	/* Fallback for standard MySQL without async support */
+	ret = mysql_real_query(conn->my_conn, statement, st_len);
+	status = 0;
+#endif
+	lua_pushinteger(L, status);
+	lua_pushinteger(L, ret);
+	return 2;
+}
+
+static int conn_poll (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	int status = luaL_checkinteger(L, 2);
+	int ret;
+#ifdef MYSQL_OPT_NONBLOCK
+	status = mysql_real_query_cont(&ret, conn->my_conn, status);
+#else
+	ret = 0;
+	status = 0;
+#endif
+	lua_pushboolean(L, status != 0);
+	lua_pushinteger(L, status);
+	return 2;
+}
+
+static int conn_get_result (lua_State *L) {
+	conn_data *conn = getconnection (L);
+	MYSQL_RES *res = mysql_store_result(conn->my_conn);
+	unsigned int num_cols = mysql_field_count(conn->my_conn);
+
+	if (res) { /* tuples returned */
+		return create_cursor (L, conn->my_conn, 1, res, num_cols);
+	}
+	else {
+		if(num_cols == 0) { /* no tuples returned */
+			if (mysql_errno(conn->my_conn))
+				return luasql_failmsg(L, "error retrieving result. MySQL: ", mysql_error(conn->my_conn));
+			lua_pushnumber(L, mysql_affected_rows(conn->my_conn));
+			return 1;
+		}
+		else
+			return luasql_failmsg(L, "error retrieving result. MySQL: ", mysql_error(conn->my_conn));
+	}
+}
+
+/*
 ** Execute an SQL statement.
 ** Return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
@@ -599,6 +662,9 @@ static int env_connect (lua_State *L) {
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
 	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");	
+#ifdef MARIADB_PACKAGE_VERSION
+	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
+#endif
 	
 	if (!mysql_real_connect(conn, host, username, password,
 		sourcename, port, unix_socket, client_flag))
@@ -665,6 +731,10 @@ static void create_metatables (lua_State *L) {
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
 		{"getlastautoid", conn_getlastautoid},
+		{"getfd",         conn_getfd},
+		{"send_query",    conn_send_query},
+		{"poll",          conn_poll},
+		{"get_result",    conn_get_result},
 		{NULL, NULL},
     };
     struct luaL_Reg cursor_methods[] = {

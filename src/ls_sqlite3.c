@@ -35,6 +35,7 @@ typedef struct
   short        auto_commit;        /* 0 for manual commit */
   unsigned int cur_counter;
   sqlite3      *sql_conn;
+  sqlite3_stmt *pending_vm;        /* for async-like support */
 } conn_data;
 
 
@@ -332,6 +333,7 @@ static int conn_gc(lua_State *L)
       /* Nullify structure fields. */
       conn->closed = 1;
       luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+      if (conn->pending_vm) sqlite3_finalize(conn->pending_vm);
       sqlite3_close(conn->sql_conn);
     }
   return 0;
@@ -361,6 +363,7 @@ static int conn_close(lua_State *L)
 
   conn->closed = 1;
   luaL_unref(L, LUA_REGISTRYINDEX, conn->env);
+  if (conn->pending_vm) sqlite3_finalize(conn->pending_vm);
   sqlite3_close(conn->sql_conn);
 
   lua_pushboolean(L, 1);
@@ -483,6 +486,97 @@ static int raw_readparams_table(lua_State *L, sqlite3_stmt *vm, int arg)
   }
 
   return rc;
+}
+
+/*
+** Asynchronous execution methods
+*/
+static int conn_getfd (lua_State *L) {
+  conn_data *conn = getconnection (L);
+  int fd = -1;
+  void *pFile = NULL;
+  int res = sqlite3_file_control(conn->sql_conn, "main", SQLITE_FCNTL_FILE_POINTER, &pFile);
+  if (res == SQLITE_OK && pFile) {
+    /* Trick to get the FD from unixFile structure */
+    fd = *((int*)((char*)pFile + 2 * sizeof(void*)));
+  }
+  /* Fallback: return stdin if we cannot get the real FD, or it's a memory DB */
+  if (fd < 0) fd = 0;
+  lua_pushinteger(L, fd);
+  return 1;
+}
+
+static int conn_send_query (lua_State *L) {
+  conn_data *conn = getconnection (L);
+  const char *statement = luaL_checkstring (L, 2);
+  sqlite3_stmt *vm;
+  const char *tail;
+  int res;
+
+  if (conn->pending_vm) {
+    sqlite3_finalize(conn->pending_vm);
+    conn->pending_vm = NULL;
+  }
+
+#if SQLITE_VERSION_NUMBER > 3006013
+  res = sqlite3_prepare_v2(conn->sql_conn, statement, -1, &vm, &tail);
+#else
+  res = sqlite3_prepare(conn->sql_conn, statement, -1, &vm, &tail);
+#endif
+  if (res != SQLITE_OK) {
+    return luasql_faildirect(L, sqlite3_errmsg(conn->sql_conn));
+  }
+
+  /* Bind parameters (if any) */
+  int ltop = lua_gettop(L);
+  if (ltop > 2) {
+    if (ltop == 3 && lua_type(L, 3) == LUA_TTABLE) {
+      res = raw_readparams_table(L, vm, 3);
+    } else if (ltop >= 3) {
+      res = raw_readparams_args(L, vm, 3, ltop);
+    }
+    if (res) {
+      sqlite3_finalize(vm);
+      return res;
+    }
+  }
+
+  conn->pending_vm = vm;
+  lua_pushboolean(L, 1);
+  return 1;
+}
+
+static int conn_poll (lua_State *L) {
+  lua_pushboolean(L, 0);
+  return 1;
+}
+
+static int conn_get_result (lua_State *L) {
+  conn_data *conn = getconnection (L);
+  if (!conn->pending_vm) {
+    lua_pushnil(L);
+    return 1;
+  }
+  
+  sqlite3_stmt *vm = conn->pending_vm;
+  conn->pending_vm = NULL;
+  
+  int res = sqlite3_step(vm);
+  int numcols = sqlite3_column_count(vm);
+
+  if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols)) {
+    return create_cursor(L, 1, conn, vm, numcols);
+  }
+
+  if (res == SQLITE_DONE) {
+    sqlite3_finalize(vm);
+    lua_pushnumber(L, sqlite3_changes(conn->sql_conn));
+    return 1;
+  }
+
+  const char *errmsg = sqlite3_errmsg(conn->sql_conn);
+  sqlite3_finalize(vm);
+  return luasql_faildirect(L, errmsg);
 }
 
 /*
@@ -660,6 +754,7 @@ static int create_connection(lua_State *L, int env, sqlite3 *sql_conn)
   conn->auto_commit = 1;
   conn->sql_conn = sql_conn;
   conn->cur_counter = 0;
+  conn->pending_vm = NULL;
   lua_pushvalue (L, env);
   conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
   return 1;
@@ -790,6 +885,10 @@ static void create_metatables (lua_State *L)
     {"rollback", conn_rollback},
     {"setautocommit", conn_setautocommit},
     {"getlastautoid", conn_getlastautoid},
+    {"getfd",         conn_getfd},
+    {"send_query",    conn_send_query},
+    {"poll",          conn_poll},
+    {"get_result",    conn_get_result},
     {NULL, NULL},
   };
   struct luaL_Reg cursor_methods[] = {
