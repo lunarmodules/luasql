@@ -31,6 +31,7 @@ typedef struct {
 	short        auto_commit;        /* 0 for manual commit */
 	unsigned int cur_counter;
 	sqlite      *sql_conn;
+	sqlite_vm   *pending_vm;
 } conn_data;
 
 
@@ -366,6 +367,76 @@ static int conn_execute(lua_State *L) {
 	return 2;
 }
 
+static int conn_send_query(lua_State *L) {
+	conn_data *conn = getconnection(L);
+	const char *statement = luaL_checkstring(L, 2);
+	int res;
+	sqlite_vm *vm;
+	char *errmsg;
+
+	if (conn->pending_vm) {
+		sqlite_finalize(conn->pending_vm, NULL);
+		conn->pending_vm = NULL;
+	}
+
+	res = sqlite_compile(conn->sql_conn, statement, NULL, &vm, &errmsg);
+	if (res != SQLITE_OK) {
+		lua_pushnil(L);
+		lua_pushliteral(L, LUASQL_PREFIX);
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+		lua_concat(L, 2);
+		return 2;
+	}
+
+	conn->pending_vm = vm;
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int conn_poll(lua_State *L) {
+	lua_pushboolean(L, 0);
+	return 1;
+}
+
+static int conn_get_result(lua_State *L) {
+	conn_data *conn = getconnection(L);
+	if (!conn->pending_vm) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	sqlite_vm *vm = conn->pending_vm;
+	conn->pending_vm = NULL;
+
+	int numcols;
+	const char **col_info;
+	char *errmsg = NULL;
+	int res = sqlite_step(vm, &numcols, NULL, &col_info);
+
+	if ((res == SQLITE_ROW) || ((res == SQLITE_DONE) && numcols)) {
+		sqlite_reset(vm, NULL);
+		return create_cursor(L, 1, conn, vm, numcols, col_info);
+	}
+
+	if (res == SQLITE_DONE) {
+		sqlite_finalize(vm, NULL);
+		lua_pushnumber(L, sqlite_changes(conn->sql_conn));
+		return 1;
+	}
+
+	sqlite_finalize(vm, &errmsg);
+	lua_pushnil(L);
+	lua_pushliteral(L, LUASQL_PREFIX);
+	if (errmsg) {
+		lua_pushstring(L, errmsg);
+		sqlite_freemem(errmsg);
+	} else {
+		lua_pushstring(L, "Unknown error");
+	}
+	lua_concat(L, 2);
+	return 2;
+}
 
 /*
 ** Commit the current transaction.
@@ -463,6 +534,7 @@ static int create_connection(lua_State *L, int env, sqlite *sql_conn) {
 	conn->env = LUA_NOREF;
 	conn->auto_commit = 1;
 	conn->sql_conn = sql_conn;
+	conn->pending_vm = NULL;
 	conn->cur_counter = 0;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
@@ -551,6 +623,9 @@ static void create_metatables (lua_State *L) {
 		{"close", conn_close},
 		{"escape", conn_escape},
 		{"execute", conn_execute},
+		{"send_query", conn_send_query},
+		{"poll", conn_poll},
+		{"get_result", conn_get_result},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
