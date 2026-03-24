@@ -22,6 +22,7 @@ typedef struct {
     int auto_commit;        /* 0 for manual commit */
     duckdb_database db;
     duckdb_connection con;
+    char *pending_query;
 } conn_data;
 
 typedef struct {
@@ -86,7 +87,9 @@ static void pushvalue(lua_State *L, duckdb_result *result, idx_t row, idx_t col)
     if (duckdb_value_is_null(result, col, row)) {
         lua_pushnil(L);
     } else {
-        lua_pushstring(L, duckdb_value_varchar(result, col, row));
+        char *str = duckdb_value_varchar(result, col, row);
+        lua_pushstring(L, str);
+        duckdb_free(str);
     }
 }
 
@@ -265,12 +268,16 @@ static int create_cursor(lua_State *L, int conn, duckdb_result *result) {
 }
 
 static void sql_commit(conn_data *conn) {
-    duckdb_query(conn->con, "COMMIT", NULL);
+    duckdb_result res;
+    duckdb_query(conn->con, "COMMIT", &res);
+    duckdb_destroy_result(&res);
 }
 
 
 static void sql_begin(conn_data *conn) {
-    duckdb_query(conn->con, "BEGIN", NULL);
+    duckdb_result res;
+    duckdb_query(conn->con, "BEGIN", &res);
+    duckdb_destroy_result(&res);
 }
 
 
@@ -292,6 +299,7 @@ static int conn_gc(lua_State *L) {
             conn->env = LUA_NOREF;
         }
         duckdb_disconnect(&conn->con);
+        duckdb_close(&conn->db);
     }
     return 0;
 }
@@ -321,6 +329,7 @@ static int conn_close(lua_State *L) {
         conn->env = LUA_NOREF;
     }
     duckdb_disconnect(&conn->con);
+    duckdb_close(&conn->db);
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -335,7 +344,10 @@ static int conn_execute(lua_State *L) {
     const char *statement = luaL_checkstring(L, 2);
     duckdb_result result;
     if (duckdb_query(conn->con, statement, &result) != DuckDBSuccess) {
-        return luasql_failmsg(L, "error executing statement. DuckDB: ", duckdb_result_error(&result));
+        const char *err = duckdb_result_error(&result);
+        int res = luasql_failmsg(L, "error executing statement. DuckDB: ", err);
+        duckdb_destroy_result(&result);
+        return res;
     }
 
     duckdb_result_type rt;
@@ -345,6 +357,60 @@ static int conn_execute(lua_State *L) {
         return create_cursor(L, 1, &result);
     } else {
         /* no tuples returned */
+        lua_pushnumber(L, duckdb_rows_changed(&result));
+        duckdb_destroy_result(&result);
+        return 1;
+    }
+}
+
+static int conn_send_query(lua_State *L) {
+    conn_data *conn = getconnection(L);
+    const char *statement = luaL_checkstring(L, 2);
+    
+    if (conn->pending_query) {
+        free(conn->pending_query);
+    }
+    
+    conn->pending_query = strdup(statement);
+    if (!conn->pending_query) {
+        return luasql_failmsg(L, "error allocating memory for pending query", NULL);
+    }
+    
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+static int conn_poll(lua_State *L) {
+    lua_pushboolean(L, 0);
+    return 1;
+}
+
+static int conn_get_result(lua_State *L) {
+    conn_data *conn = getconnection(L);
+    
+    if (!conn->pending_query) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    duckdb_result result;
+    if (duckdb_query(conn->con, conn->pending_query, &result) != DuckDBSuccess) {
+        const char *err = duckdb_result_error(&result);
+        int res = luasql_failmsg(L, "error executing pending statement. DuckDB: ", err);
+        duckdb_destroy_result(&result);
+        free(conn->pending_query);
+        conn->pending_query = NULL;
+        return res;
+    }
+    
+    free(conn->pending_query);
+    conn->pending_query = NULL;
+
+    duckdb_result_type rt;
+    rt = duckdb_result_return_type(result);
+    if (rt == DUCKDB_RESULT_TYPE_QUERY_RESULT) {
+        return create_cursor(L, 1, &result);
+    } else {
         lua_pushnumber(L, duckdb_rows_changed(&result));
         duckdb_destroy_result(&result);
         return 1;
@@ -373,7 +439,6 @@ static int conn_commit(lua_State *L)
 */
 static int conn_rollback(lua_State *L)
 {
-  char *errmsg;
   conn_data *conn = getconnection(L);
   duckdb_result res;
   const char *sql = "ROLLBACK";
@@ -382,12 +447,12 @@ static int conn_rollback(lua_State *L)
 
   if (duckdb_query(conn->con, sql, &res) != DuckDBSuccess)
     {
-      lua_pushnil(L);
-      lua_pushliteral(L, LUASQL_PREFIX);
-      lua_pushstring(L, errmsg);
-      lua_concat(L, 2);
-      return 2;
+      const char *err = duckdb_result_error(&res);
+      int ret = luasql_failmsg(L, "error rolling back transaction. DuckDB: ", err);
+      duckdb_destroy_result(&res);
+      return ret;
     }
+  duckdb_destroy_result(&res);
   lua_pushboolean(L, 1);
   return 1;
 }
@@ -411,7 +476,7 @@ static int conn_setautocommit(lua_State *L) {
 /*
 ** Create a new Connection object and push it on top of the stack.
 */
-static int create_connection(lua_State *L, int env, duckdb_connection const con) {
+static int create_connection(lua_State *L, int env, duckdb_database db, duckdb_connection con) {
     conn_data *conn = (conn_data *)LUASQL_NEWUD(L, sizeof(conn_data));
     luasql_setmeta(L, LUASQL_CONNECTION_DUCKDB);
 
@@ -419,7 +484,9 @@ static int create_connection(lua_State *L, int env, duckdb_connection const con)
     conn->closed = 0;
     conn->env = LUA_NOREF;
     conn->auto_commit = 1;
+    conn->db = db;
     conn->con = con;
+    conn->pending_query = NULL;
     lua_pushvalue(L, env);                       /* push env userdata */
     env_data *e = (env_data *)luaL_checkudata(L, -1, LUASQL_ENVIRONMENT_DUCKDB);
     e->open_conns += 1;
@@ -435,19 +502,21 @@ static int env_connect(lua_State *L) {
     duckdb_database db;
     duckdb_connection con;
 
-    char * error = NULL;
+    char *error = NULL;
 
     getenvironment(L);	/* validate environment */
 
     // Needs to pass in db config in third parameter here
     if (duckdb_open_ext(sourcename, &db, NULL, &error) != DuckDBSuccess) {
-        return luasql_failmsg(L, "error connecting to database. DuckDB: ", error);
+        int res = luasql_failmsg(L, "error connecting to database. DuckDB: ", error);
+        duckdb_free(error);
+        return res;
     }
     if (duckdb_connect(db, &con) != DuckDBSuccess) {
         duckdb_close(&db);
         return luasql_failmsg(L, "error connecting to database. DuckDB: ", "Unspecified driver error");
     }
-    return create_connection(L, 1, con);
+    return create_connection(L, 1, db, con);
 }
 
 /*
@@ -502,6 +571,9 @@ static void create_metatables(lua_State *L) {
         {"__close", conn_close},
         {"close", conn_close},
         {"execute", conn_execute},
+        {"send_query", conn_send_query},
+        {"poll", conn_poll},
+        {"get_result", conn_get_result},
         {"commit", conn_commit},
         {"rollback", conn_rollback},
         {"setautocommit", conn_setautocommit},
