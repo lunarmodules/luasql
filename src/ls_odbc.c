@@ -57,6 +57,8 @@ typedef struct {
 	int           lock;               /* lock count for open statements */
 	env_data      *env;               /* the connection's environment */
 	SQLHDBC       hdbc;               /* database connection handle */
+	SQLHSTMT      hstmt_async;        /* handle for async statement */
+	short         async_active;       /* is an async operation active? */
 } conn_data;
 
 typedef struct {
@@ -219,7 +221,7 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
 static param_data *malloc_stmt_params(SQLSMALLINT c)
 {
 	param_data *p = (param_data *)malloc(sizeof(param_data)*c);
-	memset(p, 0, sizeof(param_data)*c);
+	if (p) memset(p, 0, sizeof(param_data)*c);
 
 	return p;
 }
@@ -230,7 +232,10 @@ static param_data *free_stmt_params(param_data *data, SQLSMALLINT c)
 		param_data *p = data;
 
 		for(; c>0; ++p, --c) {
-			free(p->buf);
+			if (p->buf) {
+				free(p->buf);
+				p->buf = NULL;
+			}
 		}
 		free(data);
 	}
@@ -372,7 +377,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 #if LUA_VERSION_NUM>=503
 		/* iNteger */
 		case 'n': {
-			SQLLEN num;
+			SQLINTEGER num;
 			SQLLEN got;
 			SQLRETURN rc = SQLGetData(hstmt, i, SQL_C_SLONG, &num, 0, &got);
 			if (error(rc))
@@ -380,7 +385,7 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
 			if (got == SQL_NULL_DATA)
 				lua_pushnil(L);
 			else
-				lua_pushinteger(L, num);
+				lua_pushinteger(L, (lua_Integer)num);
 			return 0;
 		}
 #endif
@@ -403,40 +408,40 @@ static int push_column(lua_State *L, int coltypes, const SQLHSTMT hstmt,
         case 'i': {
 			SQLSMALLINT stype = (type == 't') ? SQL_C_CHAR : SQL_C_BINARY;
 			SQLLEN got;
-			char *buffer;
-			luaL_Buffer b;
+			char buffer[LUAL_BUFFERSIZE];
 			SQLRETURN rc;
-			luaL_buffinit(L, &b);
-			buffer = luaL_prepbuffer(&b);
+
 			rc = SQLGetData(hstmt, i, stype, buffer, LUAL_BUFFERSIZE, &got);
 			if (got == SQL_NULL_DATA) {
 				lua_pushnil(L);
 				return 0;
 			}
-			/* concat intermediary chunks */
-			while (rc == SQL_SUCCESS_WITH_INFO) {
-				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-					got = LUAL_BUFFERSIZE;
-					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) got--;
-				}
-				luaL_addsize(&b, got);
-				buffer = luaL_prepbuffer(&b);
-				rc = SQLGetData(hstmt, i, stype, buffer,
-					LUAL_BUFFERSIZE, &got);
-			}
-			/* concat last chunk */
+
 			if (rc == SQL_SUCCESS) {
-				if (got >= LUAL_BUFFERSIZE || got == SQL_NO_TOTAL) {
-					got = LUAL_BUFFERSIZE;
-					/* get rid of null termination in string block */
-					if (stype == SQL_C_CHAR) got--;
+				lua_pushlstring(L, buffer, got);
+				return 0;
+			}
+
+			if (rc == SQL_SUCCESS_WITH_INFO) {
+				luaL_Buffer b;
+				luaL_buffinit(L, &b);
+				luaL_addlstring(&b, buffer, (stype == SQL_C_CHAR) ? LUAL_BUFFERSIZE-1 : LUAL_BUFFERSIZE);
+				while (rc == SQL_SUCCESS_WITH_INFO) {
+					char *buff = luaL_prepbuffer(&b);
+					rc = SQLGetData(hstmt, i, stype, buff, LUAL_BUFFERSIZE, &got);
+					if (rc == SQL_ERROR) return fail(L, hSTMT, hstmt);
+					if (got == SQL_NULL_DATA) break; /* should not happen */
+					if (rc == SQL_SUCCESS_WITH_INFO) {
+						luaL_addsize(&b, (stype == SQL_C_CHAR) ? LUAL_BUFFERSIZE-1 : LUAL_BUFFERSIZE);
+					} else {
+						luaL_addsize(&b, got);
+					}
 				}
-				luaL_addsize(&b, got);
+				luaL_pushresult(&b);
+				return 0;
 			}
 			if (rc == SQL_ERROR) return fail(L, hSTMT, hstmt);
-			/* return everything we got */
-			luaL_pushresult(&b);
+			lua_pushnil(L);
 			return 0;
 		}
     }
@@ -630,6 +635,17 @@ static int stmt_paramtypes (lua_State *L)
 	return 1;
 }
 
+/*
+** Statement object collector function
+*/
+static int stmt_gc (lua_State *L) {
+	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
+	if (stmt != NULL && !(stmt->closed)) {
+		stmt_shut(L, stmt);
+	}
+	return 0;
+}
+
 static int stmt_close(lua_State *L)
 {
 	stmt_data *stmt = (stmt_data *) luaL_checkudata (L, 1, LUASQL_STATEMENT_ODBC);
@@ -670,6 +686,27 @@ static int stmt_reset(lua_State *L)
 }
 
 /*
+** Connection object collector function
+*/
+static int conn_gc (lua_State *L) {
+	conn_data *conn = (conn_data *)luaL_checkudata(L, 1, LUASQL_CONNECTION_ODBC);
+	if (conn != NULL && !(conn->closed)) {
+		/* Decrement connection counter on environment object */
+		unlock_obj(L, conn->env);
+
+		/* Nullify structure fields. */
+		conn->closed = 1;
+		if (conn->hstmt_async != SQL_NULL_HANDLE) {
+			SQLFreeHandle(hSTMT, conn->hstmt_async);
+			conn->hstmt_async = SQL_NULL_HANDLE;
+		}
+		SQLDisconnect(conn->hdbc);
+		SQLFreeHandle(hDBC, conn->hdbc);
+	}
+	return 0;
+}
+
+/*
 ** Closes a connection.
 */
 static int conn_close (lua_State *L)
@@ -693,11 +730,11 @@ static int conn_close (lua_State *L)
 
 	/* Nullify structure fields. */
 	conn->closed = 1;
-	ret = SQLDisconnect(conn->hdbc);
-	if (error(ret)) {
-		return fail(L, hDBC, conn->hdbc);
+	if (conn->hstmt_async != SQL_NULL_HANDLE) {
+		SQLFreeHandle(hSTMT, conn->hstmt_async);
+		conn->hstmt_async = SQL_NULL_HANDLE;
 	}
-
+	SQLDisconnect(conn->hdbc);
 	ret = SQLFreeHandle(hDBC, conn->hdbc);
 	if (error(ret)) {
 		return fail(L, hDBC, conn->hdbc);
@@ -729,10 +766,10 @@ static int raw_execute(lua_State *L, int istmt)
 
 	if (numcols > 0) {
 		/* if there is a results table (e.g., SELECT) */
-		return create_cursor(L, -1, stmt, numcols);
+		return create_cursor(L, istmt, stmt, numcols);
 	} else {
 		/* if action has no results (e.g., UPDATE) */
-		SQLLEN numrows;
+		SQLLEN numrows = -1;
 		if(error(SQLRowCount(stmt->hstmt, &numrows))) {
 			return fail(L, hSTMT, stmt->hstmt);
 		}
@@ -1039,6 +1076,127 @@ static int conn_execute (lua_State *L)
 }
 
 /*
+** Executes the given statement asynchronously
+*/
+static int conn_send_query(lua_State *L) {
+	conn_data *conn = getconnection(L, 1);
+	const char *statement = luaL_checkstring(L, 2);
+	SQLRETURN ret;
+
+	if (conn->hstmt_async == SQL_NULL_HANDLE) {
+		ret = SQLAllocHandle(hSTMT, conn->hdbc, &conn->hstmt_async);
+		if (error(ret)) return fail(L, hDBC, conn->hdbc);
+	}
+
+	/* ensure it's not busy */
+	if (conn->async_active) {
+		return luasql_faildirect(L, "an async query is already in progress");
+	}
+
+	/* We must use SQLPrepare + SQLExecute for polling support without re-sending string */
+	ret = SQLPrepare(conn->hstmt_async, (SQLCHAR *)statement, SQL_NTS);
+	if (error(ret)) return fail(L, hSTMT, conn->hstmt_async);
+
+	/* Try to enable async. */
+	SQLSetStmtAttr(conn->hstmt_async, SQL_ATTR_ASYNC_ENABLE, (SQLPOINTER)SQL_ASYNC_ENABLE_ON, 0);
+
+	ret = SQLExecute(conn->hstmt_async);
+
+	if (ret == SQL_STILL_EXECUTING) {
+		conn->async_active = 1;
+		lua_pushinteger(L, 1); /* status: still executing */
+		lua_pushinteger(L, 0);
+		return 2;
+	}
+
+	if (error(ret)) return fail(L, hSTMT, conn->hstmt_async);
+
+	/* Finished immediately */
+	conn->async_active = 1;
+	lua_pushinteger(L, 0); /* status: done */
+	lua_pushinteger(L, 0);
+	return 2;
+}
+
+/*
+** Polls the async execution
+*/
+static int conn_poll(lua_State *L) {
+	conn_data *conn = getconnection(L, 1);
+	SQLRETURN ret;
+
+	if (!conn->async_active || conn->hstmt_async == SQL_NULL_HANDLE) {
+		lua_pushboolean(L, 0);
+		lua_pushinteger(L, 0);
+		return 2;
+	}
+
+	ret = SQLExecute(conn->hstmt_async);
+
+	if (ret == SQL_STILL_EXECUTING) {
+		lua_pushboolean(L, 1); /* busy */
+		lua_pushinteger(L, 1); /* status */
+		return 2;
+	}
+
+	lua_pushboolean(L, 0); /* done */
+	lua_pushinteger(L, 0);
+	return 2;
+}
+
+/*
+** Retrieves the result of an async execution
+*/
+static int conn_get_result(lua_State *L) {
+	conn_data *conn = getconnection(L, 1);
+	SQLSMALLINT numcols;
+	SQLRETURN ret;
+
+	if (!conn->async_active || conn->hstmt_async == SQL_NULL_HANDLE) {
+		return luasql_faildirect(L, "no async query in progress");
+	}
+
+	/* determine the number of result columns */
+	ret = SQLNumResultCols(conn->hstmt_async, &numcols);
+	if (error(ret)) {
+		conn->async_active = 0;
+		return fail(L, hSTMT, conn->hstmt_async);
+	}
+
+	if (numcols > 0) {
+		/* SELECT query, create a statement object and then a cursor */
+		stmt_data *stmt = (stmt_data *)LUASQL_NEWUD(L, sizeof(stmt_data));
+		memset(stmt, 0, sizeof(stmt_data));
+		stmt->closed = 0;
+		stmt->conn = conn;
+		stmt->hstmt = conn->hstmt_async;
+		stmt->hidden = 1;
+		luasql_setmeta(L, LUASQL_STATEMENT_ODBC);
+
+		/* hstmt_async is now owned by stmt object */
+		conn->hstmt_async = SQL_NULL_HANDLE;
+		conn->async_active = 0;
+
+		lock_obj(L, 1, conn); /* lock connection for this statement */
+
+		return create_cursor(L, lua_gettop(L), stmt, numcols);
+	} else {
+		/* UPDATE/INSERT query */
+		SQLLEN numrows = -1;
+		SQLRowCount(conn->hstmt_async, &numrows);
+
+		conn->async_active = 0;
+
+#if LUA_VERSION_NUM >= 503
+		lua_pushinteger(L, (lua_Integer)numrows);
+#else
+		lua_pushnumber(L, (lua_Number)numrows);
+#endif
+		return 1;
+	}
+}
+
+/*
 ** Rolls back a transaction.
 */
 static int conn_commit (lua_State *L) {
@@ -1103,6 +1261,8 @@ static int create_connection (lua_State *L, int o, env_data *env, SQLHDBC hdbc)
 	conn->lock = 0;
 	conn->env = env;
 	conn->hdbc = hdbc;
+	conn->hstmt_async = SQL_NULL_HANDLE;
+	conn->async_active = 0;
 
 	lock_obj(L, 1, env);
 
@@ -1228,19 +1388,22 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_Reg connection_methods[] = {
-		{"__gc", conn_close}, /* Should this method be changed? */
-		{"__close", conn_close},
+		{"__gc", conn_gc},
+		{"__close", conn_gc},
 		{"close", conn_close},
 		{"prepare", conn_prepare},
 		{"execute", conn_execute},
+		{"send_query", conn_send_query},
+		{"poll", conn_poll},
+		{"get_result", conn_get_result},
 		{"commit", conn_commit},
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
 		{NULL, NULL},
 	};
 	struct luaL_Reg statement_methods[] = {
-		{"__gc", stmt_close}, /* Should this method be changed? */
-		{"__close", stmt_close},
+		{"__gc", stmt_gc},
+		{"__close", stmt_gc},
 		{"close", stmt_close},
 		{"execute", stmt_execute},
 		{"reset", stmt_reset},
@@ -1248,7 +1411,7 @@ static void create_metatables (lua_State *L) {
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
-		{"__gc", cur_gc}, /* Should this method be changed? */
+		{"__gc", cur_gc},
 		{"__close", cur_gc},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
