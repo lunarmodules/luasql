@@ -950,6 +950,72 @@ static int conn_prepare (lua_State *L) {
 	return 1;
 }
 
+/*
+** Validates the Params table (bind_data)  [ This part is done and tested!! ]
+** bind the data with the Prepared Statement
+** execute the Prepared Statement
+** return a Cursor object if the statement is a query, otherwise
+** return the number of tuples affected by the statement.
+*/
+static int stmt_execute (lua_State *L) {
+    stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_OCI8);
+
+    if (stmt->cursor_open) {
+        lua_pushnil(L);
+        lua_pushstring(L, LUASQL_PREFIX"cannot execute: cursor still open");
+        return 2;
+    }
+
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    /* Validates the Params table (bind_data) */
+    int is_named;
+    if (!luasql_validate_params(L, 2, &is_named))
+        return 2;  /* nil+errmsg already on stack */
+
+    /* Binding part outline [ Not completed yet ] */
+    lua_pushnil(L);
+    while (lua_next(L, 2) != 0) {
+
+        /* fetching value and type: key at -2, value at -1 */
+        int luasql_type;
+        int is_null = 0;
+
+        if (lua_istable(L, -1)) {
+            /* {value, luasql.type} — get type from index 2 */
+            lua_rawgeti(L, -1, 2);
+            luasql_type = (int)lua_tointeger(L, -1);
+            lua_pop(L, 1);
+
+            if (luasql_type == LUASQL_TYPE_NULL)
+                is_null = 1;
+
+        } else {
+            /* luasql.type.null */
+            luasql_type = LUASQL_TYPE_NULL;
+            is_null = 1;
+        }
+
+        /* bind data */
+        if (is_named) {
+			/* If this driver won't support this feature, we will throw error */
+            const char *name = lua_tostring(L, -2);
+            /* ... OCIBindByName(stmt->stmthp, &bindhp, stmt->errhp,
+                                 name, strlen(name), ...) */
+        } else {
+			/* If this driver won't support this feature, we will throw error */
+            ub4 pos = (ub4)lua_tointeger(L, -2); /* 1-based, matches OCI */
+            /* ... OCIBindByPos(stmt->stmthp, &bindhp, stmt->errhp,
+                                pos, ...) */
+        }
+
+        lua_pop(L, 1); 
+    }
+
+    /* Execute Part */
+    return 0; 
+}
+
 
 /*
 ** Commit the current transaction.
@@ -1144,6 +1210,7 @@ static void create_metatables (lua_State *L) {
 	struct luaL_Reg statement_methods[] = {
 		{"__gc", stmt_close},
 		{"__close", stmt_close},
+		{"execute", stmt_execute},
 		{"close", stmt_close},
 		{NULL, NULL},
 	};
