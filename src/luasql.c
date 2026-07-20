@@ -15,6 +15,10 @@
 	lua_pushstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 #endif
 
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen lua_objlen
+#endif
+
 
 /*
 ** Typical database error situation
@@ -189,14 +193,16 @@ LUASQL_API void luasql_set_types (lua_State *L) {
 ** Returns 1 on success.
 ** Returns 0 on failure — pushes nil + errmsg onto the stack.
 */
-LUASQL_API int luasql_validate_params (lua_State *L, int tbl_idx, int *is_named_out) {
+LUASQL_API int luasql_validate_params (lua_State *L, int tbl_idx, int *is_named_out, int *num_params_out) {
     int is_named = -1;  /* -1=unknown, 1=named, 0=positional */
+    int param_count = 0;
     
     /* Convert tbl_idx to absolute index to prevent it from changing when we push nil */
     int abs_tbl_idx = (tbl_idx < 0) ? lua_gettop(L) + tbl_idx + 1 : tbl_idx;
 
     lua_pushnil(L);
     while (lua_next(L, abs_tbl_idx) != 0) {
+        param_count++;
         /* key at -2, value at -1 */
 
         /* check if keys are named or positional */
@@ -294,6 +300,7 @@ LUASQL_API int luasql_validate_params (lua_State *L, int tbl_idx, int *is_named_
     }
 
     *is_named_out = (is_named == 1) ? 1 : 0;
+    if (num_params_out) *num_params_out = param_count;
     return 1;
 }
 

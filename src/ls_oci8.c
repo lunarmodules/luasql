@@ -951,8 +951,147 @@ static int conn_prepare (lua_State *L) {
 }
 
 /*
-** Validates the Params table (bind_data)  [ This part is done and tested!! ]
-** bind the data with the Prepared Statement
+** Helper function to parse 'YYYY-MM-DD' into an OCIDate struct.
+** Returns 1 on success, 0 on failure.
+*/
+#ifdef SQLT_ODT
+static int parse_date(const char *date_str, OCIDate *date) {
+	int year, month, day;
+	if (sscanf(date_str, "%4d-%2d-%2d", &year, &month, &day) == 3) {
+		OCIDateSetDate(date, year, month, day);
+		OCIDateSetTime(date, 0, 0, 0);
+		return 1;
+	}
+	return 0;
+}
+#endif
+
+/*
+** Binds parameters to a prepared statement.
+** Returns 0 on success, or a Lua return value on error.
+*/
+static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_named,
+                      column_value **p_bind_values, OCIBind ***p_bind_handles, sb2 **p_inds) {
+    column_value *bind_values = (column_value *)calloc(num_params, sizeof(column_value));
+    OCIBind **bind_handles = (OCIBind **)calloc(num_params, sizeof(OCIBind *));
+    sb2 *inds = (sb2 *)calloc(num_params, sizeof(sb2));
+
+    *p_bind_values = bind_values;
+    *p_bind_handles = bind_handles;
+    *p_inds = inds;
+
+    int param_idx = 0;
+    lua_pushnil(L);
+    while (lua_next(L, 2) != 0) {
+        /* fetching value and type: key at -2, value at -1 */
+        int luasql_type;
+        int is_null = 0;
+
+        if (lua_istable(L, -1)) {
+            /* {value, luasql.type} — get type from index 2 */
+            lua_rawgeti(L, -1, 2);
+            luasql_type = (int)lua_tointeger(L, -1);
+            lua_pop(L, 1);
+            if (luasql_type == LUASQL_TYPE_NULL)
+                is_null = 1;
+        } else {
+            /* luasql.type.null */
+            luasql_type = LUASQL_TYPE_NULL;
+            is_null = 1;
+        }
+
+        dvoid *bind_ptr = NULL;
+        sb4 bind_size = 0;
+        ub2 bind_type = 0;
+
+        if (!is_null) {
+            inds[param_idx] = 0; /* not null */
+            lua_rawgeti(L, -1, 1);
+            switch (luasql_type) {
+                case LUASQL_TYPE_INT:
+                    bind_values[param_idx].i = (int)lua_tointeger(L, -1);
+                    bind_ptr = &bind_values[param_idx].i;
+                    bind_size = sizeof(int);
+                    bind_type = SQLT_INT;
+                    break;
+                case LUASQL_TYPE_NUMBER:
+                    bind_values[param_idx].d = (double)lua_tonumber(L, -1);
+                    bind_ptr = &bind_values[param_idx].d;
+                    bind_size = sizeof(double);
+                    bind_type = SQLT_FLT;
+                    break;
+                case LUASQL_TYPE_BOOLEAN:
+                    bind_values[param_idx].s = lua_toboolean(L, -1) ? "1" : "0";
+                    bind_ptr = bind_values[param_idx].s;
+                    bind_size = 1;
+                    bind_type = SQLT_CHR;
+                    break;
+                case LUASQL_TYPE_STRING:
+                case LUASQL_TYPE_TIME:
+                case LUASQL_TYPE_TIMESTAMP:
+                    bind_values[param_idx].s = (char *)lua_tostring(L, -1);
+                    bind_ptr = bind_values[param_idx].s;
+                    bind_size = strlen(bind_values[param_idx].s) + 1;
+                    bind_type = SQLT_STR;
+                    break;
+                case LUASQL_TYPE_DATE: {
+                    const char *date_str = lua_tostring(L, -1);
+#ifdef SQLT_ODT
+                    if (!parse_date(date_str, &bind_values[param_idx].date)) {
+                        lua_pushnil(L);
+                        lua_pushstring(L, LUASQL_PREFIX"invalid date format, expected YYYY-MM-DD");
+                        return 2;
+                    }
+                    bind_ptr = &bind_values[param_idx].date;
+                    bind_size = sizeof(OCIDate);
+                    bind_type = SQLT_ODT;
+#else
+                    bind_values[param_idx].s = (char *)date_str;
+                    bind_ptr = bind_values[param_idx].s;
+                    bind_size = strlen(bind_values[param_idx].s) + 1;
+                    bind_type = SQLT_STR;
+#endif
+                    break;
+                }
+            }
+            lua_pop(L, 1);
+        } else {
+            inds[param_idx] = -1; /* NULL */
+            bind_type = SQLT_STR; /* default safe type for null */
+            bind_size = 0;
+            bind_ptr = NULL;
+        }
+
+        /* bind data */
+        sword status;
+        if (is_named) {
+            const char *name = lua_tostring(L, -2);
+            status = OCIBindByName(stmt->stmthp, &bind_handles[param_idx], stmt->errhp,
+                                   (text *)name, strlen(name),
+                                   bind_ptr, bind_size, bind_type,
+                                   (dvoid *)&inds[param_idx], (ub2 *)0, (ub2 *)0,
+                                   (ub4)0, (ub4 *)0, OCI_DEFAULT);
+        } else {
+            ub4 pos = (ub4)lua_tointeger(L, -2); /*OCI also follows 1-based indexing*/
+            status = OCIBindByPos(stmt->stmthp, &bind_handles[param_idx], stmt->errhp,
+                                  pos, bind_ptr, bind_size, bind_type,
+                                  (dvoid *)&inds[param_idx], (ub2 *)0, (ub2 *)0,
+                                  (ub4)0, (ub4 *)0, OCI_DEFAULT);
+        }
+
+        if (status) {
+            return checkerr(L, status, stmt->errhp);
+        }
+
+        param_idx++;
+        lua_pop(L, 1); 
+    }
+    return 0;
+}
+
+/*
+** Validates the Params table (bind_data)  
+** bind the data with the Prepared Statement [ Upto this part is done! ]
 ** execute the Prepared Statement
 ** return a Cursor object if the statement is a query, otherwise
 ** return the number of tuples affected by the statement.
@@ -970,50 +1109,32 @@ static int stmt_execute (lua_State *L) {
 
     /* Validates the Params table (bind_data) */
     int is_named;
-    if (!luasql_validate_params(L, 2, &is_named))
+    int num_params = 0;
+    if (!luasql_validate_params(L, 2, &is_named, &num_params))
         return 2;  /* nil+errmsg already on stack */
 
-    /* Binding part outline [ Not completed yet ] */
-    lua_pushnil(L);
-    while (lua_next(L, 2) != 0) {
+    column_value *bind_values = NULL;
+    OCIBind **bind_handles = NULL;
+    sb2 *inds = NULL;
 
-        /* fetching value and type: key at -2, value at -1 */
-        int luasql_type;
-        int is_null = 0;
-
-        if (lua_istable(L, -1)) {
-            /* {value, luasql.type} — get type from index 2 */
-            lua_rawgeti(L, -1, 2);
-            luasql_type = (int)lua_tointeger(L, -1);
-            lua_pop(L, 1);
-
-            if (luasql_type == LUASQL_TYPE_NULL)
-                is_null = 1;
-
-        } else {
-            /* luasql.type.null */
-            luasql_type = LUASQL_TYPE_NULL;
-            is_null = 1;
+    if (num_params > 0) {
+        int ret = stmt_bind(L, stmt, num_params, is_named, &bind_values, &bind_handles, &inds);
+        if (ret) {
+            if (bind_values) free(bind_values);
+            if (bind_handles) free(bind_handles);
+            if (inds) free(inds);
+            return ret;
         }
-
-        /* bind data */
-        if (is_named) {
-			/* If this driver won't support this feature, we will throw error */
-            const char *name = lua_tostring(L, -2);
-            /* ... OCIBindByName(stmt->stmthp, &bindhp, stmt->errhp,
-                                 name, strlen(name), ...) */
-        } else {
-			/* If this driver won't support this feature, we will throw error */
-            ub4 pos = (ub4)lua_tointeger(L, -2); /* 1-based, matches OCI */
-            /* ... OCIBindByPos(stmt->stmthp, &bindhp, stmt->errhp,
-                                pos, ...) */
-        }
-
-        lua_pop(L, 1); 
     }
 
-    /* Execute Part */
-    return 0; 
+    /* Execute part comes here - not implemented yet */
+
+    /* Free bind data */
+    if (bind_values) free(bind_values);
+    if (bind_handles) free(bind_handles);
+    if (inds) free(inds);
+
+    return 0;
 }
 
 
