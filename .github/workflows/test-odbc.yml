@@ -15,9 +15,9 @@ jobs:
       UNIX_ODBC_VERSION: 2.3.14
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+    - uses: luau-project/setup-lua@c47c002fc60841a11b22ef3058c86a3d08acf218 # v2.0.1
       with:
         lua-version: ${{ matrix.lua-version }}
 
@@ -60,12 +60,12 @@ jobs:
         toolchain: ["msvc", "gcc"]
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       if: ${{ matrix.toolchain == 'msvc' }}
 
-    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+    - uses: luau-project/setup-lua@c47c002fc60841a11b22ef3058c86a3d08acf218 # v2.0.1
       with:
         lua-version: ${{ matrix.lua-version }}
 
