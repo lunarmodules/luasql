@@ -404,13 +404,12 @@ static int set_param(lua_State *L, sqlite3_stmt *vm, int param_nr, int arg)
     case LUA_TSTRING: {
       size_t s_len;
       const char *s = lua_tolstring(L, arg, &s_len);
-      rc = sqlite3_bind_null(vm, param_nr);
       rc = sqlite3_bind_text(vm, param_nr, s, s_len, SQLITE_TRANSIENT);
       break;
     }
 
     case LUA_TBOOLEAN: {
-      int val = lua_tointeger(L, arg);
+      int val = lua_toboolean(L, arg);
       rc = sqlite3_bind_int(vm, param_nr, val);
       break;
     }
