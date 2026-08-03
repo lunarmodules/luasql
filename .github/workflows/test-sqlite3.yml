@@ -15,9 +15,9 @@ jobs:
       SQLITE3_DOWNLOAD_URL: https://sqlite.org/2026/sqlite-autoconf-3510200.tar.gz
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+    - uses: luau-project/setup-lua@c47c002fc60841a11b22ef3058c86a3d08acf218 # v2.0.1
       with:
         lua-version: ${{ matrix.lua-version }}
 
@@ -39,7 +39,7 @@ jobs:
     # on their servers
     - name: Restore SQLite3 tarball
       id: sqlite3-tarball
-      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env._SQLITE3_ARCHIVE }}
         key: ${{ env._SQLITE3_ARCHIVE }}
@@ -51,7 +51,7 @@ jobs:
 
     - name: Save SQLite3 tarball
       if: ${{ steps.sqlite3-tarball.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env._SQLITE3_ARCHIVE }}
         key: ${{ env._SQLITE3_ARCHIVE }}
@@ -93,12 +93,12 @@ jobs:
       LUAROCKS_DEPS_DIR: C:\external
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       if: ${{ matrix.toolchain == 'msvc' }}
 
-    - uses: luau-project/setup-lua@740668c632803d06039deb1c6e7c9293a26fa8e7 # v1.0.9
+    - uses: luau-project/setup-lua@c47c002fc60841a11b22ef3058c86a3d08acf218 # v2.0.1
       with:
         lua-version: ${{ matrix.lua-version }}
 
@@ -131,7 +131,7 @@ jobs:
     # on their servers
     - name: Restore SQLite3 zip archive
       id: sqlite3-zip
-      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env._SQLITE3_ARCHIVE }}
         key: ${{ env._SQLITE3_ARCHIVE }}
@@ -143,7 +143,7 @@ jobs:
 
     - name: Save SQLite3 zip archive
       if: ${{ steps.sqlite3-zip.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env._SQLITE3_ARCHIVE }}
         key: ${{ env._SQLITE3_ARCHIVE }}
