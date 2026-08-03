@@ -687,11 +687,11 @@ static int env_connect (lua_State *L) {
 	if (conn == NULL)
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
-	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");	
+	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");
 #ifdef MARIADB_PACKAGE_VERSION
 	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
 #endif
-	
+
 	if (!mysql_real_connect(conn, host, username, password,
 		sourcename, port, unix_socket, client_flag))
 	{
