@@ -15,6 +15,19 @@
 
 #include "luasql.h"
 
+#ifndef SQL_BOOLEAN
+#define SQL_BOOLEAN 32764
+#endif
+#ifndef SQL_INT128
+#define SQL_INT128 32752
+#endif
+#ifndef SQL_DEC16
+#define SQL_DEC16 32762
+#endif
+#ifndef SQL_DEC34
+#define SQL_DEC34 32760
+#endif
+
 #define LUASQL_ENVIRONMENT_FIREBIRD "Firebird environment"
 #define LUASQL_CONNECTION_FIREBIRD "Firebird connection"
 #define LUASQL_CURSOR_FIREBIRD "Firebird cursor"
@@ -25,16 +38,8 @@ typedef struct {
 	int lock;						/* lock count for open connections */
 } env_data;
 
-typedef struct {
-	short			closed;
-	env_data*		env;			/* the DB environment this is in */
-	isc_db_handle	db;				/* the database handle */
-	char			dpb_buffer[256];/* holds the database parameter buffer */
-	short			dpb_length;		/* the used amount of the dpb */
-	isc_tr_handle	transaction;	/* the transaction handle */
-	int				lock;			/* lock count for open cursors */
-	int				autocommit;		/* should each statement be committed */
-} conn_data;
+struct conn_data;
+typedef struct conn_data conn_data;
 
 typedef struct {
 	short			closed;
@@ -44,6 +49,21 @@ typedef struct {
 	int			stmt_type;			/* the type of the statement */
 	XSQLDA			*out_sqlda;		/* the cursor data array */
 } cur_data;
+
+struct conn_data {
+	short			closed;
+	env_data*		env;			/* the DB environment this is in */
+	isc_db_handle	db;				/* the database handle */
+	char			dpb_buffer[256];/* holds the database parameter buffer */
+	short			dpb_length;		/* the used amount of the dpb */
+	isc_tr_handle	transaction;	/* the transaction handle */
+	int				lock;			/* lock count for open cursors */
+	int				autocommit;		/* should each statement be committed */
+	/* Async support */
+	int             pending_type; /* 0: none, 1: cursor, 2: count */
+	cur_data        pending_cur;
+	int             pending_count;
+};
 
 /* How many fields to pre-alloc to the cursor */
 #define CURSOR_PREALLOC 10
@@ -71,11 +91,12 @@ typedef struct {
 static int return_db_error(lua_State *L, const ISC_STATUS *pvector)
 {
 	char errmsg[512];
+	ISC_STATUS *ptr = (ISC_STATUS *)pvector;
 
 	lua_pushnil(L);
-	FB_INTERPRET(errmsg, 512, &pvector);
+	FB_INTERPRET(errmsg, 512, &ptr);
 	lua_pushstring(L, errmsg);
-	while(FB_INTERPRET(errmsg, 512, &pvector)) {
+	while(FB_INTERPRET(errmsg, 512, &ptr)) {
 		lua_pushstring(L, "\n * ");
 		lua_pushstring(L, errmsg);
 		lua_concat(L, 3);
@@ -111,18 +132,35 @@ static void lua_unregisterobj(lua_State *L, void *obj)
 */
 static void free_cur(cur_data* cur)
 {
-	int i;
+	int i, n;
 	XSQLVAR *var;
 
-	/* free the field memory blocks */
-	for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
-		free(var->sqldata);
-		if(var->sqlind != NULL)
-			free(var->sqlind);
+	if (cur->out_sqlda) {
+		n = cur->out_sqlda->sqld;
+		if (n > cur->out_sqlda->sqln)
+			n = cur->out_sqlda->sqln;
+
+		/* free the field memory blocks */
+		for (i=0, var = cur->out_sqlda->sqlvar; i < n; i++, var++) {
+			if (var->sqldata) {
+				free(var->sqldata);
+				var->sqldata = NULL;
+			}
+			if(var->sqlind != NULL) {
+				free(var->sqlind);
+				var->sqlind = NULL;
+			}
+		}
+
+		/* free the data array */
+		free(cur->out_sqlda);
+		cur->out_sqlda = NULL;
 	}
 
-	/* free the data array */
-	free(cur->out_sqlda);
+	if (cur->stmt) {
+		isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
+		cur->stmt = 0;
+	}
 }
 
 /*
@@ -130,13 +168,7 @@ static void free_cur(cur_data* cur)
 */
 static int cur_shut(lua_State *L, cur_data *cur)
 {
-	isc_dsql_free_statement(cur->env->status_vector, &cur->stmt,
-	                        DSQL_close);
-	if ( CHECK_DB_ERROR(cur->env->status_vector) ) {
-		return return_db_error(L, cur->env->status_vector);
-	}
-
-	/* free the cursor data */
+	/* free the cursor data (includes isc_dsql_free_statement with DSQL_drop) */
 	free_cur(cur);
 
 	/* remove cursor from lock count and check if statement can be unregistered */
@@ -307,17 +339,15 @@ static int count_rows_affected(cur_data* cur)
 static void *malloc_zero(size_t len)
 {
 	void *res = malloc(len);
-	memset(res, 0, len);
+	if (res) memset(res, 0, len);
 	return res;
 }
 
 /*
-** Executes a SQL statement.
-** Returns
-**   cursor object: if there are results or
-**   row count: number of rows affected by statement if no results
+** Executes a SQL statement but stores the result in the connection
+** object for later retrieval.
 */
-static int conn_execute (lua_State *L) {
+static int conn_send_query (lua_State *L) {
 	conn_data *conn = getconnection(L,1);
 	const char *statement = luaL_checkstring(L, 2);
 	int dialect = (int)luaL_optnumber(L, 3, 3);
@@ -326,40 +356,50 @@ static int conn_execute (lua_State *L) {
 	long dtype;
 	int i, n, count;
 
-	cur_data cur;
+	cur_data *cur = &conn->pending_cur;
 
-	cur.closed = 0;
-	cur.env = conn->env;
-	cur.conn = conn;
-	cur.stmt = 0;
+	if (conn->pending_type == 1) {
+		return luasql_faildirect(L, "there is already a pending query");
+	}
+	conn->pending_type = 0;
 
-	cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(CURSOR_PREALLOC));
-	cur.out_sqlda->version = SQLDA_VERSION1;
-	cur.out_sqlda->sqln = CURSOR_PREALLOC;
+	memset(cur, 0, sizeof(cur_data));
+	cur->closed = 0;
+	cur->env = conn->env;
+	cur->conn = conn;
+	cur->stmt = 0;
+
+	cur->out_sqlda = (XSQLDA *)malloc_zero(XSQLDA_LENGTH(CURSOR_PREALLOC));
+	if (cur->out_sqlda == NULL) {
+		return luasql_faildirect(L, "out of memory");
+	}
+	cur->out_sqlda->version = SQLDA_VERSION1;
+	cur->out_sqlda->sqln = CURSOR_PREALLOC;
 
 	/* create a statement to handle the query */
-	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur.stmt);
+	isc_dsql_allocate_statement(conn->env->status_vector, &conn->db, &cur->stmt);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
-		free(cur.out_sqlda);
+		free(cur->out_sqlda);
+		cur->out_sqlda = NULL;
 		return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* process the SQL ready to run the query */
-	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &cur.stmt, 0, (char*)statement, dialect, cur.out_sqlda);
+	isc_dsql_prepare(conn->env->status_vector, &conn->transaction, &cur->stmt, 0, (char*)statement, (unsigned short)dialect, cur->out_sqlda);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
-		free(cur.out_sqlda);
+		free_cur(cur);
 		return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* what type of SQL statement is it? */
-	cur.stmt_type = get_statement_type(&cur);
-	if(cur.stmt_type < 0) {
-		free(cur.out_sqlda);
+	cur->stmt_type = get_statement_type(cur);
+	if(cur->stmt_type < 0) {
+		free_cur(cur);
 		return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* an unsupported SQL statement (something like COMMIT) */
-	switch(cur.stmt_type) {
+	switch(cur->stmt_type) {
 	case isc_info_sql_stmt_select:
 	case isc_info_sql_stmt_insert:
 	case isc_info_sql_stmt_update:
@@ -368,27 +408,31 @@ static int conn_execute (lua_State *L) {
 	case isc_info_sql_stmt_exec_procedure:
 		break;
 	default:
-		free(cur.out_sqlda);
+		free_cur(cur);
 		return luasql_faildirect(L, "unsupported SQL statement");
 	}
 
 	/* resize the result set if needed */
-	if (cur.out_sqlda->sqld > cur.out_sqlda->sqln)
+	if (cur->out_sqlda->sqld > cur->out_sqlda->sqln)
 	{
-		n = cur.out_sqlda->sqld;
-		free(cur.out_sqlda);
-		cur.out_sqlda = (XSQLDA *)malloc(XSQLDA_LENGTH(n));
-		cur.out_sqlda->sqln = n;
-		cur.out_sqlda->version = SQLDA_VERSION1;
-		isc_dsql_describe(conn->env->status_vector, &cur.stmt, 1, cur.out_sqlda);
+		n = cur->out_sqlda->sqld;
+		free(cur->out_sqlda);
+		cur->out_sqlda = (XSQLDA *)malloc_zero(XSQLDA_LENGTH(n));
+		if (cur->out_sqlda == NULL) {
+			free_cur(cur);
+			return luasql_faildirect(L, "out of memory");
+		}
+		cur->out_sqlda->sqln = (short)n;
+		cur->out_sqlda->version = SQLDA_VERSION1;
+		isc_dsql_describe(conn->env->status_vector, &cur->stmt, 1, cur->out_sqlda);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
-			free(cur.out_sqlda);
+			free_cur(cur);
 			return return_db_error(L, conn->env->status_vector);
 		}
 	}
 
 	/* prep the result set ready to handle the data */
-	for (i=0, var = cur.out_sqlda->sqlvar; i < cur.out_sqlda->sqld; i++, var++) {
+	for (i=0, var = cur->out_sqlda->sqlvar; i < cur->out_sqlda->sqld; i++, var++) {
 		dtype = (var->sqltype & ~1); /* drop flag bit for now */
 		switch(dtype) {
 		case SQL_VARYING:
@@ -406,6 +450,21 @@ static int conn_execute (lua_State *L) {
 		case SQL_INT64:
 			var->sqldata = (char *)malloc_zero(sizeof(ISC_INT64));
 			break;
+#ifdef SQL_INT128
+		case SQL_INT128:
+			var->sqldata = (char *)malloc_zero(16);
+			break;
+#endif
+#ifdef SQL_DEC16
+		case SQL_DEC16:
+			var->sqldata = (char *)malloc_zero(8);
+			break;
+#endif
+#ifdef SQL_DEC34
+		case SQL_DEC34:
+			var->sqldata = (char *)malloc_zero(16);
+			break;
+#endif
 		case SQL_FLOAT:
 			var->sqldata = (char *)malloc_zero(sizeof(float));
 			break;
@@ -421,10 +480,14 @@ static int conn_execute (lua_State *L) {
 		case SQL_TIMESTAMP:
 			var->sqldata = (char *)malloc_zero(sizeof(ISC_TIMESTAMP));
 			break;
+#ifdef SQL_BOOLEAN
+		case SQL_BOOLEAN:
+			var->sqldata = (char *)malloc_zero(sizeof(signed char));
+			break;
+#endif
 		case SQL_BLOB:
 			var->sqldata = (char *)malloc_zero(sizeof(ISC_QUAD));
 			break;
-		/* TODO : add extra data type handles here */
 		}
 
 		if (var->sqltype & 1) {
@@ -436,57 +499,102 @@ static int conn_execute (lua_State *L) {
 	}
 
 	/* run the query */
-	isc_dsql_execute(conn->env->status_vector, &conn->transaction, &cur.stmt, 1, NULL);
+	isc_dsql_execute(conn->env->status_vector, &conn->transaction, &cur->stmt, 1, NULL);
 	if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
-		free_cur(&cur);
+		free_cur(cur);
 		return return_db_error(L, conn->env->status_vector);
 	}
 
 	/* if autocommit is set and it's a non SELECT query, commit change */
-	if(conn->autocommit != 0 && cur.stmt_type > 1) {
+	if(conn->autocommit != 0 && cur->stmt_type > 1) {
 		isc_commit_retaining(conn->env->status_vector, &conn->transaction);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
-			free_cur(&cur);
+			free_cur(cur);
 			return return_db_error(L, conn->env->status_vector);
 		}
 	}
 
-	/* what do we return? a cursor or a count */
-	if(cur.out_sqlda->sqld > 0) { /* a cursor */
+	/* what do we have? a cursor or a count */
+	if(cur->out_sqlda->sqld > 0) { /* a cursor */
+		conn->pending_type = 1;
+	} else { /* a count */
+		if( (count = count_rows_affected(cur)) < 0 ) {
+			free_cur(cur);
+			return return_db_error(L, conn->env->status_vector);
+		}
+		conn->pending_type = 2;
+		conn->pending_count = count;
+		/* totally finished with the cursor */
+		free_cur(cur);
+	}
+
+	lua_pushinteger(L, 0); /* status: finished */
+	lua_pushinteger(L, 0); /* ret: success */
+	return 2;
+}
+
+/*
+** Retrieves the result of a pending query.
+*/
+static int conn_get_result (lua_State *L) {
+	conn_data *conn = getconnection(L,1);
+
+	if (conn->pending_type == 0) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	if (conn->pending_type == 1) { /* a cursor */
 		char cur_name[32];
 		cur_data* user_cur = (cur_data*)LUASQL_NEWUD(L, sizeof(cur_data));
 		luasql_setmeta (L, LUASQL_CURSOR_FIREBIRD);
 
-		sprintf(cur_name, "dyn_cursor_%p", (void *)user_cur);
+		sprintf(cur_name, "c%lx", (unsigned long)user_cur);
 
 		/* open the cursor ready for fetch cycles */
-		isc_dsql_set_cursor_name(cur.env->status_vector, &cur.stmt, cur_name, 0);
+		isc_dsql_set_cursor_name(conn->env->status_vector, &conn->pending_cur.stmt, cur_name, 0);
 		if ( CHECK_DB_ERROR(conn->env->status_vector) ) {
 			lua_pop(L, 1);	/* the userdata */
-			free_cur(&cur);
+			free_cur(&conn->pending_cur);
+			conn->pending_type = 0;
 			return return_db_error(L, conn->env->status_vector);
 		}
 
 		/* copy the cursor into a new lua userdata object */
-		memcpy((void*)user_cur, (void*)&cur, sizeof(cur_data));
+		memcpy((void*)user_cur, (void*)&conn->pending_cur, sizeof(cur_data));
 
 		/* add cursor to the lock count */
 		lua_registerobj(L, 1, conn);
 		++conn->lock;
 	} else { /* a count */
-		if( (count = count_rows_affected(&cur)) < 0 ) {
-			free(cur.out_sqlda);
-			return return_db_error(L, conn->env->status_vector);
-		}
-
-		lua_pushnumber(L, count);
-
-		/* totally finished with the cursor */
-		isc_dsql_free_statement(conn->env->status_vector, &cur.stmt, DSQL_drop);
-		free(cur.out_sqlda);
+		lua_pushnumber(L, conn->pending_count);
 	}
 
+	conn->pending_type = 0;
 	return 1;
+}
+
+/*
+** Checks if a query is still running.
+*/
+static int conn_poll (lua_State *L) {
+	lua_pushboolean(L, 0); /* not busy */
+	lua_pushinteger(L, 0); /* status */
+	return 2;
+}
+
+/*
+** Executes a SQL statement.
+** Returns
+**   cursor object: if there are results or
+**   row count: number of rows affected by statement if no results
+*/
+static int conn_execute (lua_State *L) {
+	int res = conn_send_query(L);
+	if (res != 2 || !lua_isinteger(L, -2) || lua_tointeger(L, -2) != 0)
+		return res;
+	lua_pop(L, 2); /* pop 0, 0 */
+	return conn_get_result(L);
 }
 
 /*
@@ -559,6 +667,11 @@ static int conn_close (lua_State *L) {
 	if(conn->lock > 0)
 		return luasql_faildirect(L, "there are still open cursors");
 
+	if (conn->pending_type == 1) {
+		free_cur(&conn->pending_cur);
+	}
+	conn->pending_type = 0;
+
 	if(conn->autocommit != 0)
 		isc_commit_transaction(conn->env->status_vector, &conn->transaction);
 	else
@@ -588,6 +701,11 @@ static int conn_gc (lua_State *L) {
 	conn_data *conn = (conn_data *)luaL_checkudata(L,1,LUASQL_CONNECTION_FIREBIRD);
 
 	if (conn != NULL && !(conn->closed)) {
+		if (conn->pending_type == 1) {
+			free_cur(&conn->pending_cur);
+		}
+		conn->pending_type = 0;
+
 		if(conn->autocommit != 0)
 			isc_commit_transaction(conn->env->status_vector, &conn->transaction);
 		else
@@ -653,19 +771,19 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 		switch(cur->out_sqlda->sqlvar[i].sqltype & ~1) {
 		case SQL_VARYING:
 			varcharlen = (int)isc_vax_integer(cur->out_sqlda->sqlvar[i].sqldata, 2);
-			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata+2, varcharlen);
+			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata+2, (size_t)varcharlen);
 			break;
 		case SQL_TEXT:
-			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata, cur->out_sqlda->sqlvar[i].sqllen);
+			lua_pushlstring(L, cur->out_sqlda->sqlvar[i].sqldata, (size_t)cur->out_sqlda->sqlvar[i].sqllen);
 			break;
 		case SQL_SHORT:
-			luasql_pushinteger(L, *(ISC_SHORT*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, (lua_Integer)*(ISC_SHORT*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_LONG:
-			luasql_pushinteger(L, *(ISC_LONG*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, (lua_Integer)*(ISC_LONG*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_INT64:
-			luasql_pushinteger(L, *(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
+			luasql_pushinteger(L, (lua_Integer)*(ISC_INT64*)(cur->out_sqlda->sqlvar[i].sqldata));
 			break;
 		case SQL_FLOAT:
 			lua_pushnumber(L, *(float*)(cur->out_sqlda->sqlvar[i].sqldata));
@@ -688,6 +806,27 @@ static void push_column(lua_State *L, int i, cur_data *cur) {
 			strftime(timestr, 255, "%x %X", &timevar);
 			lua_pushstring(L, timestr);
 			break;
+#ifdef SQL_BOOLEAN
+		case SQL_BOOLEAN:
+			lua_pushboolean(L, *(signed char *)(cur->out_sqlda->sqlvar[i].sqldata));
+			break;
+#endif
+#ifdef SQL_INT128
+		case SQL_INT128:
+			/* use lua_pushnumber or luasql_pushinteger as a fallback */
+			lua_pushnumber(L, 0); 
+			break;
+#endif
+#ifdef SQL_DEC16
+		case SQL_DEC16:
+			lua_pushnumber(L, 0); 
+			break;
+#endif
+#ifdef SQL_DEC34
+		case SQL_DEC34:
+			lua_pushnumber(L, 0); 
+			break;
+#endif
 		case SQL_BLOB:
 			/* get the BLOB ID and open it */
 			memcpy(&blob_id, cur->out_sqlda->sqlvar[i].sqldata, sizeof(ISC_QUAD));
@@ -758,7 +897,7 @@ static int cur_fetch (lua_State *L) {
 				}
 
 				if (alpha) {
-					lua_pushlstring(L, cur->out_sqlda->sqlvar[i].aliasname, cur->out_sqlda->sqlvar[i].aliasname_length);
+					lua_pushlstring(L, cur->out_sqlda->sqlvar[i].aliasname, (size_t)cur->out_sqlda->sqlvar[i].aliasname_length);
 					lua_pushvalue(L, -2);
 					lua_settable(L, 2);
 				}
@@ -793,12 +932,7 @@ static int cur_fetch (lua_State *L) {
 	if (fetch_stat != 100L)
 		return return_db_error(L, cur->env->status_vector);
 
-	/* last row has been fetched, close cursor */
-	isc_dsql_free_statement(cur->env->status_vector, &cur->stmt, DSQL_drop);
-	if ( CHECK_DB_ERROR(cur->env->status_vector) )
-		return return_db_error(L, cur->env->status_vector);
-
-	/* free the cursor data */
+	/* last row has been fetched, close cursor (includes DSQL_drop) */
 	free_cur(cur);
 
 	cur->closed = 1;
@@ -825,7 +959,7 @@ static int cur_colnames (lua_State *L) {
 
 	for (i=1, var = cur->out_sqlda->sqlvar; i <= cur->out_sqlda->sqld; i++, var++) {
 		lua_pushnumber(L, i);
-		lua_pushlstring(L, var->aliasname, var->aliasname_length);
+		lua_pushlstring(L, var->aliasname, (size_t)var->aliasname_length);
 		lua_settable(L, -3);
 	}
 
@@ -856,12 +990,26 @@ static int cur_coltypes (lua_State *L) {
 		case SQL_BLOB:
             lua_pushstring(L, "string");
 			break;
+#ifdef SQL_BOOLEAN
+		case SQL_BOOLEAN:
+			lua_pushstring(L, "boolean");
+			break;
+#endif
 		case SQL_SHORT:
 		case SQL_LONG:
 		case SQL_INT64:
+#ifdef SQL_INT128
+		case SQL_INT128:
+#endif
 #if LUA_VERSION_NUM>=503
             lua_pushstring(L, "integer");
 			break;
+#endif
+#ifdef SQL_DEC16
+		case SQL_DEC16:
+#endif
+#ifdef SQL_DEC34
+		case SQL_DEC34:
 #endif
 		case SQL_FLOAT:
 		case SQL_DOUBLE:
@@ -962,7 +1110,8 @@ static int env_connect (lua_State *L) {
 	conn.db = 0L;
 	conn.transaction = 0L;
 	conn.lock = 0;
-	conn.autocommit = 0;
+	conn.autocommit = 1;
+	conn.pending_type = 0;
 
 	/* Construct a database parameter buffer. */
 	dpb = conn.dpb_buffer;
@@ -998,8 +1147,10 @@ static int env_connect (lua_State *L) {
 							isc_tpb );
 
 	/* return NULL on error */
-	if ( CHECK_DB_ERROR(conn.env->status_vector) )
+	if ( CHECK_DB_ERROR(conn.env->status_vector) ) {
+		isc_detach_database(env->status_vector, &conn.db);
 		return return_db_error(L, conn.env->status_vector);
+	}
 
 	/* create the lua object and add the connection to the lock */
 	res_conn = (conn_data*)LUASQL_NEWUD(L, sizeof(conn_data));
@@ -1084,11 +1235,14 @@ static void create_metatables (lua_State *L) {
 		{"rollback", conn_rollback},
 		{"setautocommit", conn_setautocommit},
 		{"escape", conn_escape},
+		{"send_query", conn_send_query},
+		{"get_result", conn_get_result},
+		{"poll", conn_poll},
 		{NULL, NULL},
 	};
 	struct luaL_Reg cursor_methods[] = {
 		{"__gc", cur_gc},
-		{"__close", cur_gc},
+		{"__close", cur_close},
 		{"close", cur_close},
 		{"fetch", cur_fetch},
 		{"getcoltypes", cur_coltypes},
@@ -1112,7 +1266,7 @@ LUASQL_API int luaopen_luasql_firebird (lua_State *L) {
 	};
 	create_metatables (L);
 	lua_newtable (L);
-	luaL_setfuncs (L, driver, 0);
+	luaL_setfuncs(L, driver, 0);
 	luasql_set_info (L);
 	return 1;
 }
