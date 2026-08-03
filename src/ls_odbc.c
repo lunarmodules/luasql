@@ -207,7 +207,7 @@ static int fail(lua_State *L,  const SQLSMALLINT type, const SQLHANDLE handle) {
     while (1) {
         ret = SQLGetDiagRec(type, handle, i, State, &NativeError, Msg,
                 sizeof(Msg), &MsgSize);
-        if (ret == SQL_NO_DATA) break;
+        if (ret == SQL_NO_DATA || (ret != SQL_SUCCESS && ret != SQL_SUCCESS_WITH_INFO)) break;
         luaL_addlstring(&b, (char*)Msg, MsgSize);
         luaL_addchar(&b, '\n');
         i++;
@@ -748,7 +748,7 @@ static int raw_execute(lua_State *L, int istmt)
 
 static int set_param(lua_State *L, stmt_data *stmt, int i, param_data *data)
 {
-	static SQLLEN cbNull = SQL_NULL_DATA;
+	SQLLEN cbNull = SQL_NULL_DATA;
 
 	switch(lua_type(L, -1)) {
 	case LUA_TNIL: {
@@ -825,7 +825,6 @@ static int set_param(lua_State *L, stmt_data *stmt, int i, param_data *data)
 */
 static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 {
-	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
@@ -853,7 +852,6 @@ static int raw_readparams_table(lua_State *L, stmt_data *stmt, int iparams)
 */
 static int raw_readparams_args(lua_State *L, stmt_data *stmt, int arg, int ltop)
 {
-	static SQLLEN cbNull = SQL_NULL_DATA;
 	SQLSMALLINT i;
 	param_data *data;
 	int res = 0;
@@ -889,10 +887,12 @@ static int stmt_execute(lua_State *L)
 {
 	int ltop = lua_gettop(L);
 	int res;
+	stmt_data *stmt = getstatement(L, 1);
+
+	luaL_argcheck(L, stmt->lock == 0, 1, LUASQL_PREFIX"there are still open cursors");
 
 	/* any parameters to use */
 	if(ltop > 1) {
-		stmt_data *stmt = getstatement(L, 1);
 		if(lua_type(L, 2) == LUA_TTABLE) {
 			res = raw_readparams_table(L, stmt, 2);
 		} else {
