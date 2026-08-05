@@ -87,6 +87,8 @@ typedef struct {
 	OCIStmt      *stmthp;             /* statement handle */
 	OCIError     *errhp;              /* !!! */
 	column_data  *cols;               /* array of columns */
+	int           stmt_ref;           /* registry ref to parent stmt_data when stmthp
+	                                     is borrowed (stmt:execute path), else LUA_NOREF */
 } cur_data;
 
 
@@ -500,7 +502,24 @@ static void cur_nullify (lua_State *L, cur_data *cur) {
 	/* Nullify structure fields. */
 	cur->closed = 1;
 	if (cur->stmthp) {
-		OCIHandleFree ((dvoid *)cur->stmthp, OCI_HTYPE_STMT);
+		if (cur->stmt_ref != LUA_NOREF) {
+			/*
+			** This cursor was created by stmt:execute(): the stmthp is owned by the
+			** parent stmt_data and must be released via OCIStmtRelease (New API)
+			** during stmt:close(). Here we will clear the cursor_open flag on
+			** the parent so it can be re-executed, then remove our reference.
+			*/
+			stmt_data *parent_stmt;
+			lua_rawgeti(L, LUA_REGISTRYINDEX, cur->stmt_ref);
+			parent_stmt = (stmt_data *)lua_touserdata(L, -1);
+			lua_pop(L, 1);
+			if (parent_stmt) parent_stmt->cursor_open = 0;
+			luaL_unref(L, LUA_REGISTRYINDEX, cur->stmt_ref);
+			cur->stmt_ref = LUA_NOREF;
+		} else {
+			/* conn:execute() path: cursor owns the handle, free it. */
+			OCIHandleFree((dvoid *)cur->stmthp, OCI_HTYPE_STMT);
+		}
 		cur->stmthp = NULL;
 	}
 	if (cur->errhp) {
@@ -738,8 +757,14 @@ static int conn_close (lua_State *L) {
 
 /*
 ** Create a new Cursor object and push it on top of the stack.
+**
+** stmt_ref : LUA_NOREF when the cursor owns 'stmt' (conn:execute path);
+**            a live Lua registry ref to the parent stmt_data when the handle
+**            is borrowed (stmt:execute path).  cur_nullify() uses this to
+**            decide between OCIHandleFree and clearing cursor_open.
 */
-static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt, const char *text) {
+static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt,
+                          const char *text, int stmt_ref) {
 	int i;
 	env_data *env;
 	cur_data *cur = (cur_data *)LUASQL_NEWUD(L, sizeof(cur_data));
@@ -755,7 +780,9 @@ static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt, c
 	cur->stmthp = stmt;
 	cur->errhp = NULL;
 	cur->cols = NULL;
-	cur->text = strdup (text);
+	cur->stmt_ref = stmt_ref;  /* LUA_NOREF or ref to parent stmt_data */
+	cur->text = strdup (text); /* Stores the statement. For prepared statement, 
+	                              let's just pass empty string. */
 	lua_pushvalue (L, o);
 	cur->conn = luaL_ref (L, LUA_REGISTRYINDEX);
 
@@ -829,8 +856,8 @@ static int conn_execute (lua_State *L) {
 		return checkerr (L, status, conn->errhp);
 	}
 	if (type == OCI_STMT_SELECT) {
-		/* create cursor */
-		return create_cursor (L, 1, conn, stmthp, statement);
+		/* create cursor — cursor owns the handle (conn:execute path) */
+		return create_cursor (L, 1, conn, stmthp, statement, LUA_NOREF);
 	} else {
 		/* return number of rows */
 		int rows_affected;
@@ -950,21 +977,6 @@ static int conn_prepare (lua_State *L) {
 	return 1;
 }
 
-/*
-** Helper function to parse 'YYYY-MM-DD' into an OCIDate struct.
-** Returns 1 on success, 0 on failure.
-*/
-#ifdef SQLT_ODT
-static int parse_date(const char *date_str, OCIDate *date) {
-	int year, month, day;
-	if (sscanf(date_str, "%4d-%2d-%2d", &year, &month, &day) == 3) {
-		OCIDateSetDate(date, year, month, day);
-		OCIDateSetTime(date, 0, 0, 0);
-		return 1;
-	}
-	return 0;
-}
-#endif
 
 /*
 ** Binds parameters to a prepared statement.
@@ -979,6 +991,12 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
     *p_bind_values = bind_values;
     *p_bind_handles = bind_handles;
     *p_inds = inds;
+
+    if (num_params > 0 && (!bind_values || !bind_handles || !inds)) {
+        lua_pushnil(L);
+        lua_pushstring(L, LUASQL_PREFIX"out of memory allocating bind buffers");
+        return 2;
+    }
 
     int param_idx = 0;
     lua_pushnil(L);
@@ -1037,17 +1055,27 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
                 case LUASQL_TYPE_DATE: {
                     const char *date_str = lua_tostring(L, -1);
 #ifdef SQLT_ODT
-                    if (!parse_date(date_str, &bind_values[param_idx].date)) {
-                        lua_pushnil(L);
-                        lua_pushstring(L, LUASQL_PREFIX"invalid date format, expected YYYY-MM-DD");
-                        return 2;
+                    {
+                        sword rc = OCIDateFromText(
+                            stmt->errhp,
+                            (const oratext *)date_str, (ub4)-1,
+                            (const oratext *)"YYYY-MM-DD", 10,
+                            NULL, 0,
+                            &bind_values[param_idx].date
+                        );
+                        if (rc != OCI_SUCCESS) {
+                            lua_pop(L, 1); /* pop value from lua_rawgeti(L, -1, 1) */
+                            lua_pushnil(L);
+                            lua_pushstring(L, LUASQL_PREFIX"invalid date format, expected YYYY-MM-DD");
+                            return 2;
+                        }
                     }
-                    bind_ptr = &bind_values[param_idx].date;
+                    bind_ptr  = &bind_values[param_idx].date;
                     bind_size = sizeof(OCIDate);
                     bind_type = SQLT_ODT;
 #else
                     bind_values[param_idx].s = (char *)date_str;
-                    bind_ptr = bind_values[param_idx].s;
+                    bind_ptr  = bind_values[param_idx].s;
                     bind_size = strlen(bind_values[param_idx].s) + 1;
                     bind_type = SQLT_STR;
 #endif
@@ -1080,6 +1108,7 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
         }
 
         if (status) {
+            lua_pop(L, 2); /* pop lua_next key and value before returning */
             return checkerr(L, status, stmt->errhp);
         }
 
@@ -1127,14 +1156,63 @@ static int stmt_execute (lua_State *L) {
         }
     }
 
-    /* Execute part comes here - not implemented yet */
+    /*
+    ** Execute the prepared statement.
+    ** Retrieve the connection from the Lua registry so we can access
+    ** svchp and the auto_commit flag.
+    */
+    lua_rawgeti(L, LUA_REGISTRYINDEX, stmt->conn);
+    conn_data *conn = (conn_data *)lua_touserdata(L, -1);
+    int conn_idx = lua_gettop(L);   /* stack: [stmt, params, conn] */
 
-    /* Free bind data */
+    ub4 iters = (stmt->type == OCI_STMT_SELECT) ? 0 : 1;
+    ub4 mode  = conn->auto_commit ? OCI_COMMIT_ON_SUCCESS : OCI_DEFAULT;
+
+    sword status = OCIStmtExecute(conn->svchp, stmt->stmthp, stmt->errhp,
+                                  iters, (ub4)0,
+                                  (CONST OCISnapshot *)NULL,
+                                  (OCISnapshot *)NULL, mode);
+
+    /* Free Bind resources */
     if (bind_values) free(bind_values);
     if (bind_handles) free(bind_handles);
     if (inds) free(inds);
 
-    return 0;
+    if (status && status != OCI_NO_DATA) {
+        lua_pop(L, 1); /* pop conn */
+        return checkerr(L, status, stmt->errhp);
+    }
+
+    if (stmt->type == OCI_STMT_SELECT) {
+        /*
+        ** For a SELECT, create a Cursor object. We pass a fresh Lua registry ref 
+        ** to the stmt itself.
+        */
+        lua_pushvalue(L, 1); /* push stmt userdata */
+        int stmt_ref_for_cur = luaL_ref(L, LUA_REGISTRYINDEX);
+        stmt->cursor_open = 1;
+        int ret = create_cursor(L, conn_idx, conn, stmt->stmthp, "", stmt_ref_for_cur);
+        if (ret != 1) {
+            cur_data *cur = (cur_data *)luaL_testudata(L, conn_idx + 1, LUASQL_CURSOR_OCI8);
+            if (cur) {
+                cur->stmt_ref = LUA_NOREF;
+            }
+            luaL_unref(L, LUA_REGISTRYINDEX, stmt_ref_for_cur);
+            stmt->cursor_open = 0;
+        }
+        lua_remove(L, conn_idx); /* pop conn */
+        return ret;
+    } else {
+        /* DML: return the number of rows affected. */
+        lua_pop(L, 1); /* pop conn */
+        ub4 rows_affected = 0;
+        ASSERT(L, OCIAttrGet((dvoid *)stmt->stmthp, (ub4)OCI_HTYPE_STMT,
+                             (dvoid *)&rows_affected, (ub4 *)0,
+                             (ub4)OCI_ATTR_ROW_COUNT, stmt->errhp),
+               stmt->errhp);
+        lua_pushnumber(L, (lua_Number)rows_affected);
+        return 1;
+    }
 }
 
 
