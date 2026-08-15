@@ -1,3 +1,8 @@
+/*
+** LuaSQL, DuckDB driver
+** Author: Geraldo Luiz
+** ls_duckdb.c
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

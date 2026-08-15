@@ -164,14 +164,14 @@ static int cur_fetch (lua_State *L) {
   if (vm == NULL)
     return 0;
 
-    if (!cur->first_fetch) {
-      res = sqlite3_step(vm);
+  if (!cur->first_fetch) {
+    res = sqlite3_step(vm);
 
-      if (res == SQLITE_DONE || res != SQLITE_ROW)
-          return finalize(L, cur);
-   } else {
-      cur->first_fetch = 0;
-   }
+    if (res == SQLITE_DONE || res != SQLITE_ROW)
+        return finalize(L, cur);
+  } else {
+    cur->first_fetch = 0;
+  }
 
   if (lua_istable (L, 2))
     {
