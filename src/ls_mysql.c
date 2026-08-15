@@ -67,6 +67,7 @@ typedef struct {
 	short      closed;
 	int        env;                /* reference to environment */
 	MYSQL     *my_conn;
+	short      query_started;      /* flag to track if a query was just started */
 } conn_data;
 
 typedef struct {
@@ -497,6 +498,7 @@ static int conn_send_query (lua_State *L) {
 	size_t st_len;
 	const char *statement = luaL_checklstring (L, 2, &st_len);
 	int status, ret;
+	conn->query_started = 1;
 #ifdef MYSQL_OPT_NONBLOCK
 	status = mysql_real_query_start(&ret, conn->my_conn, statement, st_len);
 #else
@@ -526,7 +528,30 @@ static int conn_poll (lua_State *L) {
 
 static int conn_get_result (lua_State *L) {
 	conn_data *conn = getconnection (L);
-	MYSQL_RES *res = mysql_store_result(conn->my_conn);
+	MYSQL_RES *res = NULL;
+	short has_result = 0;
+
+	if (conn->query_started) {
+		conn->query_started = 0;
+		res = mysql_store_result(conn->my_conn);
+		has_result = 1;
+	} else {
+		if (mysql_more_results(conn->my_conn)) {
+			int ret = mysql_next_result(conn->my_conn);
+			if (ret == 0) {
+				res = mysql_store_result(conn->my_conn);
+				has_result = 1;
+			} else if (ret > 0) {
+				return luasql_failmsg(L, "error retrieving next result. MySQL: ", mysql_error(conn->my_conn));
+			}
+		}
+	}
+
+	if (!has_result) {
+		lua_pushnil(L);
+		return 1;
+	}
+
 	unsigned int num_cols = mysql_field_count(conn->my_conn);
 
 	if (res) { /* tuples returned */
@@ -634,6 +659,7 @@ static int create_connection (lua_State *L, int env, MYSQL *const my_conn) {
 	conn->closed = 0;
 	conn->env = LUA_NOREF;
 	conn->my_conn = my_conn;
+	conn->query_started = 0;
 	lua_pushvalue (L, env);
 	conn->env = luaL_ref (L, LUA_REGISTRYINDEX);
 	return 1;
@@ -661,11 +687,11 @@ static int env_connect (lua_State *L) {
 	if (conn == NULL)
 		return luasql_faildirect(L, "error connecting: Out of memory.");
 
-	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");	
+	mysql_options(conn, MYSQL_READ_DEFAULT_GROUP, "client-lua");
 #ifdef MARIADB_PACKAGE_VERSION
 	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
 #endif
-	
+
 	if (!mysql_real_connect(conn, host, username, password,
 		sourcename, port, unix_socket, client_flag))
 	{
