@@ -758,10 +758,17 @@ static int conn_close (lua_State *L) {
 /*
 ** Create a new Cursor object and push it on top of the stack.
 **
-** stmt_ref : LUA_NOREF when the cursor owns 'stmt' (conn:execute path);
-**            a live Lua registry ref to the parent stmt_data when the handle
-**            is borrowed (stmt:execute path).  cur_nullify() uses this to
-**            decide between OCIHandleFree and clearing cursor_open.
+** stmt_ref: This argument manages the ownership and lifecycle of the underlying 
+**           OCIStmt handle (stmthp). It expects one of two values:
+**           1) LUA_NOREF: Used when the cursor is created via `conn:execute()`. 
+**              In this case, the cursor exclusively owns the statement handle 
+**              and is responsible for freeing it (via OCIHandleFree) when closed.
+**           2) A valid Lua registry reference (integer): Used when the cursor is 
+**              created via `stmt:execute()`. Here, the statement handle is "borrowed" 
+**              from a parent `stmt_data` object. The cursor does not free the handle; 
+**              instead, when the cursor closes, it uses this reference to find the 
+**              parent statement and resets its `cursor_open` flag to 0, allowing the 
+**              parent statement to be executed again.
 */
 static int create_cursor (lua_State *L, int o, conn_data *conn, OCIStmt *stmt,
                           const char *text, int stmt_ref) {
@@ -983,20 +990,28 @@ static int conn_prepare (lua_State *L) {
 ** Returns 0 on success, or a Lua return value on error.
 */
 static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_named,
-                      column_value **p_bind_values, OCIBind ***p_bind_handles, sb2 **p_inds) {
+                      column_value **p_bind_values, OCIBind ***p_bind_handles, sb2 **p_inds, ub2 **p_bind_types) {
     column_value *bind_values = (column_value *)calloc(num_params, sizeof(column_value));
     OCIBind **bind_handles = (OCIBind **)calloc(num_params, sizeof(OCIBind *));
     sb2 *inds = (sb2 *)calloc(num_params, sizeof(sb2));
+    ub2 *bind_types = (ub2 *)calloc(num_params, sizeof(ub2));
 
     *p_bind_values = bind_values;
     *p_bind_handles = bind_handles;
     *p_inds = inds;
+    *p_bind_types = bind_types;
 
-    if (num_params > 0 && (!bind_values || !bind_handles || !inds)) {
+    if (num_params > 0 && (!bind_values || !bind_handles || !inds || !bind_types)) {
         lua_pushnil(L);
         lua_pushstring(L, LUASQL_PREFIX"out of memory allocating bind buffers");
         return 2;
     }
+
+    env_data *env = NULL;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, stmt->conn);
+    conn_data *conn = (conn_data *)lua_touserdata(L, -1);
+    if (conn) env = getenvfromconn(L, conn);
+    lua_pop(L, 1);
 
     int param_idx = 0;
     lua_pushnil(L);
@@ -1046,19 +1061,60 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
                     break;
                 case LUASQL_TYPE_STRING:
                 case LUASQL_TYPE_TIME:
-                case LUASQL_TYPE_TIMESTAMP:
                     bind_values[param_idx].s = (char *)lua_tostring(L, -1);
                     bind_ptr = bind_values[param_idx].s;
                     bind_size = strlen(bind_values[param_idx].s) + 1;
                     bind_type = SQLT_STR;
                     break;
+                case LUASQL_TYPE_TIMESTAMP: {
+                    const char *date_str = lua_tostring(L, -1);
+#ifdef SQLT_TIMESTAMP
+                    bind_type = SQLT_TIMESTAMP;
+                    bind_types[param_idx] = bind_type;
+                    if (env) {
+                        sword rc = OCIDescriptorAlloc(env->envhp, (dvoid **)&bind_values[param_idx].datetime, OCI_DTYPE_TIMESTAMP, 0, (void **)0);
+                        if (rc == OCI_SUCCESS) {
+                            rc = OCIDateTimeFromText(
+                                env->envhp,
+                                stmt->errhp,
+                                (const oratext *)date_str, (size_t)strlen(date_str),
+                                (const oratext *)"YYYY-MM-DD HH24:MI:SS", 21,
+                                NULL, 0,
+                                bind_values[param_idx].datetime
+                            );
+                            if (rc != OCI_SUCCESS) {
+                                lua_pop(L, 1); /* pop value from lua_rawgeti(L, -1, 1) */
+                                return checkerr(L, rc, stmt->errhp);
+                            }
+                        } else {
+                            lua_pop(L, 1);
+                            lua_pushnil(L);
+                            lua_pushstring(L, LUASQL_PREFIX"failed to allocate timestamp descriptor");
+                            return 2;
+                        }
+                    } else {
+                        lua_pop(L, 1);
+                        lua_pushnil(L);
+                        lua_pushstring(L, LUASQL_PREFIX"missing environment handle for timestamp");
+                        return 2;
+                    }
+                    bind_ptr  = &bind_values[param_idx].datetime;
+                    bind_size = sizeof(OCIDateTime *);
+#else
+                    bind_values[param_idx].s = (char *)date_str;
+                    bind_ptr  = bind_values[param_idx].s;
+                    bind_size = strlen(bind_values[param_idx].s) + 1;
+                    bind_type = SQLT_STR;
+#endif
+                    break;
+                }
                 case LUASQL_TYPE_DATE: {
                     const char *date_str = lua_tostring(L, -1);
 #ifdef SQLT_ODT
                     {
                         sword rc = OCIDateFromText(
                             stmt->errhp,
-                            (const oratext *)date_str, (ub4)-1,
+                            (const oratext *)date_str, (ub4)strlen(date_str),
                             (const oratext *)"YYYY-MM-DD", 10,
                             NULL, 0,
                             &bind_values[param_idx].date
@@ -1112,10 +1168,30 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
             return checkerr(L, status, stmt->errhp);
         }
 
+        bind_types[param_idx] = bind_type;
         param_idx++;
         lua_pop(L, 1); 
     }
     return 0;
+}
+
+/*
+** Free bind resources allocated during stmt_bind.
+*/
+static void free_bind_buffers (int num_params, column_value *bind_values, OCIBind **bind_handles, sb2 *inds, ub2 *bind_types) {
+    if (bind_values && bind_types) {
+        for (int i = 0; i < num_params; i++) {
+#ifdef SQLT_TIMESTAMP
+            if (bind_types[i] == SQLT_TIMESTAMP && bind_values[i].datetime) {
+                OCIDescriptorFree(bind_values[i].datetime, OCI_DTYPE_TIMESTAMP);
+            }
+#endif
+        }
+    }
+    if (bind_values) free(bind_values);
+    if (bind_handles) free(bind_handles);
+    if (inds) free(inds);
+    if (bind_types) free(bind_types);
 }
 
 /*
@@ -1145,13 +1221,12 @@ static int stmt_execute (lua_State *L) {
     column_value *bind_values = NULL;
     OCIBind **bind_handles = NULL;
     sb2 *inds = NULL;
+    ub2 *bind_types = NULL;
 
     if (num_params > 0) {
-        int ret = stmt_bind(L, stmt, num_params, is_named, &bind_values, &bind_handles, &inds);
+        int ret = stmt_bind(L, stmt, num_params, is_named, &bind_values, &bind_handles, &inds, &bind_types);
         if (ret) {
-            if (bind_values) free(bind_values);
-            if (bind_handles) free(bind_handles);
-            if (inds) free(inds);
+            free_bind_buffers(num_params, bind_values, bind_handles, inds, bind_types);
             return ret;
         }
     }
@@ -1174,9 +1249,7 @@ static int stmt_execute (lua_State *L) {
                                   (OCISnapshot *)NULL, mode);
 
     /* Free Bind resources */
-    if (bind_values) free(bind_values);
-    if (bind_handles) free(bind_handles);
-    if (inds) free(inds);
+    free_bind_buffers(num_params, bind_values, bind_handles, inds, bind_types);
 
     if (status && status != OCI_NO_DATA) {
         lua_pop(L, 1); /* pop conn */
