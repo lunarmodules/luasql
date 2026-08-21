@@ -824,7 +824,6 @@ password = arg[4] or DEFAULT_PASSWORD or nil
 -- Complete set of tests
 tests = {
 	{ "basic checking", basic_test },
-	{ "type constants", type_constants_test },
 	{ "create table", create_table },
 	{ "fetch two values", fetch2 },
 	{ "fetch new table", fetch_new_table },
@@ -839,6 +838,10 @@ tests = {
 	{ "close connection", close_conn },
 	{ "finalization", finalization },
 }
+
+if driver == "oci8" then
+	table.insert(tests, 2, { "type constants", type_constants_test })
+end
 
 if string.find(_VERSION, " 5.0") then
 	local init_so, err = loadlib("./"..driver..".so", "luaopen_luasql_"..driver)

@@ -214,6 +214,17 @@ LUASQL_API int luasql_validate_params (lua_State *L, int tbl_idx, int *is_named_
             return 0;
         }
 
+        if (key_type == LUA_TNUMBER) {
+            lua_Number num = lua_tonumber(L, -2);
+            lua_Integer integer = lua_tointeger(L, -2);
+            if (num != (lua_Number)integer || integer <= 0) {
+                lua_pop(L, 2);
+                lua_pushnil(L);
+                lua_pushstring(L, LUASQL_PREFIX "numeric parameter keys must be positive integers");
+                return 0;
+            }
+        }
+
         int key_is_str = (key_type == LUA_TSTRING);
         if (is_named == -1) {
             is_named = key_is_str ? 1 : 0;

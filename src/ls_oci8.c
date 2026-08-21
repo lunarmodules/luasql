@@ -54,7 +54,7 @@ typedef struct {
 } stmt_data;
 
 typedef union {
-	int     i;
+	lua_Integer     i;
 	char   *s;
 	double  d;
 #ifdef SQLT_DAT
@@ -885,21 +885,25 @@ static int stmt_close (lua_State *L) {
 	stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_OCI8);
 	luaL_argcheck (L, stmt != NULL, 1, LUASQL_PREFIX"statement expected");
 	if (stmt->closed) {
-		lua_pushboolean (L, 0);
+		lua_pushnil (L);
 		lua_pushstring (L, "Statement is already closed");
 		return 2;
 	}
 	if (stmt->cursor_open) {
-		lua_pushboolean (L, 0);
+		lua_pushnil (L);
 		lua_pushstring (L, LUASQL_PREFIX"cannot close statement with open cursor");
 		return 2;
 	}
 
-	stmt->closed = 1;
 	if (stmt->stmthp) {
-		OCIStmtRelease (stmt->stmthp, stmt->errhp, NULL, 0, OCI_DEFAULT);
+		sword status = OCIStmtRelease (stmt->stmthp, stmt->errhp, NULL, 0, OCI_DEFAULT);
+		if (status) {
+			return checkerr (L, status, stmt->errhp);
+		}
 		stmt->stmthp = NULL;
 	}
+	stmt->closed = 1;
+
 	if (stmt->errhp) {
 		OCIHandleFree ((dvoid *)stmt->errhp, OCI_HTYPE_ERROR);
 		stmt->errhp = NULL;
@@ -1042,9 +1046,9 @@ static int stmt_bind (lua_State *L, stmt_data *stmt, int num_params, int is_name
             lua_rawgeti(L, -1, 1);
             switch (luasql_type) {
                 case LUASQL_TYPE_INT:
-                    bind_values[param_idx].i = (int)lua_tointeger(L, -1);
+                    bind_values[param_idx].i = (lua_Integer)lua_tointeger(L, -1);
                     bind_ptr = &bind_values[param_idx].i;
-                    bind_size = sizeof(int);
+                    bind_size = sizeof(lua_Integer);
                     bind_type = SQLT_INT;
                     break;
                 case LUASQL_TYPE_NUMBER:
@@ -1202,7 +1206,7 @@ static void free_bind_buffers (int num_params, column_value *bind_values, OCIBin
 ** return the number of tuples affected by the statement.
 */
 static int stmt_execute (lua_State *L) {
-    stmt_data *stmt = (stmt_data *)luaL_checkudata (L, 1, LUASQL_STATEMENT_OCI8);
+    stmt_data *stmt = getstatement (L);
 
     if (stmt->cursor_open) {
         lua_pushnil(L);
@@ -1266,8 +1270,9 @@ static int stmt_execute (lua_State *L) {
         stmt->cursor_open = 1;
         int ret = create_cursor(L, conn_idx, conn, stmt->stmthp, "", stmt_ref_for_cur);
         if (ret != 1) {
-            cur_data *cur = (cur_data *)luaL_testudata(L, conn_idx + 1, LUASQL_CURSOR_OCI8);
+            cur_data *cur = (cur_data *)luaL_checkudata(L, conn_idx + 1, LUASQL_CURSOR_OCI8);
             if (cur) {
+                cur->stmthp = NULL;
                 cur->stmt_ref = LUA_NOREF;
             }
             luaL_unref(L, LUA_REGISTRYINDEX, stmt_ref_for_cur);
