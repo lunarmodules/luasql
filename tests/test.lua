@@ -448,7 +448,7 @@ function unicode_values ()
 	local row = { cur:fetch () }
 	assert2 ("string", type(row[1]), "error while trying to fetch values")
 	assert2 ("1", row[1], "wrong value: expecting '1', got '"..tostring (row[1]).."'")
-	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[1]).."'")
+	assert2 ("Áêìõü", row[2], "wrong value: expecting 'Áêìõü', got '"..tostring (row[2]).."'")
 	assert2 (nil, cur:fetch (row))
 	assert2 (false, cur:close(), MSG_CURSOR_NOT_CLOSED)
 	-- fetch row based on Unicode value
@@ -762,6 +762,142 @@ function numrows()
 	io.write (" numrows")
 end
 
+---------------------------------------------------------------------
+-- Test prepared statements (OCI8 specific for now)
+---------------------------------------------------------------------
+function prepared_statements_test ()
+	local luasql_type = luasql.type
+	assert (type(luasql_type) == "table", "luasql.type is missing")
+
+	-- 1. Create table
+	pcall(CONN.execute, CONN, "DROP TABLE t_ps")
+	assert2 (0, CONN:execute ([[
+		CREATE TABLE t_ps (
+			id NUMBER PRIMARY KEY,
+			str_col VARCHAR2(200),
+			int_col NUMBER(10),
+			num_col FLOAT,
+			bool_col VARCHAR2(1),
+			null_col VARCHAR2(50)
+		)
+	]]), "could not create prepared statements test table")
+
+	-- 2. Positional Binding
+	local stmt = assert (CONN:prepare ([[
+		INSERT INTO t_ps (id, str_col, int_col, num_col, bool_col)
+		VALUES (:1, :2, :3, :4, :5)
+	]]), "failed to prepare positional statement")
+	
+	local rows, err = stmt:execute({
+		[1] = {1, luasql_type.int},
+		[2] = {"positional", luasql_type.string},
+		[3] = {42, luasql_type.int},
+		[4] = {3.14, luasql_type.number},
+		[5] = {true, luasql_type.boolean}
+	})
+	assert2 (1, rows, "positional execute failed: " .. tostring(err))
+	assert (stmt:close())
+
+	-- 3. Named Binding & NULL
+	stmt = assert (CONN:prepare ([[
+		INSERT INTO t_ps (id, str_col, null_col)
+		VALUES (:id, :str, :n)
+	]]), "failed to prepare named statement")
+	
+	rows, err = stmt:execute({
+		id = {2, luasql_type.int},
+		str = {"named", luasql_type.string},
+		n = luasql_type.null
+	})
+	assert2 (1, rows, "named execute failed: " .. tostring(err))
+	assert (stmt:close())
+
+	-- 4. Statement Reuse
+	stmt = assert (CONN:prepare ("INSERT INTO t_ps (id) VALUES (:id)"))
+	for i = 3, 5 do
+		rows, err = stmt:execute({ id = {i, luasql_type.int} })
+		assert2 (1, rows, "reuse execute failed: " .. tostring(err))
+	end
+	assert (stmt:close())
+
+	-- 5. Data Type Verification
+	stmt = assert (CONN:prepare ("SELECT id, str_col, int_col, num_col, bool_col, null_col FROM t_ps WHERE id = :id"))
+	local cur = assert (stmt:execute({ id = {1, luasql_type.int} }))
+	local row = cur:fetch({}, "a")
+	assert2 (1, tonumber(row.id))
+	assert2 ("positional", row.str_col)
+	assert2 (42, tonumber(row.int_col))
+	assert2 (3.14, tonumber(row.num_col))
+	assert2 ("1", row.bool_col)
+	assert2 (nil, row.null_col)
+	cur:close()
+	assert (stmt:close())
+
+	-- verify NULL roundtrip
+	stmt = assert (CONN:prepare ("SELECT null_col FROM t_ps WHERE id = :id"))
+	cur = assert (stmt:execute({ id = {2, luasql_type.int} }))
+	row = cur:fetch({}, "a")
+	assert2 (nil, row.null_col, "expected null_col to be nil")
+	cur:close()
+	assert (stmt:close())
+
+	-- 6. Error Handling
+	stmt = assert (CONN:prepare ("INSERT INTO t_ps (id) VALUES (:id)"))
+	
+	-- mixed binds
+	local res, err_ret = stmt:execute({ id = {10, luasql_type.int}, [1] = {11, luasql_type.int} })
+	assert2 (true, res == nil, "mixed binding should fail")
+	
+	-- invalid type
+	res, err_ret = stmt:execute({ id = {"abc", luasql_type.int} })
+	assert2 (true, res == nil, "invalid Lua type should fail")
+	assert (stmt:close())
+
+	-- 7. Cursor Lifecycle
+	stmt = assert (CONN:prepare ("SELECT * FROM t_ps WHERE id = :id"))
+	cur = assert (stmt:execute({ id = {1, luasql_type.int} }))
+	
+	-- executing while cursor is open should fail
+	res, err_ret = stmt:execute({ id = {2, luasql_type.int} })
+	assert2 (true, res == nil, "executing while cursor is open should fail")
+
+	-- closing stmt while cursor is open should fail
+	res, err_ret = stmt:close()
+	assert2 (true, res == false, "closing statement while cursor is open should fail")
+	
+	cur:close()
+	assert (stmt:close())
+
+	-- 8. Cleanup
+	assert2 (0, CONN:execute("DROP TABLE t_ps"))
+end
+
+---------------------------------------------------------------------
+-- Test luasql.type constants and the __index error on unknown keys.
+---------------------------------------------------------------------
+function type_constants_test ()
+	assert (type(luasql.type) == "table", "luasql.type is not a table")
+
+	-- check that an unknown key raises an error and lists exactly all expected types
+	local ok, err = pcall(function () return luasql.type.nul end)
+	assert2 (false, ok, "luasql.type.nul should raise an error")
+
+	-- The error message lists types in an undefined order (table iteration).
+	-- We extract them, sort them, and compare against the expected list.
+	local prefix = "LuaSQL: invalid type 'nul', expected one of: "
+	local msg_start = err:find(prefix, 1, true)
+	assert (msg_start, "error message missing expected prefix: " .. tostring(err))
+	
+	local types = {}
+	for t in err:sub(msg_start + #prefix):gmatch("[^, ]+") do
+		table.insert(types, t)
+	end
+	table.sort(types)
+
+	assert2 ("boolean, date, int, null, number, string, time, timestamp", table.concat(types, ", "),
+		"luasql.type contains unexpected or missing types")
+end
+
 
 ---------------------------------------------------------------------
 -- Main
@@ -813,6 +949,11 @@ tests = {
 	{ "finalization", finalization },
 }
 
+if driver == "oci8" then
+	table.insert(tests, 2, { "type constants", type_constants_test })
+	table.insert(tests, 4, { "prepared statements", prepared_statements_test })
+end
+
 if string.find(_VERSION, " 5.0") then
 	local init_so, err = loadlib("./"..driver..".so", "luaopen_luasql_"..driver)
 	if init_so then
@@ -824,7 +965,7 @@ else
 	luasql = require ("luasql."..driver)
 	local major, minor = _VERSION:match" (%d)%.(%d+)"
 	if tonumber(minor) >= 4 then
-		table.insert (tests, 11, { "to-be-closed support", to_be_closed_support })
+		table.insert (tests, #tests - 2, { "to-be-closed support", to_be_closed_support })
 	end
 end
 assert (luasql, "Could not load driver: no luasql table.")

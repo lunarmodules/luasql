@@ -24,6 +24,17 @@
 #define LUASQL_CONNECTION "Each driver must have a connection metatable"
 #define LUASQL_CURSOR "Each driver must have a cursor metatable"
 
+/* Prepared-statement type constants (driver-agnostic) */
+#define LUASQL_TYPE_INT       0
+#define LUASQL_TYPE_NUMBER    1
+#define LUASQL_TYPE_STRING    2
+#define LUASQL_TYPE_BOOLEAN   3
+#define LUASQL_TYPE_DATE      4
+#define LUASQL_TYPE_TIME      5
+#define LUASQL_TYPE_TIMESTAMP 6
+#define LUASQL_TYPE_NULL      7
+#define LUASQL_TYPE_COUNT     8 // Always place it in the last. Used in validating the range of type constants. 
+
 // Macro to handle userdata creation across Lua versions
 #if LUA_VERSION_NUM >= 504
 #define LUASQL_NEWUD(L, size) lua_newuserdatauv(L, size, 0)
@@ -36,6 +47,8 @@ LUASQL_API int luasql_failmsg (lua_State *L, const char *err, const char *m);
 LUASQL_API int luasql_createmeta (lua_State *L, const char *name, const luaL_Reg *methods);
 LUASQL_API void luasql_setmeta (lua_State *L, const char *name);
 LUASQL_API void luasql_set_info (lua_State *L);
+LUASQL_API void luasql_set_types (lua_State *L);
+LUASQL_API int luasql_validate_params (lua_State *L, int tbl_idx, int *is_named_out, int *num_params_out);
 
 #if !defined LUA_VERSION_NUM || LUA_VERSION_NUM==501
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
