@@ -512,6 +512,7 @@ static int conn_send_query (lua_State *L) {
   sqlite3_stmt *vm;
   const char *tail;
   int res;
+  int ltop;
 
   if (conn->pending_vm) {
     sqlite3_finalize(conn->pending_vm);
@@ -528,7 +529,7 @@ static int conn_send_query (lua_State *L) {
   }
 
   /* Bind parameters (if any) */
-  int ltop = lua_gettop(L);
+  ltop = lua_gettop(L);
   if (ltop > 2) {
     if (ltop == 3 && lua_type(L, 3) == LUA_TTABLE) {
       res = raw_readparams_table(L, vm, 3);
