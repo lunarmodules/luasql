@@ -32,3 +32,11 @@ table.insert (EXTENSIONS, function ()
 	-- Drops the table
 	assert2 (DROP_TABLE_RETURN_VALUE, CONN:execute("drop table test_dt") )
 end)
+
+table.insert (EXTENSIONS, function ()
+	for _, value in ipairs {"4294967296", "-4294967297", "9223372036854775807", "-9223372036854775808"} do
+		local cur = CUR_OK (CONN:execute ("select cast("..value.." as bigint)"))
+		assert2 (tonumber(value), cur:fetch(), "Wrong 64-bit integer representation")
+		assert (cur:close())
+	end
+end)
