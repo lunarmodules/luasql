@@ -171,6 +171,8 @@ static int cur_fetch (lua_State *L) {
         return finalize(L, cur);
   } else {
     cur->first_fetch = 0;
+    if (sqlite3_data_count(vm) == 0)
+        return finalize(L, cur);
   }
 
   if (lua_istable (L, 2))
